@@ -7,7 +7,8 @@ const path = require('path');
 const Assembler = require('./assembler');
 const Interpreter = require('./interpreter');
 const Linker = require('./linker');
-const nameHandler = require('../utils/name.js');
+// Commented to remove name requirement - Aidan O'Donnell 2/6/26
+// const nameHandler = require('../utils/name.js');
 const { generateBSTLSTContent } = require('../utils/genStats.js');
 
 const newline = process.platform === 'win32' ? '\r\n' : '\n';
@@ -52,12 +53,14 @@ class LCC {
     // If multiple inputs were supplied, the "main input file" is the first one
     this.inputFileName = this.args[0];
 
-    try {
-      this.userName = nameHandler.createNameFile(this.inputFileName);
-    } catch (error) {
-      console.error('Error handling name file:', error.message);
-      fatalExit('Error handling name file: ' + error.message, 1);
-    }
+    // Commented to remove name requirement - Aidan O'Donnell 2/6/26
+    
+    // try {
+    //   this.userName = nameHandler.createNameFile(this.inputFileName);
+    // } catch (error) {
+    //   console.error('Error handling name file:', error.message);
+    //   fatalExit('Error handling name file: ' + error.message, 1);
+    // }
 
     // TODO: (extra feature) check similarly to see if multiple .a files were 
     // supplied for multi-file assembly.
