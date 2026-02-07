@@ -48,7 +48,7 @@ async def execute_assembly(submission: CodeSubmission):
         with open("/tmp/code.a", "w") as f:
             f.write(cleaned_code)
         
-        # run your LCC emulator with Node.js
+        # run LCC emulator with Node.js
         result = subprocess.run(
             ["node", INTERPRETER_PATH, "/tmp/code.a"],
             capture_output=True,
@@ -56,7 +56,7 @@ async def execute_assembly(submission: CodeSubmission):
             text=True
         )
         
-        # check if LCC emulator had errors
+        # check if emulator had errors
         if result.returncode != 0:
             return CodeResult(
                 success=False,
