@@ -12,7 +12,9 @@
 const fs = require('fs');
 const path = require('path');
 const { generateBSTLSTContent } = require('../utils/genStats.js');
-const nameHandler = require('../utils/name.js');
+
+// Commented to remove name requirement - Aidan O'Donnell 2/6/26
+// const nameHandler = require('../utils/name.js');
 
 const isTestMode = (typeof global.it === 'function'); // crude check for Jest
 
@@ -268,13 +270,15 @@ class Assembler {
       // After writing the output file, handle additional outputs
       if (this.isObjectModule) {
 
+        // Commented to remove name requirement - Aidan O'Donnell 2/6/26
+
         // Get the userName using nameHandler
-        try {
-          this.userName = nameHandler.createNameFile(this.inputFileName);
-        } catch (error) {
-          console.error('Error handling name file:', error.message);
-          fatalExit('Error handling name file: ' + error.message, 1);
-        }
+        // try {
+        //   this.userName = nameHandler.createNameFile(this.inputFileName);
+        // } catch (error) {
+        //   console.error('Error handling name file:', error.message);
+        //   fatalExit('Error handling name file: ' + error.message, 1);
+        // }
 
         console.log(`Output file ${this.outputFileName} needs linking`);
       

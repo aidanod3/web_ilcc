@@ -5,7 +5,8 @@
 const fs = require('fs');
 const path = require('path');
 const { generateBSTLSTContent } = require('../utils/genStats.js');
-const nameHandler = require('../utils/name.js');
+// Commented to remove name requirement - Aidan O'Donnell 2/6/26
+// const nameHandler = require('../utils/name.js');
 
 const newline = process.platform === 'win32' ? '\r\n' : '\n';
 
@@ -121,16 +122,18 @@ class Interpreter {
       fatalExit('No input file specified.', 1);
     }
 
+    // Commented to remove name requirement - Aidan O'Donnell 2/6/26
+
     // Get the userName using nameHandler
-    try {
-      //// console.log(`inputFileName = ${this.inputFileName}`);
-      this.userName = nameHandler.createNameFile(this.inputFileName);
-      //// console.log("userName = " + this.userName);
-    } catch (error) {
-      console.error('Error handling name file:', error.message);
-      // process.exit(1);
-      fatalExit('Error handling name file: ' + error.message, 1);
-    }
+    // try {
+    //   //// console.log(`inputFileName = ${this.inputFileName}`);
+    //   this.userName = nameHandler.createNameFile(this.inputFileName);
+    //   //// console.log("userName = " + this.userName);
+    // } catch (error) {
+    //   console.error('Error handling name file:', error.message);
+    //   // process.exit(1);
+    //   fatalExit('Error handling name file: ' + error.message, 1);
+    // }
 
     // this prints out when called by interpreter.js
     console.log(`Starting interpretation of ${this.inputFileName}`);
