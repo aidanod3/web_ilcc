@@ -6,7 +6,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/main" replace />} />
+        <Route path="/" element={<Navigate to="/autograder" replace />} />
         <Route path="/main" element={<Main />} />
         <Route path="/autograder" element={<Autograder />} />
       </Routes>
