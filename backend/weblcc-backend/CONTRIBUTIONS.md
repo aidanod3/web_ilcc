@@ -10,3 +10,4 @@ CED - Backend
 - Updated `README.md` with usage/testing notes.
 - Set up basic backend file organization to prep frontend connectivity.
 - Setup basic frontend for React to have a working local host frontend to prepare the frontend developers 
+- Setup basic frontend for emulator compiling of assembly code to beging testing output accuracy of .a code/files

@@ -1,0 +1,11 @@
+{
+  "name": "ilcc-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm --prefix backend/weblcc-backend run dev\" \"npm --prefix weblcc run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
