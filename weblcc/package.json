@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "interactive_lccjs": "file:../backend/interactive_lccjs",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2"
