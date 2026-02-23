@@ -1,0 +1,22 @@
+.editor {
+  background: white;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.header {
+  padding: 8px 12px;
+  background: #ddd;
+  font-size: 14px;
+}
+
+.textarea {
+  flex: 1;
+  border: none;
+  resize: none;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 14px;
+}

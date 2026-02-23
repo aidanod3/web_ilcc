@@ -1,0 +1,14 @@
+.panel {
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section {
+  background: #f3f3f3;
+  padding: 8px;
+  border-radius: 6px;
+}
