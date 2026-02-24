@@ -1,4 +1,8 @@
 import { useMemo, useState } from 'react';
+import EditorPanel from '../components/EditorPanel.jsx';
+import OutputPanel from '../components/OutputPanel.jsx';
+import RightPanel from '../components/RightPanel.jsx';
+import Topbar from '../components/Topbar.jsx';
 
 const starterProgram = `; ex0301.a
           ld r0, x
@@ -145,186 +149,46 @@ export default function Main() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <h1>LCC Compiler</h1>
-          <p>Assembly editor and execution dashboard</p>
-        </div>
-        <div className="topbar__actions">
-          <button className="btn btn--gold" type="button" onClick={handleRun} disabled={isRunning}>
-            {isRunning ? 'Running...' : 'Run'}
-          </button>
-          <button className="btn btn--ghost" type="button" onClick={handleTrace}>
-            Trace
-          </button>
-          <button className="btn btn--ghost" type="button" onClick={handlePrev} disabled={stepCount === 0 || currentStep === 0}>
-            Step Back
-          </button>
-          <button className="btn btn--ghost" type="button" onClick={handleNext} disabled={stepCount === 0 || currentStep >= stepCount - 1}>
-            Step Forward
-          </button>
-          <button className="btn btn--ghost" type="button" onClick={handleReset}>
-            Reset
-          </button>
-          <button className="btn btn--outline" type="button" onClick={handleDownload}>
-            Download .a
-          </button>
-        </div>
-      </header>
+      <Topbar
+        isRunning={isRunning}
+        stepCount={stepCount}
+        onRun={handleRun}
+        onTrace={handleTrace}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onReset={handleReset}
+        onDownload={handleDownload}
+        canStepBack={stepCount > 0 && currentStep > 0}
+        canStepForward={stepCount > 0 && currentStep < stepCount - 1}
+      />
 
       <div className="layout">
-        <div className="panel panel--editor">
-          <div className="panel__header">
-            <span>Assembly Source</span>
-            <span className="panel__meta">Steps: {stepCount || 0}</span>
-          </div>
-          <div className="panel__body">
-            {isTracing ? (
-              <div className="code-display">
-                {lines.map((line, index) => (
-                  <div
-                    key={`line-${index}`}
-                    className={index === activeLine ? 'code-line is-active' : 'code-line'}
-                  >
-                    <span className="code-line__number">{index + 1}</span>
-                    <span className="code-line__text">{line || ' '}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <textarea
-                className="editor__textarea"
-                value={source}
-                onChange={(event) => setSource(event.target.value)}
-                spellCheck="false"
-              />
-            )}
-          </div>
-        </div>
+        <EditorPanel
+          isTracing={isTracing}
+          lines={lines}
+          activeLine={activeLine}
+          source={source}
+          onSourceChange={setSource}
+        />
 
-        <div className="panel panel--output">
-          <div className="panel__tabs">
-            <button
-              type="button"
-              className={leftTab === 'output' ? 'tab is-active' : 'tab'}
-              onClick={() => setLeftTab('output')}
-            >
-              Output
-            </button>
-            <button
-              type="button"
-              className={leftTab === 'trace' ? 'tab is-active' : 'tab'}
-              onClick={() => setLeftTab('trace')}
-            >
-              Trace
-            </button>
-          </div>
-          <div className="panel__body">
-            {leftTab === 'output' ? (
-              <pre className="console">{output || 'No output yet...'}</pre>
-            ) : (
-              <div className="trace-list">
-                {traceSteps.length === 0 && (
-                  <div className="empty">Run Trace to see steps.</div>
-                )}
-                {traceSteps.map((step, index) => (
-                  <button
-                    key={`${step.lineNumber}-${index}`}
-                    type="button"
-                    className={index === currentStep ? 'trace-item is-active' : 'trace-item'}
-                    onClick={() => setCurrentStep(index)}
-                  >
-                    <span>L{step.lineNumber}</span>
-                    <span>{step.code}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <OutputPanel
+          activeTab={leftTab}
+          onTabChange={setLeftTab}
+          output={output}
+          traceSteps={traceSteps}
+          currentStep={currentStep}
+          onSelectStep={setCurrentStep}
+        />
 
-        <div className="panel panel--right">
-          <div className="panel__tabs">
-            <button
-              type="button"
-              className={rightTab === 'registers' ? 'tab is-active' : 'tab'}
-              onClick={() => setRightTab('registers')}
-            >
-              Registers
-            </button>
-            <button
-              type="button"
-              className={rightTab === 'stack' ? 'tab is-active' : 'tab'}
-              onClick={() => setRightTab('stack')}
-            >
-              Stack
-            </button>
-            <button
-              type="button"
-              className={rightTab === 'flags' ? 'tab is-active' : 'tab'}
-              onClick={() => setRightTab('flags')}
-            >
-              Flags
-            </button>
-            <button
-              type="button"
-              className={rightTab === 'memory' ? 'tab is-active' : 'tab'}
-              onClick={() => setRightTab('memory')}
-            >
-              Memory
-            </button>
-          </div>
-          <div className="panel__body">
-            {rightTab === 'registers' ? (
-              <div className="register-grid">
-                {registers.map((register) => (
-                  <div key={register.name} className="register">
-                    <span>{register.name.toUpperCase()}</span>
-                    <strong>{register.value}</strong>
-                  </div>
-                ))}
-              </div>
-            ) : rightTab === 'stack' ? (
-              <div className="stack-list">
-                {stack.map((item, index) => (
-                  <div key={item.addr} className="stack-item">
-                    <span>{item.addr}</span>
-                    <strong>{item.value}</strong>
-                    <span className="stack-index">#{index}</span>
-                  </div>
-                ))}
-                <div className="stack-event">{eventLabel}</div>
-              </div>
-            ) : rightTab === 'flags' ? (
-              <div className="flags-grid">
-                {Object.entries(flags).map(([key, value]) => (
-                  <div key={key} className="flag-cell">
-                    <span>{key}</span>
-                    <strong>{value}</strong>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="memory-grid">
-                <div className="memory-row memory-row--head">
-                  <span>Addr</span>
-                  <span>+0</span>
-                  <span>+1</span>
-                  <span>+2</span>
-                  <span>+3</span>
-                </div>
-                {memoryRows.map((row) => (
-                  <div key={row.addr} className="memory-row">
-                    <span>{row.addr}</span>
-                    {row.cells.map((cell, index) => (
-                      <span key={`${row.addr}-${index}`}>{cell}</span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <RightPanel
+          activeTab={rightTab}
+          onTabChange={setRightTab}
+          registers={registers}
+          stack={stack}
+          flags={flags}
+          memoryRows={memoryRows}
+          eventLabel={eventLabel}
+        />
       </div>
     </div>
   );
