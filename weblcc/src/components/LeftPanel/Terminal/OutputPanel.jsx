@@ -1,35 +1,37 @@
+import styles from './OutputPanel.module.css';
+
 export default function OutputPanel({ activeTab, onTabChange, output, traceSteps, currentStep, onSelectStep }) {
   return (
-    <div className="panel panel--output">
-      <div className="panel__tabs">
+    <div className={styles.panel}>
+      <div className={styles.tabs}>
         <button
           type="button"
-          className={activeTab === 'output' ? 'tab is-active' : 'tab'}
+          className={activeTab === 'output' ? styles.tabActive : styles.tab}
           onClick={() => onTabChange('output')}
         >
           Output
         </button>
         <button
           type="button"
-          className={activeTab === 'trace' ? 'tab is-active' : 'tab'}
+          className={activeTab === 'trace' ? styles.tabActive : styles.tab}
           onClick={() => onTabChange('trace')}
         >
           Trace
         </button>
       </div>
-      <div className="panel__body">
+      <div className={styles.body}>
         {activeTab === 'output' ? (
-          <pre className="console">{output || 'No output yet...'}</pre>
+          <pre className={styles.console}>{output || 'No output yet...'}</pre>
         ) : (
-          <div className="trace-list">
+          <div className={styles.traceList}>
             {traceSteps.length === 0 && (
-              <div className="empty">Run Trace to see steps.</div>
+              <div className={styles.empty}>Run Trace to see steps.</div>
             )}
             {traceSteps.map((step, index) => (
               <button
                 key={`${step.lineNumber}-${index}`}
                 type="button"
-                className={index === currentStep ? 'trace-item is-active' : 'trace-item'}
+                className={index === currentStep ? styles.traceItemActive : styles.traceItem}
                 onClick={() => onSelectStep(index)}
               >
                 <span>L{step.lineNumber}</span>

@@ -1,25 +1,27 @@
+import styles from './EditorPanel.module.css';
+
 export default function EditorPanel({ isTracing, lines, activeLine, source, onSourceChange }) {
   return (
-    <div className="panel panel--editor">
-      <div className="panel__header">
+    <div className={styles.panel}>
+      <div className={styles.header}>
         <span>Assembly Source</span>
       </div>
-      <div className="panel__body">
+      <div className={styles.body}>
         {isTracing ? (
-          <div className="code-display">
+          <div className={styles.codeDisplay}>
             {lines.map((line, index) => (
               <div
                 key={`line-${index}`}
-                className={index === activeLine ? 'code-line is-active' : 'code-line'}
+                className={index === activeLine ? styles.codeLineActive : styles.codeLine}
               >
-                <span className="code-line__number">{index + 1}</span>
-                <span className="code-line__text">{line || ' '}</span>
+                <span className={styles.codeLineNumber}>{index + 1}</span>
+                <span>{line || ' '}</span>
               </div>
             ))}
           </div>
         ) : (
           <textarea
-            className="editor__textarea"
+            className={styles.textarea}
             value={source}
             onChange={(event) => onSourceChange(event.target.value)}
             spellCheck="false"

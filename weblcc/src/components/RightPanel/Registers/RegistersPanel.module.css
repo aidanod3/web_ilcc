@@ -1,0 +1,17 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.register {
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--bg3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text2);
+}
