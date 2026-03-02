@@ -1,0 +1,16 @@
+.section {
+  padding: 12px;
+  border-bottom: 1px solid var(--border2);
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.sectionHeader {
+  font-size: 0.7rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin-bottom: 10px;
+}
