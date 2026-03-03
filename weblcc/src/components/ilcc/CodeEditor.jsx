@@ -1,24 +1,26 @@
 import { useEffect, useRef } from "react";
-// import { EditorView, basicSetup } from "codemirror";
-import styles from './codeEditor.module.css';
+import { EditorView, basicSetup } from "codemirror";
+// import styles from './codeEditor.module.css';
 
-export default function Editor() {
-  // const editorRef = useRef(null);
+export default function Editor({ source, setSource }) {
+  const editorRef = useRef(null);
 
-  // useEffect(() => {
-  //   const view = new EditorView({
-  //       doc: "start typing...",
-  //       extensions: [basicSetup],
-  //       parent: editorRef.current,
-  //   });
+  useEffect(() => {
+    const view = new EditorView({
+      doc: source,
+      extensions: [
+        basicSetup,
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            setSource(view.state.doc.toString());
+          }
+        })
+      ],
+      parent: editorRef.current,
+    });
 
-  //   return () => view.destroy(); // cleanup on unmount
-  // }, []);
+    return () => view.destroy();
+  }, []);
 
-  // return (
-  //       <div ref={editorRef} />
-  // );
-  return (
-    <p>hi</p>
-  )
+  return <div ref={editorRef} />;
 }

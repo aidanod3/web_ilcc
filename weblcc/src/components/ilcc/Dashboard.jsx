@@ -8,7 +8,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import Pane from '../shared/Pane';
 import PaneHeader from '../shared/PaneHeader';
 
-export default function Dashboard({output}) {
+export default function Dashboard({source, setSource, output}) {
     return (
         <div className={styles.dashboardContent}>
             <div className={styles.leftColumn}>
@@ -16,7 +16,10 @@ export default function Dashboard({output}) {
                     <Panel defaultSize={70} minSize={20}>
                         <Pane>
                             <PaneHeader>Code Editor</PaneHeader>
-                            <CodeEditor />
+                            <CodeEditor 
+                                source={source}
+                                setSource={setSource}
+                            />
                         </Pane>
                     </Panel>
                     <Separator className={styles.resizeHandle} />

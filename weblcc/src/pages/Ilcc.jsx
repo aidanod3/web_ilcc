@@ -33,7 +33,7 @@ function normalizeLines(source) {
 
 export default function Ilcc() {
   const [source, setSource] = useState(starterProgram); //source by default is starterProgram
-  const [leftTab, setLeftTab] = useState('output');
+  // const [leftTab, setLeftTab] = useState('output');
 
   const { isRunning, output, setOutput, handleRun } = useRunProgram();
 
@@ -83,6 +83,8 @@ export default function Ilcc() {
       <div className={styles.dashboard}>
         <Dashboard 
           output={output}
+          source={source}
+          setSource={setSource}
         />
       </div>
     </div>
