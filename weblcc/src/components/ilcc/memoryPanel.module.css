@@ -1,0 +1,108 @@
+.content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tableHeader {
+    display: flex;
+    gap: 8px;
+    padding: 6px 12px;
+    position: sticky;
+    top: 0;
+    background-color: var(--bg2);
+    border-bottom: 2px solid var(--bg3);
+}
+
+.colLabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text2);
+}
+
+.colLabel:first-child {
+    flex: 1;
+}
+
+.colLabel:not(:first-child) {
+    width: 74px;
+    text-align: left;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 12px;
+}
+
+.row:hover {
+    background-color: var(--bg3);
+}
+
+.address {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--text2);
+    flex: 1;
+}
+
+.value {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--text);
+    width: 74px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.pcMarker {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text2);
+    background-color: var(--bg3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.tagWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pcChecker {
+    color: #f2efe8;
+    border: 1px solid #0b0b0b;
+    background:
+      linear-gradient(45deg, #0e0e0e 25%, #1b1b1b 25%, #1b1b1b 50%, #0e0e0e 50%, #0e0e0e 75%, #1b1b1b 75%, #1b1b1b 100%);
+    background-size: 8px 8px;
+}
+
+.changed {
+    background: rgba(74, 222, 128, 0.25);
+    outline: 1px solid rgba(74, 222, 128, 0.55);
+}
+
+.studentMode .colLabel {
+    font-size: 12px;
+    color: #ffd37a;
+}
+
+.studentMode .address,
+.studentMode .value {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.studentMode .pcMarker {
+    font-size: 11px;
+}

@@ -1,0 +1,22 @@
+.grid {
+  display: grid;
+  gap: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--text2);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr repeat(4, 1fr);
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.rowHead {
+  composes: row;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.7rem;
+}

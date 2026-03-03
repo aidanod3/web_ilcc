@@ -1,0 +1,77 @@
+.content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.row:hover {
+    background-color: var(--bg3);
+}
+
+.spRow {
+    background-color: rgba(247, 168, 0, 0.12);
+}
+
+.address {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--text2);
+    flex: 1;
+}
+
+.value {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--text);
+}
+
+.spMarker {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text2);
+    background-color: var(--bg3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.eventLabel {
+    margin-top: 8px;
+    padding: 6px;
+    border-top: 1px solid var(--bg3);
+    font-size: 11px;
+    color: var(--text2);
+    word-break: break-word;
+}
+
+.changed {
+    background: rgba(74, 222, 128, 0.25);
+    outline: 1px solid rgba(74, 222, 128, 0.55);
+}
+
+.studentMode .address,
+.studentMode .value {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.studentMode .spMarker {
+    font-size: 11px;
+}
+
+.studentMode .eventLabel {
+    font-size: 13px;
+    color: #ffd37a;
+}
