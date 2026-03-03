@@ -1,6 +1,6 @@
 .panel {
   background: var(--bg1);
-  border: 1px solid var(--border2);
+  border: 2px solid var(--bg2);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -13,13 +13,13 @@
   display: flex;
   gap: 6px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border2);
+  border-bottom: 2px solid var(--bg2);
   flex-wrap: wrap;
 }
 
 .tab {
   background: transparent;
-  border: 1px solid var(--border2);
+  border: 2px solid var(--bg2);
   color: var(--text2);
   padding: 4px 8px;
   border-radius: 6px;
@@ -60,7 +60,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 6px 8px;
-  border: 1px solid var(--border2);
+  border: 2px solid var(--bg2);
   border-radius: 6px;
   background: var(--bg3);
   color: var(--text2);

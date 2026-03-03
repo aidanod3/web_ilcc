@@ -1,0 +1,79 @@
+.content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sectionTitle {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    padding: 0 6px;
+    margin-bottom: 4px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.row:hover {
+    /* background-color: var(--color-accent); */
+}
+
+.label {
+    font-size: 12px;
+    font-family: monospace;
+    /* color: red; */
+}
+
+.value {
+    font-size: 12px;
+    font-family: monospace;
+    /* color: red; */
+}
+
+.flagRow {
+    display: flex;
+    gap: 6px;
+    padding: 0 6px;
+}
+
+.flag {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 4px;
+    /* background-color: blue; */
+}
+
+.flagLabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    /* color: red; */
+}
+
+.flagValue {
+    font-size: 14px;
+    font-family: monospace;
+    /* color: red; */
+}

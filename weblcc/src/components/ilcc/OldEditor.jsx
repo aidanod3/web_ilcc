@@ -1,6 +1,6 @@
-import styles from './EditorPanel.module.css';
+import styles from './CodeEditor.module.css';
 
-export default function EditorPanel({ isTracing, lines, activeLine, source, onSourceChange }) {
+export default function CodeEditor({ isTracing, lines, activeLine, source, onSourceChange }) {
   return (
     <div className={styles.panel}>
       <div className={styles.header}>

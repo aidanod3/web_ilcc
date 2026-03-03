@@ -1,20 +1,18 @@
-.topbar {
+.header {
+  height: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 12px 16px;
-  background: var(--bg1);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
+  padding: 8px 8px 0;
 }
 
-.topbar h1 {
+.header h1 {
   font-size: 1.6rem;
   margin-bottom: 4px;
 }
 
-.topbar p {
+.header p {
   color: var(--text2);
   font-size: 0.9rem;
 }

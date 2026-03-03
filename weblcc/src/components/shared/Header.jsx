@@ -1,17 +1,16 @@
-import styles from './Topbar.module.css';
+import styles from './Header.module.css';
 
-export default function Topbar({ isRunning, stepCount, onRun, onTrace, onPrev, onNext, onReset, onDownload, canStepBack, canStepForward }) {
+export default function Header({ isRunning, onRun}) {
   return (
-    <header className={styles.topbar}>
+    <header className={styles.header}>
       <div>
-        <h1>LCC Compiler</h1>
-        <p>Assembly Dashboard</p>
+        <h1>&lt;lcc&gt;</h1>
       </div>
       <div className={styles.actions}>
         <button className={styles.btnGold} type="button" onClick={onRun} disabled={isRunning}>
           {isRunning ? 'Running...' : 'Run'}
         </button>
-        <button className={styles.btnGhost} type="button" onClick={onTrace}>
+        {/* <button className={styles.btnGhost} type="button" onClick={onTrace}>
           Trace
         </button>
         <button className={styles.btnGhost} type="button" onClick={onPrev} disabled={!canStepBack}>
@@ -19,15 +18,15 @@ export default function Topbar({ isRunning, stepCount, onRun, onTrace, onPrev, o
         </button>
         <button className={styles.btnGhost} type="button" onClick={onNext} disabled={!canStepForward}>
           Step Forward
-        </button>
-        <button className={styles.btnGhost} type="button" onClick={onReset}>
+        </button> */}
+        {/* <button className={styles.btnGhost} type="button" onClick={onReset}>
           Reset
         </button>
         <button className={styles.btnOutline} type="button" onClick={onDownload}>
           Download .a
-        </button>
+        </button> */}
       </div>
-      <div className={styles.meta}>Steps: {stepCount || 0}</div>
+      {/* <div className={styles.meta}>Steps: {stepCount || 0}</div> */}
     </header>
   );
 }

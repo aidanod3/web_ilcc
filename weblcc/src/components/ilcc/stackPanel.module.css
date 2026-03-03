@@ -1,0 +1,48 @@
+.content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.row:hover {
+    background-color: var(--color-accent);
+}
+
+.spRow {
+    background-color: var(--color-header);
+}
+
+.address {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--color-text-muted);
+    flex: 1;
+}
+
+.value {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--color-text);
+}
+
+.spMarker {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background-color: var(--color-accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}

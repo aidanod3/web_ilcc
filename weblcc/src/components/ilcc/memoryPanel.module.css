@@ -1,0 +1,67 @@
+.content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tableHeader {
+    display: flex;
+    gap: 8px;
+    padding: 6px 12px;
+    position: sticky;
+    top: 0;
+    background-color: var(--color-pane);
+    border-bottom: 2px solid var(--color-accent);
+}
+
+.colLabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+}
+
+.colLabel:first-child {
+    flex: 1;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 12px;
+}
+
+.row:hover {
+    background-color: var(--color-accent);
+}
+
+.pcRow {
+    background-color: var(--color-header);
+}
+
+.address {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--color-text-muted);
+    flex: 1;
+}
+
+.value {
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--color-text);
+}
+
+.pcMarker {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background-color: var(--color-accent);
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
