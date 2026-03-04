@@ -4,7 +4,10 @@ export default function StackPanel({ stack = [], previousStack = [], eventLabel 
     const previousStackMap = new Map(previousStack.map((item) => [item.addr, `${item.value}:${item.tags.join(',')}`]));
 
     return (
-        <div className={studentMode ? `${styles.content} ${styles.studentMode}` : styles.content}>
+        <div
+            className={studentMode ? `${styles.content} ${styles.studentMode}` : styles.content}
+            style={{ overflowY: 'auto', maxHeight: '250px' }} /* ADDED SCROLLBAR LOGIC HERE */
+        >
             {stack.map(({ addr, value, tags = [] }) => (
                 <div
                     key={addr}
