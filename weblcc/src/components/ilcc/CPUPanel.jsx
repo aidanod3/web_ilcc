@@ -1,6 +1,6 @@
 import styles from './cpuPanel.module.css';
 
-const conditionCodes = ['C', 'V', 'N', 'Z', 'P'];
+const conditionCodes = ['C', 'V', 'N', 'Z'];
 const pointers = ['FP', 'SP', 'LR', 'PC', 'IR'];
 
 export default function CPUPanel({

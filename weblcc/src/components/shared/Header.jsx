@@ -1,5 +1,6 @@
 import styles from './Header.module.css';
-import { Play, Loader, BugPlay, RotateCcw, Square, StepBack, StepForward} from 'lucide-react';
+import { Play, Loader, BugPlay, RotateCcw, Square, StepBack, StepForward, Sun, Moon} from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function Header({
   isRunning,
@@ -18,6 +19,7 @@ export default function Header({
 }) {
 
   const idle = !isRunning && !isTracing;
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className={styles.header}>
@@ -37,7 +39,6 @@ export default function Header({
             </option>
           ))}
         </select>
-
 
         {/* run button */}
         {!isTracing && (
@@ -71,6 +72,9 @@ export default function Header({
         )}
 
       </div>
+      <button onClick={toggleTheme}>
+        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
       <div className={styles.meta}>Trace Steps: {stepCount || 0}</div>
     </header>
   );

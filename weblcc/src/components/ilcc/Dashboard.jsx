@@ -31,7 +31,7 @@ export default function Dashboard({
         <div className={studentMode ? `${styles.dashboardContent} ${styles.studentMode}` : styles.dashboardContent}>
             <div className={styles.leftColumn}>
                 <Group orientation="vertical">
-                    <Panel defaultSize={70} minSize={20}>
+                    <Panel defaultSize={70} minSize={37}>
                         <Pane>
                             <PaneHeader>Code Editor</PaneHeader>
                             <CodeEditor 
@@ -42,7 +42,7 @@ export default function Dashboard({
                         </Pane>
                     </Panel>
                     <Separator className={styles.resizeHandle} />
-                    <Panel defaultSize={30} minSize={200}>
+                    <Panel defaultSize={30} minSize={37}>
                         <Pane>
                             <PaneHeader>Terminal</PaneHeader>
                             <Terminal 

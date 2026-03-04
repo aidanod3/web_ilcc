@@ -1,12 +1,9 @@
 import { useState } from 'react';
-
 import { DEFAULT_FLAGS, DEFAULT_REGISTERS, DEFAULT_STACK } from '../constants/cpuDefaults.js';
 import { useRunProgram } from '../hooks/useRunProgram.js';
 import { useTraceSession } from '../hooks/useTraceSession.js';
-
 import Header from '../components/shared/Header.jsx';
 import Dashboard from '../components/ilcc/Dashboard.jsx';
-
 import styles from './ilcc.module.css';
 
 const starterProgram = `; ex0301.a

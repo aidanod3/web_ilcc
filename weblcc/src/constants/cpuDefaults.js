@@ -9,7 +9,7 @@ export const DEFAULT_REGISTERS = [
   { name: 'r7', value: '0x0000' }
 ];
 
-export const DEFAULT_FLAGS = { N: 0, Z: 0, P: 0, C: 0, V: 0 };
+export const DEFAULT_FLAGS = { C: 0, V: 0, N: 0, Z: 0 };
 
 export const DEFAULT_STACK = [
   { addr: '0x4000', value: '0x0000' },
