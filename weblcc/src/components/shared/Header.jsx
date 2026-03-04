@@ -1,4 +1,5 @@
 import styles from './Header.module.css';
+import { Play, Loader, BugPlay, RotateCcw, Square, StepBack, StepForward} from 'lucide-react';
 
 export default function Header({
   isRunning,
@@ -15,6 +16,9 @@ export default function Header({
   selectedSample,
   onSampleChange
 }) {
+
+  const idle = !isRunning && !isTracing;
+
   return (
     <header className={styles.header}>
       <div>
@@ -33,21 +37,39 @@ export default function Header({
             </option>
           ))}
         </select>
-        <button className={styles.btnGold} type="button" onClick={onRun} disabled={isRunning}>
-          {isRunning ? 'Running...' : 'Run'}
+
+
+        {/* run button */}
+        {!isTracing && (
+          <button className={styles.btn} type="button" onClick={onRun} disabled={isRunning}>
+            {isRunning ? <Loader size={16} /> : <Play size={16} fill="currentColor" />}
+          </button>
+        )}
+
+        {/* step buttons */}
+        {isTracing && (
+          <>
+            <button className={styles.btn} type="button" onClick={onPrev} disabled={!canStepBack}>
+              <StepBack size={16} />
+            </button>
+            <button className={styles.btn} type="button" onClick={onNext} disabled={!canStepForward}>
+              <StepForward size={16} />
+            </button>
+          </>
+        )}
+
+        {/* debug button */}
+        <button className={isTracing ? styles.btnGreen : styles.btn} type="button" onClick={onTrace} disabled={isRunning}>
+          {isTracing ? <RotateCcw size={16} /> : <BugPlay size={16} />}
         </button>
-        <button className={styles.btnGhost} type="button" onClick={onTrace} disabled={isRunning}>
-          {isTracing ? 'Restart Trace' : 'Trace'}
-        </button>
-        <button className={styles.btnGhost} type="button" onClick={onPrev} disabled={!canStepBack}>
-          Step Back
-        </button>
-        <button className={styles.btnGhost} type="button" onClick={onNext} disabled={!canStepForward}>
-          Step Forward
-        </button>
-        <button className={styles.btnGhost} type="button" onClick={onReset} disabled={!isTracing}>
-          Reset
-        </button>
+
+        {/* stop buttons */}
+        {(isRunning || isTracing) && (
+          <button className={styles.btnRed} type="button" onClick={onReset}>
+            <Square size={16} />
+          </button>
+        )}
+
       </div>
       <div className={styles.meta}>Trace Steps: {stepCount || 0}</div>
     </header>

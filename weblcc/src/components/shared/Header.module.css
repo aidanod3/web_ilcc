@@ -29,37 +29,40 @@
 }
 
 .btn {
+  display: flex;
   border: 1px solid var(--border2);
   background: var(--bg2);
   color: var(--text);
-  padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
+  align-items: center;
+  justify-content: center;
+  height: 30.5px;
+  width: 30.5px;
+  padding: 0;
 }
 
 .btn:hover {
-  transform: translateY(-1px);
+  background: var(--bg3);
 }
 
-.btnGold {
+.btnGreen {
   composes: btn;
-  background: var(--gold);
-  color: #1a1204;
-  border-color: transparent;
+  background: rgb(60, 151, 60);
 }
 
-.btnGhost {
-  composes: btn;
-  background: transparent;
+.btnGreen:hover {
+  background: rgb(55, 143, 55);
 }
 
-.btnOutline {
+.btnRed {
   composes: btn;
-  border-color: var(--gold);
-  color: var(--gold);
-  background: transparent;
+  background: rgb(255, 56, 56)
+}
+
+.btnRed:hover {
+  background: rgb(228, 49, 49)
 }
 
 .sampleSelect {
