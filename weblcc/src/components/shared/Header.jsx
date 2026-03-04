@@ -72,7 +72,7 @@ export default function Header({
         )}
 
       </div>
-      <button onClick={toggleTheme}>
+      <button className={styles.btn} onClick={toggleTheme}>
         {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
       </button>
       <div className={styles.meta}>Trace Steps: {stepCount || 0}</div>
