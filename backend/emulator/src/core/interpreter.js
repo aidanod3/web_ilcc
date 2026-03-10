@@ -1013,6 +1013,8 @@ class Interpreter {
   }
 
   pauseForInput() {
+    // step() already incremented PC during fetch; rewind so the same input TRAP re-executes on resume.
+    this.pc = (this.pc - 1) & 0xFFFF;
     this.pauseReason = 'input';
     this.running = false;
   }

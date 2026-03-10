@@ -137,6 +137,12 @@ function buildStatus(interpreter) {
   };
 }
 
+function sanitizeOutputText(text) {
+  if (typeof text !== 'string') return '';
+  // Keep printable text + common whitespace; strip problematic control chars.
+  return text.replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');
+}
+
 function buildSnapshot(session, traceMeta) {
   const interpreter = session.interpreter;
   const regs = Array.from(interpreter.r);
@@ -146,12 +152,15 @@ function buildSnapshot(session, traceMeta) {
 
   const executedAddress = traceMeta ? (traceMeta.address & 0xffff) : pc;
   const entry = session.addressMap.get(executedAddress) || {};
+  const nextEntry = session.addressMap.get(pc) || {};
 
   const mnemonic = traceMeta?.mnemonic || entry.mnemonic || 'INIT';
 
   return {
     lineNumber: entry.lineNumber || 0,
     code: entry.sourceLine || '',
+    nextLineNumber: nextEntry.lineNumber || 0,
+    nextCode: nextEntry.sourceLine || '',
     pc: formatHex(executedAddress),
     nextPc: formatHex(pc),
     ir: formatHex(traceMeta?.ir ?? interpreter.ir ?? 0),
@@ -266,7 +275,7 @@ function tracePayload(session, snapshot, extra = {}) {
     sessionId: session.id,
     status: buildStatus(session.interpreter),
     snapshot,
-    output: session.interpreter.output,
+    output: sanitizeOutputText(session.interpreter.output),
     ...extra
   };
 }
@@ -317,7 +326,7 @@ app.post('/api/run', async (req, res) => {
       child.on('close', resolve);
     });
 
-    return res.json({ stdout, stderr, exitCode });
+    return res.json({ stdout: sanitizeOutputText(stdout), stderr: sanitizeOutputText(stderr), exitCode });
   } catch (error) {
     return res.status(500).json({ error: String(error) });
   } finally {
@@ -502,7 +511,7 @@ app.post('/api/trace', async (req, res) => {
       if (!session.interpreter.running) break;
     }
 
-    const output = session.interpreter.output;
+    const output = sanitizeOutputText(session.interpreter.output);
     const haltReason = session.interpreter.pauseReason || (session.interpreter.running ? 'unknown' : 'halt');
 
     await removeTraceSession(session.id);
