@@ -1,79 +1,115 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-const starterProgram = `; WebLCC starter program
-.start x3000
+import { DEFAULT_FLAGS, DEFAULT_REGISTERS, DEFAULT_STACK } from '../constants/cpuDefaults.js';
+import { useRunProgram } from '../hooks/useRunProgram.js';
+import { useTraceSession } from '../hooks/useTraceSession.js';
 
-    lea r0, msg
-    trap x22
-    halt
+import EditorPanel from '../components/LeftPanel/Editor/EditorPanel.jsx';
+import OutputPanel from '../components/LeftPanel/Terminal/OutputPanel.jsx';
+import Topbar from '../components/Header/Topbar.jsx';
+import FlagsPanel from '../components/RightPanel/Flags/FlagsPanel.jsx';
+import MemoryPanel from '../components/RightPanel/Memory/MemoryPanel.jsx';
+import RegistersPanel from '../components/RightPanel/Registers/RegistersPanel.jsx';
+import StackPanel from '../components/RightPanel/Stack/StackPanel.jsx';
 
-msg .stringz "Hello, Team Charlie!"
-.end
+import styles from './Main.module.css';
+
+const starterProgram = `; ex0301.a
+          ld r0, x
+          ld r1, y
+          add r0, r0, r1
+          dout r0
+          nl
+          halt
+x:        .word 2
+y:        .word 3
 `;
+
+function normalizeLines(source) {
+  return source.replace(/\r\n/g, '\n').split('\n');
+}
 
 export default function Main() {
   const [source, setSource] = useState(starterProgram);
-  const [isRunning, setIsRunning] = useState(false);
-  const [output, setOutput] = useState('');
+  const [leftTab, setLeftTab] = useState('output');
 
-  async function handleRun() {
-    setIsRunning(true);
-    setOutput('');
+  const { isRunning, output, setOutput, handleRun } = useRunProgram();
+  const {
+    traceSteps,
+    currentStep,
+    setCurrentStep,
+    isTracing,
+    stepCount,
+    activeStep,
+    handleTrace,
+    handlePrev,
+    handleNext,
+    handleReset,
+    canStepBack,
+    canStepForward
+  } = useTraceSession();
 
-    try {
-      const response = await fetch('/api/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source })
-      });
+  const lines = useMemo(() => normalizeLines(source), [source]);
+  const activeLine = activeStep ? activeStep.lineNumber - 1 : -1;
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to run program');
-      }
+  const registers = activeStep?.registers || DEFAULT_REGISTERS;
+  const flags = activeStep?.flags || DEFAULT_FLAGS;
+  const stack = activeStep?.stack || DEFAULT_STACK;
+  const eventLabel = activeStep?.action || 'No trace data loaded.';
 
-      const combined = [data.stdout, data.stderr].filter(Boolean).join('\n');
-      setOutput(combined || 'Program finished with no output.');
-    } catch (error) {
-      setOutput(String(error));
-    } finally {
-      setIsRunning(false);
-    }
+  function handleDownload() {
+    const blob = new Blob([source], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'program.a';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
-    <main className="page">
-      <header className="page__header">
-        <h1>LCC</h1>
-        <p>Run ILCC assembly against the emulator.</p>
-      </header>
+    <div className={styles.appShell}>
+      <Topbar
+        isRunning={isRunning}
+        stepCount={stepCount}
+        onRun={() => handleRun(source)}
+        onTrace={() => handleTrace(source, () => setLeftTab('trace'), setOutput)}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onReset={handleReset}
+        onDownload={handleDownload}
+        canStepBack={canStepBack}
+        canStepForward={canStepForward}
+      />
 
-      <section className="panel">
-        <label className="panel__label" htmlFor="source">
-          Code
-        </label>
-        <textarea
-          id="source"
-          className="panel__textarea"
-          value={source}
-          onChange={(event) => setSource(event.target.value)}
-          spellCheck="false"
-        />
-        <div className="panel__actions">
-          <button type="button" onClick={handleRun} disabled={isRunning}>
-            {isRunning ? 'Running...' : 'Run'}
-          </button>
+      <div className={styles.layout}>
+        <div className={styles.left}>
+          <EditorPanel
+            isTracing={isTracing}
+            lines={lines}
+            activeLine={activeLine}
+            source={source}
+            onSourceChange={setSource}
+          />
+          <OutputPanel
+            activeTab={leftTab}
+            onTabChange={setLeftTab}
+            output={output}
+            traceSteps={traceSteps}
+            currentStep={currentStep}
+            onSelectStep={setCurrentStep}
+          />
         </div>
-      </section>
 
-      <section className="panel">
-        <label className="panel__label" htmlFor="output">
-          Output
-        </label>
-        <pre id="output" className="panel__output">
-          {output}
-        </pre>
-      </section>
-    </main>
+        <div className={styles.panelRight}>
+          <RegistersPanel registers={registers} />
+          <FlagsPanel flags={flags} />
+          <StackPanel stack={stack} eventLabel={eventLabel} />
+          <MemoryPanel stack={stack} />
+        </div>
+      </div>
+    </div>
   );
 }
