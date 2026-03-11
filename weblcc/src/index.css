@@ -121,6 +121,51 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.panel.management-options {
+  width: min(960px, 100%);
+  min-height: 260px;
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.management-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2.5rem 2.25rem;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #dde1e7;
+  box-shadow: none;
+  color: #111827;
+  text-align: left;
+  font-size: 1.4rem;
+}
+
+.management-option__label {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.management-option__hint {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.management-option:hover {
+  transform: translateY(-2px);
+  background: #eef2ff;
+  box-shadow: 0 16px 40px -30px rgba(15, 23, 42, 0.7);
+}
+
+.management-option:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 18px -14px rgba(15, 23, 42, 0.7);
+}
+
 @media (max-width: 640px) {
   .panel {
     padding: 16px;
