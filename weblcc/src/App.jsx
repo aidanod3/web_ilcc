@@ -13,8 +13,6 @@ export default function App() {
         <Route path="/main" element={<Main />} />
         <Route path="/autograder" element={<Autograder />} />
         <Route path="/management" element={<Management />} />
-        <Route path="/newlab" element={<NewLab />} />
-        <Route path="/labgrade" element={<LabGrade />} />
       </Routes>
     </BrowserRouter>
   );
