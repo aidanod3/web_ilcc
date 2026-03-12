@@ -2,7 +2,7 @@ import { useState } from 'react';
 import npLogo from './Images/npLogo.png';
 
 export default function Management() {
-  const [activeName, setActiveName] = useState(1);
+  const [hoveredName, setHoveredName] = useState(null);
   const totalNames = 7;
 
   return (
@@ -45,13 +45,14 @@ export default function Management() {
                 <li key={n}>
                   <button
                     type="button"
-                    onClick={() => setActiveName(n)}
+                    onMouseEnter={() => setHoveredName(n)}
+                    onMouseLeave={() => setHoveredName(null)}
                     style={{
                       width: '100%',
                       textAlign: 'left',
                       padding: '0.5rem 0.75rem',
                       borderRadius: '8px',
-                      background: activeName === n ? '#bfdbfe' : '#f3f4f6',
+                      background: hoveredName === n ? '#dbeafe' : '#f3f4f6',
                       color: '#111827'
                     }}
                   >
@@ -76,7 +77,7 @@ export default function Management() {
             >
               <div
                 style={{
-                  width: `${(activeName / totalNames) * 100}%`,
+                  width: '0%',
                   height: '100%',
                   background: '#22c55e',
                   display: 'flex',
@@ -87,7 +88,7 @@ export default function Management() {
                   whiteSpace: 'nowrap'
                 }}
               >
-                {activeName}/{totalNames}
+                0/{totalNames}
               </div>
             </div>
           </div>
