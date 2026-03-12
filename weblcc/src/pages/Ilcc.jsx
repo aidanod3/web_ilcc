@@ -1321,6 +1321,24 @@ function reducer(state, action) {
         timelineState: { ...state.timelineState, educationMode: Boolean(action.value) }
       };
 
+    case 'STOP_DEBUGGER_VIEW':
+      return {
+        ...state,
+        currentStep: 0,
+        previewOffset: 0,
+        transition: { from: state.currentStep, to: 0, direction: 'backward', ts: Date.now() },
+        timelineState: { ...state.timelineState, playing: false },
+        terminalState: {
+          ...state.terminalState,
+          mode: 'command',
+          command: ''
+        },
+        traceStatus: {
+          ...state.traceStatus,
+          waitingForInput: false
+        }
+      };
+
     case 'TOGGLE_THEME':
       return { ...state, theme: state.theme === 'dark' ? 'light' : 'dark' };
 
@@ -1445,25 +1463,20 @@ function renderHighlightedLine(line, theme, keyPrefix) {
 
 function Ilcc() {
   const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
-  const [bpDraft, setBpDraft] = useState('');
   const [isBackendBusy, setIsBackendBusy] = useState(false);
-  const [viewMode, setViewMode] = useState('code');
+  const [editorTerminalSplit, setEditorTerminalSplit] = useState(62);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(300);
+  const [rightPanelWidth, setRightPanelWidth] = useState(420);
   const [collapsed, setCollapsed] = useState({
     stack: false,
     editor: false,
-    timeline: false,
     terminal: false,
     registers: false,
     flags: false,
-    memory: false,
-    breakpoints: false
+    memory: false
   });
   const lineRefs = useRef([]);
-  const timelineTrackRef = useRef(null);
   const stateRef = useRef(state);
-  const timelineResumeAfterInputRef = useRef(false);
-  const [playheadProgress, setPlayheadProgress] = useState(0);
-  const [timelineVisualLine, setTimelineVisualLine] = useState(0);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -1472,7 +1485,57 @@ function Ilcc() {
   const current = state.snapshots[state.currentStep];
   const prev = state.currentStep > 0 ? state.snapshots[state.currentStep - 1] : null;
   const next = state.currentStep < state.snapshots.length - 1 ? state.snapshots[state.currentStep + 1] : null;
-  const focusLineIndex = state.timelineState.playing ? timelineVisualLine : (current?.lineIndex ?? 0);
+  const debuggerActive = state.currentStep > 0 || state.terminalState.mode === 'awaiting_input';
+  const focusLineIndex = current?.lineIndex ?? 0;
+  const beginEditorTerminalDrag = (e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startSplit = editorTerminalSplit;
+    const dragHeight = Math.max(420, window.innerHeight - 140);
+    const onMove = (evt) => {
+      const dy = startY - evt.clientY;
+      const deltaPct = (dy / dragHeight) * 100;
+      setEditorTerminalSplit(clamp(startSplit + deltaPct, 20, 80));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+  const beginLeftPanelDrag = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startLeft = leftPanelWidth;
+    const onMove = (evt) => {
+      const dx = evt.clientX - startX;
+      const maxLeft = Math.max(260, window.innerWidth - rightPanelWidth - 520);
+      setLeftPanelWidth(clamp(startLeft + dx, 220, maxLeft));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+  const beginRightPanelDrag = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startRight = rightPanelWidth;
+    const onMove = (evt) => {
+      const dx = evt.clientX - startX;
+      const maxRight = Math.max(320, window.innerWidth - leftPanelWidth - 520);
+      setRightPanelWidth(clamp(startRight - dx, 300, maxRight));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
   const preview = useMemo(() => computePreview(state), [state.previewOffset, state.currentStep, state.snapshots, state.ctx]);
 
   useEffect(() => {
@@ -1483,46 +1546,6 @@ function Ilcc() {
   }, [focusLineIndex]);
 
   useEffect(() => {
-    if (!state.timelineState.playing) {
-      setTimelineVisualLine(current?.lineIndex ?? 0);
-    }
-  }, [state.timelineState.playing, current?.lineIndex]);
-
-  useEffect(() => {
-    if (!state.timelineState.playing) return;
-    const ms = state.timelineState.speed * 1000;
-    let raf = null;
-    const start = performance.now();
-
-    const tick = (now) => {
-      const p = clamp((now - start) / ms, 0, 1);
-      setPlayheadProgress(p);
-      if (p < 1 && state.timelineState.playing) {
-        raf = requestAnimationFrame(tick);
-      }
-    };
-    raf = requestAnimationFrame(tick);
-
-    const timer = setTimeout(() => {
-      setPlayheadProgress(0);
-      const lastLine = Math.max(0, state.ctx.lines.length - 1);
-      setTimelineVisualLine((prevLine) => {
-        if (prevLine >= lastLine) {
-          if (state.timelineState.loop) return 0;
-          dispatch({ type: 'TIMELINE_PAUSE' });
-          return prevLine;
-        }
-        return prevLine + 1;
-      });
-    }, ms);
-
-    return () => {
-      clearTimeout(timer);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [state.timelineState.playing, state.timelineState.speed, timelineVisualLine, state.ctx.lines.length, state.timelineState.loop]);
-
-  useEffect(() => {
     const onKey = (e) => {
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -1530,10 +1553,8 @@ function Ilcc() {
       if (e.code === 'Space') {
         e.preventDefault();
         if (state.timelineState.playing) dispatch({ type: 'TIMELINE_PAUSE' });
-        else startTimelinePlayback();
       } else if (e.key === 'Escape') {
         dispatch({ type: 'TIMELINE_STOP' });
-        setTimelineVisualLine(0);
         dispatch({ type: 'CLEAR_PREVIEW' });
       } else if (e.key === 'ArrowLeft' && e.shiftKey) {
         for (let i = 0; i < 5; i += 1) dispatch({ type: 'STEP_BACKWARD' });
@@ -1550,14 +1571,6 @@ function Ilcc() {
   }, [state.timelineState.playing, isBackendBusy]);
 
   const canForward = state.terminalState.mode !== 'awaiting_input' && !isBackendBusy;
-
-  const startTimelinePlayback = () => {
-    dispatch({ type: 'CLEAR_TERMINAL' });
-    timelineResumeAfterInputRef.current = false;
-    const maxLine = Math.max(0, stateRef.current.ctx.lines.length - 1);
-    setTimelineVisualLine((prev) => (prev >= maxLine ? 0 : prev));
-    dispatch({ type: 'TIMELINE_PLAY' });
-  };
 
   const addOutputEntries = (previousOutput, nextOutput) => {
     if (!nextOutput || nextOutput === previousOutput) return [];
@@ -1650,10 +1663,6 @@ function Ilcc() {
       const terminalEntries = [...outputEntries];
 
       if (stepped.status?.waitingForInput) {
-        if (sourceTag === 'timeline') {
-          timelineResumeAfterInputRef.current = true;
-          dispatch({ type: 'TIMELINE_PAUSE' });
-        }
         terminalEntries.push({ kind: 'warn', text: '[INPUT REQUIRED] Enter value and press Enter:' });
       }
 
@@ -1726,15 +1735,8 @@ function Ilcc() {
           finalOutput = continued.output || '';
         }
 
-        if (finalStatus?.waitingForInput) {
-          timelineResumeAfterInputRef.current = true;
-          dispatch({ type: 'TIMELINE_PAUSE' });
-        } else if (finalStatus?.halted) {
+        if (finalStatus?.halted) {
           dispatch({ type: 'SET_AUTO_CONTINUE_AFTER_INPUT', value: false });
-          timelineResumeAfterInputRef.current = false;
-        } else if (timelineResumeAfterInputRef.current) {
-          timelineResumeAfterInputRef.current = false;
-          dispatch({ type: 'TIMELINE_PLAY' });
         }
       } catch (error) {
         dispatch({ type: 'APPEND_TERMINAL_HISTORY', entries: [{ kind: 'warn', text: String(error) }] });
@@ -1834,15 +1836,6 @@ function Ilcc() {
     else dispatch({ type: 'SET_BREAKPOINT', line: line + 1 });
   };
 
-  const handleTimelineTrackClick = (clientX) => {
-    const el = timelineTrackRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const p = clamp((clientX - rect.left) / rect.width, 0, 1);
-    const idx = Math.round(p * Math.max(0, state.ctx.lines.length - 1));
-    setTimelineVisualLine(idx);
-  };
-
   return (
     <div
       style={{
@@ -1866,6 +1859,12 @@ function Ilcc() {
         .asm-btn:hover { border-color: ${t.accent}; }
         .asm-btn-gold { background: linear-gradient(135deg, #f7a800, #ffbf33); color:#1a1204; border-color: transparent; }
         .asm-panel { background: ${t.panel}; border: 1px solid ${t.border}; border-radius: 10px; overflow: hidden; }
+        .asm-splitter { position: relative; cursor: ns-resize; user-select: none; }
+        .asm-splitter-line { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: transparent; transform: translateY(-50%); transition: background 120ms ease, height 120ms ease; }
+        .asm-splitter:hover .asm-splitter-line { background: ${t.accent}; height: 2px; }
+        .asm-vsplitter { position: relative; cursor: ew-resize; user-select: none; }
+        .asm-vsplitter-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: transparent; transform: translateX(-50%); transition: background 120ms ease, width 120ms ease; }
+        .asm-vsplitter:hover .asm-vsplitter-line { background: ${t.accent}; width: 2px; }
         .diff-flash { animation: fadeDiff 2.5s ease-out forwards; }
         .line-flash-forward { animation: flashForward 400ms ease-out; }
         .line-flash-backward { animation: flashBackward 400ms ease-out; }
@@ -1884,13 +1883,12 @@ function Ilcc() {
         onStepForward={() => handleStepForward('manual')}
         backendBusy={isBackendBusy}
         canForward={canForward}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
+        debuggerActive={debuggerActive}
       />
 
-      {viewMode === 'code' ? (
+      {!debuggerActive ? (
         <div style={{ flex: 1, minHeight: 0, display: 'flex', justifyContent: 'center', alignItems: 'stretch', padding: 14 }}>
-          <div style={{ width: 'min(1300px, 100%)', minHeight: 0, display: 'grid', gridTemplateRows: `${collapsed.editor ? '42px' : '1fr'} ${collapsed.terminal ? '42px' : '320px'}`, gap: 12 }}>
+          <div style={{ width: 'min(1300px, 100%)', minHeight: 0, display: 'grid', gridTemplateRows: `${collapsed.editor ? '42px' : `minmax(220px, ${editorTerminalSplit}fr)`} ${collapsed.editor || collapsed.terminal ? '0px' : '8px'} ${collapsed.terminal ? '42px' : `minmax(140px, ${100 - editorTerminalSplit}fr)`}`, gap: 12 }}>
             <EditorPane
               state={state}
               dispatch={dispatch}
@@ -1901,11 +1899,19 @@ function Ilcc() {
               activeDiff={activeDiff}
               preview={preview}
               onRunProgram={onRunProgram}
+              onStopDebug={() => dispatch({ type: 'STOP_DEBUGGER_VIEW' })}
               backendBusy={isBackendBusy}
               showFocusZoom={false}
               collapsed={collapsed.editor}
               onToggle={() => setCollapsed((c) => ({ ...c, editor: !c.editor }))}
             />
+            {collapsed.editor || collapsed.terminal ? (
+              <div />
+            ) : (
+              <div className="asm-splitter" onMouseDown={beginEditorTerminalDrag}>
+                <div className="asm-splitter-line" />
+              </div>
+            )}
             <Terminal
               state={state}
               dispatch={dispatch}
@@ -1916,10 +1922,13 @@ function Ilcc() {
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '300px 1.45fr 1fr', gap: 10, padding: 10 }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `${leftPanelWidth}px 8px minmax(420px, 1fr) 8px ${rightPanelWidth}px`, gap: 8, padding: 10 }}>
           <StackPanel state={state} current={current} theme={t} collapsed={collapsed.stack} onToggle={() => setCollapsed((c) => ({ ...c, stack: !c.stack }))} />
+          <div className="asm-vsplitter" onMouseDown={beginLeftPanelDrag}>
+            <div className="asm-vsplitter-line" />
+          </div>
 
-          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: `${collapsed.editor ? '42px' : '1fr'} ${collapsed.timeline ? '42px' : 'auto'} ${collapsed.terminal ? '42px' : '240px'}`, gap: 10 }}>
+          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: `${collapsed.editor ? '42px' : `minmax(220px, ${editorTerminalSplit}fr)`} ${collapsed.editor || collapsed.terminal ? '0px' : '8px'} ${collapsed.terminal ? '42px' : `minmax(140px, ${100 - editorTerminalSplit}fr)`}`, gap: 10 }}>
             <EditorPane
               state={state}
               dispatch={dispatch}
@@ -1930,28 +1939,19 @@ function Ilcc() {
               activeDiff={activeDiff}
               preview={preview}
               onRunProgram={onRunProgram}
+              onStopDebug={() => dispatch({ type: 'STOP_DEBUGGER_VIEW' })}
               backendBusy={isBackendBusy}
               showFocusZoom
               collapsed={collapsed.editor}
               onToggle={() => setCollapsed((c) => ({ ...c, editor: !c.editor }))}
             />
-
-            <TimelinePanel
-              state={state}
-              dispatch={dispatch}
-              current={current}
-              timelineVisualLine={timelineVisualLine}
-              trackRef={timelineTrackRef}
-              playheadProgress={playheadProgress}
-              onTrackClick={handleTimelineTrackClick}
-              onSetTimelineLine={setTimelineVisualLine}
-              onTogglePlay={() => {
-                if (state.timelineState.playing) dispatch({ type: 'TIMELINE_PAUSE' });
-                else startTimelinePlayback();
-              }}
-              collapsed={collapsed.timeline}
-              onToggle={() => setCollapsed((c) => ({ ...c, timeline: !c.timeline }))}
-            />
+            {collapsed.editor || collapsed.terminal ? (
+              <div />
+            ) : (
+              <div className="asm-splitter" onMouseDown={beginEditorTerminalDrag}>
+                <div className="asm-splitter-line" />
+              </div>
+            )}
 
             <Terminal
               state={state}
@@ -1961,6 +1961,9 @@ function Ilcc() {
               onToggle={() => setCollapsed((c) => ({ ...c, terminal: !c.terminal }))}
             />
           </div>
+          <div className="asm-vsplitter" onMouseDown={beginRightPanelDrag}>
+            <div className="asm-vsplitter-line" />
+          </div>
 
           <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(170px, .9fr) minmax(260px, 1.8fr) minmax(180px, 1fr)', gap: 10 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, minHeight: 0 }}>
@@ -1969,7 +1972,6 @@ function Ilcc() {
             </div>
 
             <MemoryPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.memory} onToggle={() => setCollapsed((c) => ({ ...c, memory: !c.memory }))} />
-            <BreakpointsPanel state={state} dispatch={dispatch} bpDraft={bpDraft} setBpDraft={setBpDraft} collapsed={collapsed.breakpoints} onToggle={() => setCollapsed((c) => ({ ...c, breakpoints: !c.breakpoints }))} />
           </div>
         </div>
       )}
@@ -1977,7 +1979,7 @@ function Ilcc() {
   );
 }
 
-function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepForward, backendBusy, canForward, viewMode, setViewMode }) {
+function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepForward, backendBusy, canForward, debuggerActive }) {
   const fileRef = useRef(null);
   const [sampleChoice, setSampleChoice] = useState('');
   const [jumpCount, setJumpCount] = useState(5);
@@ -1986,22 +1988,6 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
     <div style={{ height: 48, borderBottom: `1px solid ${THEME[state.theme].border}`, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '0 10px', columnGap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <strong style={{ letterSpacing: '.04em' }}>CPS340 | LCC</strong>
-        <div style={{ display: 'inline-flex', border: `1px solid ${THEME[state.theme].border}`, borderRadius: 7, overflow: 'hidden' }}>
-          <button
-            className="asm-btn"
-            onClick={() => setViewMode('code')}
-            style={{ border: 'none', borderRight: `1px solid ${THEME[state.theme].border}`, borderRadius: 0, background: viewMode === 'code' ? THEME[state.theme].accent : THEME[state.theme].panel2, color: viewMode === 'code' ? '#1a1204' : THEME[state.theme].text }}
-          >
-            Code Editor
-          </button>
-          <button
-            className="asm-btn"
-            onClick={() => setViewMode('tracing')}
-            style={{ border: 'none', borderRadius: 0, background: viewMode === 'tracing' ? THEME[state.theme].accent : THEME[state.theme].panel2, color: viewMode === 'tracing' ? '#1a1204' : THEME[state.theme].text }}
-          >
-            Tracing Mode
-          </button>
-        </div>
         <select
           value={sampleChoice}
           onChange={(e) => {
@@ -2022,7 +2008,7 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        {viewMode === 'tracing' ? (
+        {debuggerActive ? (
           <div
             style={{
               display: 'inline-flex',
@@ -2071,6 +2057,12 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
             >
               +N
             </button>
+            <button
+              className="asm-btn"
+              onClick={() => dispatch({ type: 'TIMELINE_SET_EDUCATION_MODE', value: !state.timelineState.educationMode })}
+            >
+              {state.timelineState.educationMode ? 'Education: ON' : 'Education: OFF'}
+            </button>
           </div>
         ) : null}
       </div>
@@ -2100,7 +2092,7 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
   );
 }
 
-function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLineBreakpoint, onRunProgram, backendBusy, showFocusZoom, collapsed, onToggle }) {
+function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLineBreakpoint, onRunProgram, onStopDebug, backendBusy, showFocusZoom, collapsed, onToggle }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFileMenu, setShowFileMenu] = useState(false);
   const [isEditingFileName, setIsEditingFileName] = useState(false);
@@ -2147,6 +2139,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
         right={(
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="asm-btn asm-btn-gold" onClick={onRunProgram} disabled={backendBusy}>Run</button>
+            <button className="asm-btn" onClick={onStopDebug} disabled={backendBusy}>Stop</button>
             <button className="asm-btn" onClick={() => dispatch({ type: 'ADD_TAB' })}>+</button>
             <button className="asm-btn" onClick={async () => {
               if (!wrapperRef.current) return;
@@ -2390,7 +2383,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
             </div>
           </div>
 
-          {showFocusZoom && state.timelineState.playing ? (
+          {showFocusZoom ? (
             <div
               style={{
                 borderTop: `1px solid ${THEME[state.theme].border}`,
