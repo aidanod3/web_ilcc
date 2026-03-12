@@ -11,6 +11,7 @@ export default function NewLab() {
     { title: '', expectedOutputFile: null, fileType: '' },
     { title: '', expectedOutputFile: null, fileType: '' }
   ]);
+  const [createdLabs, setCreatedLabs] = useState([]);
 
   const labFilled =
     labTitle.trim() !== '' &&
@@ -243,9 +244,33 @@ export default function NewLab() {
           type="button"
           disabled={!canFinish}
           onClick={() => {
-            if (canFinish) {
-              // TODO: submit lab (e.g. navigate or API call)
-            }
+            if (!canFinish) return;
+
+            const lab = {
+              title: labTitle.trim(),
+              chapter: Number(labChapter),
+              description: description.trim(),
+              questions: questions.map((q, index) => ({
+                index: index + 1,
+                title: q.title.trim(),
+                fileType: q.fileType.trim(),
+                expectedOutputFile: q.expectedOutputFile
+              }))
+            };
+
+            setCreatedLabs((prev) => [...prev, lab]);
+            // For now, just log so you can inspect the object.
+            console.log('Created lab:', lab);
+
+            // Reset form back to initial state.
+            setLabTitle('');
+            setLabChapter('');
+            setDescription('');
+            setQuestions([
+              { title: '', expectedOutputFile: null, fileType: '' },
+              { title: '', expectedOutputFile: null, fileType: '' },
+              { title: '', expectedOutputFile: null, fileType: '' }
+            ]);
           }}
           style={{
             alignSelf: 'center',
