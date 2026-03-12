@@ -1,48 +1,83 @@
-import { useNavigate } from 'react-router-dom';
 import npLogo from './Images/npLogo.png';
 
 export default function Management() {
-  const navigate = useNavigate();
-
   return (
     <main className="page">
-      <header className="page__header">
-        <div
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '100%',
+          display: 'grid',
+          gridTemplateColumns: '0.7fr 1.8fr 0.7fr',
+          gap: '2rem',
+          alignItems: 'stretch'
+        }}
+      >
+        {/* Left tall panel */}
+        <section
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.75rem'
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '1.25rem',
+            boxShadow: '0 18px 40px -30px rgba(15, 23, 42, 0.6)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            minHeight: '460px'
           }}
         >
-          <img
-            src={npLogo}
-            alt="TA Management logo"
-            style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '10px' }}
-          />
-          <h1>TA Management</h1>
-        </div>
-        <p>Select an option below.</p>
-      </header>
+          <h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}></h2>
+          <p style={{ margin: 0 }}></p>
+        </section>
 
-      <section className="panel management-options">
-        <button
-          type="button"
-          className="management-option"
-          onClick={() => navigate('/newlab')}
+        {/* Center 2x2 grid */}
+        <section
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gridAutoRows: 'minmax(180px, 1fr)',
+            gap: '1.5rem'
+          }}
         >
-          <span className="management-option__label">New Lab</span>
-          <span className="management-option__hint">Create and configure a new lab.</span>
-        </button>
+          {['', '', '', ''].map((title) => (
+            <div
+              key={title}
+              style={{
+                background: '#ffffff',
+                borderRadius: '16px',
+                padding: '1.1rem',
+                boxShadow: '0 18px 40px -30px rgba(15, 23, 42, 0.6)',
+                display: 'flex',
+                flexDirection: 'column',
+            justifyContent: 'center',
+            minHeight: '180px'
+              }}
+            >
+              <h3 style={{ margin: 0, marginBottom: '0.4rem' }}>{title}</h3>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#4b5563' }}>
+                Placeholder content for {title.toLowerCase()}.
+              </p>
+            </div>
+          ))}
+        </section>
 
-        <button
-          type="button"
-          className="management-option"
-          onClick={() => navigate('/labgrade')}
+        {/* Right tall panel */}
+        <section
+          style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '1.25rem',
+            boxShadow: '0 18px 40px -30px rgba(15, 23, 42, 0.6)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            minHeight: '460px'
+          }}
         >
-          <span className="management-option__label">Grade Lab</span>
-          <span className="management-option__hint">Review and grade student submissions.</span>
-        </button>
-      </section>
+          <h2 style={{ marginTop: 0, marginBottom: '0.5rem' }}></h2>
+          <p style={{ margin: 0 }}></p>
+        </section>
+      </div>
     </main>
   );
 }
