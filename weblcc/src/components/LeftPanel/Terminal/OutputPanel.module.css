@@ -1,0 +1,80 @@
+.panel {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  animation: fadeUp 0.3s ease;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border2);
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+
+.tabActive {
+  composes: tab;
+  color: var(--gold);
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+
+.body {
+  flex: 1;
+  overflow: auto;
+}
+
+.console {
+  padding: 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.traceList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+
+.traceItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.traceItemActive {
+  composes: traceItem;
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.empty {
+  color: var(--text3);
+  font-size: 0.85rem;
+}

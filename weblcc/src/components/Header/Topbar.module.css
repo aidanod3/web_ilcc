@@ -1,0 +1,65 @@
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+}
+
+.topbar h1 {
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.topbar p {
+  color: var(--text2);
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta {
+  color: var(--text2);
+  font-size: 0.85rem;
+}
+
+.btn {
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btnGold {
+  composes: btn;
+  background: var(--gold);
+  color: #1a1204;
+  border-color: transparent;
+}
+
+.btnGhost {
+  composes: btn;
+  background: transparent;
+}
+
+.btnOutline {
+  composes: btn;
+  border-color: var(--gold);
+  color: var(--gold);
+  background: transparent;
+}

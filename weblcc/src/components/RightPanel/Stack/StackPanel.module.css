@@ -1,0 +1,27 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item {
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--bg3);
+  display: flex;
+  justify-content: space-between;
+  color: var(--text2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+}
+
+.index {
+  color: var(--text3);
+}
+
+.event {
+  margin-top: 6px;
+  color: var(--text3);
+  font-size: 0.8rem;
+}
