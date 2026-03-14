@@ -24,39 +24,45 @@ def clean_code(code: str) -> str:
     code = code.strip()
     return code
 
-# TODO: this only works for .a files at the moment.
-# define the submission model
+# --- MODELS ---
+
 class CodeSubmission(BaseModel):
     code: str
     expectedOutput: str
 
-# define response model
 class CodeResult(BaseModel):
     success: bool
     actualOutput: str
     matched: bool
     error: str | None = None
 
-# create endpoint
+class GradeSubmission(BaseModel):
+    studentCode: str
+    solutionCode: str
+
+class GradeResult(BaseModel):
+    isCorrect: bool
+    similarityScore: float
+    message: str
+
+# --- ENDPOINTS ---
+
 @app.post("/execute", response_model=CodeResult)
 async def execute_assembly(submission: CodeSubmission):
     try:
-        # clean the code
         cleaned_code = clean_code(submission.code)
 
-        # write assembly code to a temp file called code.a
-        with open("/tmp/code.a", "w") as f:
+        # write assembly code to a local temp file (Windows friendly)
+        with open("code.a", "w") as f:
             f.write(cleaned_code)
         
-        # run LCC emulator with Node.js
         result = subprocess.run(
-            ["node", INTERPRETER_PATH, "/tmp/code.a"],
+            ["node", INTERPRETER_PATH, "code.a"],
             capture_output=True,
             timeout=5,
             text=True
         )
         
-        # check if emulator had errors
         if result.returncode != 0:
             return CodeResult(
                 success=False,
@@ -65,13 +71,9 @@ async def execute_assembly(submission: CodeSubmission):
                 error=result.stderr
             )
         
-        # get generated output
         actual = result.stdout.strip()
-
-        # get expected output from submission
         expected = submission.expectedOutput.strip()
         
-        # return positive result
         return CodeResult(
             success=True,
             actualOutput=actual,
@@ -82,3 +84,28 @@ async def execute_assembly(submission: CodeSubmission):
         raise HTTPException(status_code=400, detail="Code execution timeout")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/grade", response_model=GradeResult)
+async def grade_code(submission: GradeSubmission):
+    try:
+        # Clean both snippets
+        student_clean = clean_code(submission.studentCode)
+        solution_clean = clean_code(submission.solutionCode)
+
+        # Compare
+        is_match = (student_clean == solution_clean)
+        score = 1.0 if is_match else 0.0
+
+        return GradeResult(
+            isCorrect=is_match,
+            similarityScore=score,
+            message="Codes match perfectly!" if is_match else "Codes do not match."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- STARTUP LOGIC ---
+if __name__ == "__main__":
+    import uvicorn
+    print("Starting Autograder Server...")
+    uvicorn.run(app, host="127.0.0.1", port=8000)
