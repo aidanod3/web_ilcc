@@ -5,6 +5,7 @@ export default function Management() {
   const navigate = useNavigate();
   const [hoverAutograder, setHoverAutograder] = useState(false);
   const [hoverCreateLabs, setHoverCreateLabs] = useState(false);
+  const [hoverSubmissions, setHoverSubmissions] = useState(false);
 
   return (
     <main
@@ -55,7 +56,7 @@ export default function Management() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/newlab')}
+            onClick={() => navigate('/lablist')}
             onMouseEnter={() => setHoverCreateLabs(true)}
             onMouseLeave={() => setHoverCreateLabs(false)}
             style={{
@@ -70,7 +71,26 @@ export default function Management() {
               minWidth: '220px'
             }}
           >
-            Create Labs
+            Edit and Create Labs
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/submissions')}
+            onMouseEnter={() => setHoverSubmissions(true)}
+            onMouseLeave={() => setHoverSubmissions(false)}
+            style={{
+              padding: '1.25rem 2.5rem',
+              fontSize: '1.15rem',
+              fontWeight: 600,
+              borderRadius: '12px',
+              border: 'none',
+              background: hoverSubmissions ? '#7c3aed' : '#8b5cf6',
+              color: 'white',
+              cursor: 'pointer',
+              minWidth: '220px'
+            }}
+          >
+            Submissions
           </button>
         </div>
       </div>
