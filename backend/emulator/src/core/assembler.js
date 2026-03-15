@@ -17,9 +17,10 @@ const { generateBSTLSTContent } = require('../utils/genStats.js');
 // const nameHandler = require('../utils/name.js');
 
 const isTestMode = (typeof global.it === 'function'); // crude check for Jest
+const shouldThrow = () => isTestMode || process.env.LCCJS_THROW_ON_ERROR === '1';
 
 function fatalExit(message, code = 1) {
-  if (isTestMode) {
+  if (shouldThrow()) {
     throw new Error(message);
   } else {
     process.exit(code);
@@ -2132,4 +2133,3 @@ if (require.main === module) {
   const assembler = new Assembler();
   assembler.main();
 }
-

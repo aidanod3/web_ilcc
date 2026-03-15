@@ -13,9 +13,10 @@ const newline = process.platform === 'win32' ? '\r\n' : '\n';
 const MAX_MEMORY = 65536; // 2^16
 
 const isTestMode = (typeof global.it === 'function'); // crude check for Jest
+const shouldThrow = () => isTestMode || process.env.LCCJS_THROW_ON_ERROR === '1';
 
 function fatalExit(message, code = 1) {
-  if (isTestMode) {
+  if (shouldThrow()) {
     throw new Error(message);
   } else {
     process.exit(code);
@@ -47,6 +48,8 @@ class Interpreter {
     this.instructionsCap = 500000;     // Limit the number of instructions to prevent infinite loops
     this.debugMode = false;            // Debug mode flag
     this.hasJumped = false;            // Flag to track jump/branch instruction executions 
+    this.traceHook = null;             // Optional trace hook for step snapshots
+    this.pauseReason = null;           // Reason execution paused (e.g., input, halt)
   }
 
   main(args) {
@@ -336,6 +339,7 @@ class Interpreter {
 
   run() {
     this.spInitial = this.r[6]; // Assuming r6 is the stack pointer
+    this.pauseReason = null;
 
     while (this.running) {
       this.step();
@@ -345,6 +349,7 @@ class Interpreter {
   step() {
     // Fetch instruction
     this.ir = this.mem[this.pc++];
+    const instrAddress = (this.pc - 1) & 0xFFFF;
     // Decode instruction
     this.opcode = (this.ir >> 12) & 0xF; // Opcode (bits 15-12)
     this.code = this.dr = this.sr = (this.ir >> 9) & 0x7; // dr/sr (bits 11-9)
@@ -466,6 +471,31 @@ class Interpreter {
         this.writeDebugOutput(regsOrFlagsOutput);
       }
 
+    }
+
+    if (this.traceHook) {
+      this.traceHook({
+        address: instrAddress,
+        ir: this.ir,
+        pc: this.pc,
+        opcode: this.opcode,
+        eopcode: this.eopcode,
+        dr: this.dr,
+        sr: this.sr,
+        sr1: this.sr1,
+        sr2: this.sr2,
+        baser: this.baser,
+        imm5: this.imm5,
+        pcoffset9: this.pcoffset9,
+        pcoffset11: this.pcoffset11,
+        offset6: this.offset6,
+        trapvec: this.trapvec,
+        registers: Array.from(this.r),
+        flags: { n: this.n, z: this.z, c: this.c, v: this.v },
+        mnemonic: this.hexToMnemonic(this.ir),
+        running: this.running,
+        pauseReason: this.pauseReason
+      });
     }
 
     this.instructionsExecuted++;
@@ -978,6 +1008,17 @@ class Interpreter {
     }
   }
 
+  shouldPauseForInput() {
+    return this.options && this.options.pauseOnInput && (!this.inputBuffer || this.inputBuffer.length === 0);
+  }
+
+  pauseForInput() {
+    // step() already incremented PC during fetch; rewind so the same input TRAP re-executes on resume.
+    this.pc = (this.pc - 1) & 0xFFFF;
+    this.pauseReason = 'input';
+    this.running = false;
+  }
+
   executeSIN() {
     let address = this.r[this.sr];
     let { inputLine: input, isSimulated } = this.readLineFromStdin();
@@ -1088,6 +1129,7 @@ class Interpreter {
     switch (this.trapvec) {
       case 0: // HALT
         this.running = false;
+        this.pauseReason = 'halt';
         break;
       case 1: // NL
         this.writeOutput(newline);
@@ -1125,6 +1167,10 @@ class Interpreter {
         break;
       case 7: // DIN
         while (true) {
+          if (this.shouldPauseForInput()) {
+            this.pauseForInput();
+            break;
+          }
           let { inputLine: dinInput, isSimulated } = this.readLineFromStdin();
 
           if (dinInput.trim() === '') {
@@ -1152,6 +1198,10 @@ class Interpreter {
         break;
       case 8: // HIN
         while (true) {
+          if (this.shouldPauseForInput()) {
+            this.pauseForInput();
+            break;
+          }
           let { inputLine: hinInput, isSimulated } = this.readLineFromStdin();
 
           if (hinInput.trim() === '') {
@@ -1177,12 +1227,20 @@ class Interpreter {
         }
         break;
       case 9: // AIN
+        if (this.shouldPauseForInput()) {
+          this.pauseForInput();
+          break;
+        }
         let { char: ainChar, isSimulated } = this.readCharFromStdin();
         this.r[this.dr] = ainChar.charCodeAt(0);
         // No need to echo input here; already handled in readCharFromStdin()
         break;
       case 10: // SIN
         // read a line of input from the user
+        if (this.shouldPauseForInput()) {
+          this.pauseForInput();
+          break;
+        }
         this.executeSIN();
         break;
       case 11: // m
