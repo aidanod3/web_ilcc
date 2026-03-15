@@ -853,6 +853,185 @@ function stepForwardInternal(state, sourceTag = 'manual') {
   };
 }
 
+function toWordHex(value) {
+  return `0x${(((value % 0x10000) + 0x10000) % 0x10000).toString(16).padStart(4, '0')}`;
+}
+
+function fromWordHex(value) {
+  if (typeof value !== 'string') return 0;
+  const n = Number.parseInt(value, 16);
+  return Number.isFinite(n) ? (n & 0xffff) : 0;
+}
+
+function stripAsmLine(raw) {
+  const noComment = String(raw || '').split(';')[0].trim();
+  const m = noComment.match(/^[A-Za-z_][\w]*:\s*(.*)$/);
+  return (m ? m[1] : noComment).trim();
+}
+
+function normalizeRegToken(token) {
+  const t = String(token || '').trim().toLowerCase();
+  if (/^r[0-7]$/.test(t)) return t.toUpperCase().replace('R5', 'R5 (FP)').replace('R6', 'R6 (SP)').replace('R7', 'R7 (LR)');
+  if (t === 'fp') return 'R5 (FP)';
+  if (t === 'sp') return 'R6 (SP)';
+  if (t === 'lr') return 'R7 (LR)';
+  if (t === 'pc') return 'PC';
+  if (t === 'ir') return 'IR';
+  return null;
+}
+
+function parseAsmValue(token, registers) {
+  const regKey = normalizeRegToken(token);
+  if (regKey) return fromWordHex(registers[regKey] || '0x0000');
+  const t = String(token || '').trim();
+  if (/^0x[0-9a-f]+$/i.test(t)) return Number.parseInt(t, 16) & 0xffff;
+  if (/^-?\d+$/.test(t)) return Number.parseInt(t, 10) & 0xffff;
+  return null;
+}
+
+function pseudoLabelAddress(label) {
+  let h = 0;
+  const s = String(label || '');
+  for (let i = 0; i < s.length; i += 1) h = ((h * 31) + s.charCodeAt(i)) & 0xffff;
+  return h & 0xffff;
+}
+
+function buildStackFromMemory(registers, memoryMap, existingStack = []) {
+  const sp = fromWordHex(registers['R6 (SP)'] || '0x0000');
+  const fp = fromWordHex(registers['R5 (FP)'] || '0x0000');
+  const rows = [];
+  const max = Math.max(12, existingStack.length || 0);
+  for (let i = 0; i < max; i += 1) {
+    const addr = (sp + i) & 0xffff;
+    const tags = [];
+    if (addr === sp) tags.push('SP');
+    if (addr === fp) tags.push('FP');
+    rows.push({
+      addrHex: toWordHex(addr),
+      valHex: memoryMap.get(toWordHex(addr)) || '0x0000',
+      faded: false,
+      label: tags.join(' ')
+    });
+  }
+  return rows;
+}
+
+function simulateForceTraceSnapshot(current, sourceLines, nextLine) {
+  const registers = { ...(current.registers || {}) };
+  const memoryMap = new Map((current.memory || []).map((m) => [m.addrHex, m.valHex]));
+  const raw = sourceLines[nextLine] || '';
+  const line = stripAsmLine(raw);
+
+  if (line) {
+    const [opRaw, argRaw = ''] = line.split(/\s+/, 2);
+    const op = String(opRaw || '').toLowerCase();
+    const args = argRaw ? argRaw.split(',').map((x) => x.trim()) : [];
+    const setReg = (token, value) => {
+      const key = normalizeRegToken(token);
+      if (!key) return;
+      registers[key] = toWordHex(value);
+    };
+    const getReg = (token) => {
+      const key = normalizeRegToken(token);
+      return key ? fromWordHex(registers[key] || '0x0000') : 0;
+    };
+    const value = (token) => {
+      const v = parseAsmValue(token, registers);
+      return v == null ? 0 : v;
+    };
+
+    switch (op) {
+      case 'mov':
+        setReg(args[0], value(args[1]));
+        break;
+      case 'add':
+        setReg(args[0], (value(args[1]) + value(args[2])) & 0xffff);
+        break;
+      case 'sub':
+        setReg(args[0], (value(args[1]) - value(args[2])) & 0xffff);
+        break;
+      case 'lea':
+        setReg(args[0], pseudoLabelAddress(args[1]));
+        break;
+      case 'push': {
+        const sp = (getReg('sp') - 1) & 0xffff;
+        setReg('sp', sp);
+        memoryMap.set(toWordHex(sp), toWordHex(value(args[0])));
+        break;
+      }
+      case 'pop': {
+        const sp = getReg('sp');
+        const popped = fromWordHex(memoryMap.get(toWordHex(sp)) || '0x0000');
+        setReg(args[0], popped);
+        setReg('sp', (sp + 1) & 0xffff);
+        break;
+      }
+      case 'din': {
+        // Force mode should not pause; keep deterministic placeholder value.
+        const prev = value(args[0]);
+        setReg(args[0], (prev + 1) & 0xffff);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  const memory = (current.memory || []).map((m) => ({ ...m, valHex: memoryMap.get(m.addrHex) || m.valHex }));
+  const stack = buildStackFromMemory(registers, memoryMap, current.stack || []);
+  return { registers, memory, stack };
+}
+
+function forceTraceForwardInternal(state) {
+  const current = state.snapshots[state.currentStep];
+  if (!current) return state;
+
+  const totalLines = state.ctx?.lines?.length || 1;
+  const lastLine = Math.max(0, totalLines - 1);
+  const nextLine = clamp((current.lineIndex ?? 0) + 1, 0, lastLine);
+  if (nextLine === (current.lineIndex ?? 0)) return state;
+
+  const nextIndex = state.currentStep + 1;
+  const baseHistory = Array.isArray(current.terminalHistory) ? current.terminalHistory : state.terminalState.inputHistory;
+  const simulated = simulateForceTraceSnapshot(current, state.ctx?.lines || [], nextLine);
+  const nextSnapshot = {
+    ...current,
+    stepIndex: nextIndex,
+    pc: nextIndex,
+    lineIndex: nextLine,
+    registers: simulated.registers,
+    memory: simulated.memory,
+    stack: simulated.stack,
+    changedRegisters: Object.keys(simulated.registers || {}).filter((k) => (simulated.registers?.[k] || '') !== (current.registers?.[k] || '')),
+    changedMemory: (simulated.memory || []).filter((m) => ((current.memory || []).find((p) => p.addrHex === m.addrHex)?.valHex || '') !== m.valHex).map((m) => m.addrHex),
+    waitingForInput: false,
+    terminalHistory: baseHistory,
+    ts: Date.now()
+  };
+
+  const trimmed = state.snapshots.slice(0, state.currentStep + 1);
+  const nextSnapshots = [...trimmed, nextSnapshot];
+  return {
+    ...state,
+    snapshots: nextSnapshots,
+    currentStep: nextIndex,
+    transition: {
+      from: state.currentStep,
+      to: nextIndex,
+      direction: 'forward',
+      ts: Date.now()
+    },
+    lastDirection: 'forward',
+    previewOffset: 0,
+    terminalState: {
+      ...state.terminalState,
+      mode: 'command',
+      command: '',
+      inputHistory: baseHistory
+    }
+  };
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case 'LOAD_CODE': {
@@ -1018,6 +1197,9 @@ function reducer(state, action) {
 
     case 'STEP_FORWARD':
       return stepForwardInternal(state, action.sourceTag || 'manual');
+
+    case 'FORCE_TRACE_FORWARD':
+      return forceTraceForwardInternal(state);
 
     case 'RUN_TO_PAUSE': {
       return state;
@@ -1537,23 +1719,19 @@ function Ilcc() {
         e.preventDefault();
         if (state.timelineState.playing) dispatch({ type: 'TIMELINE_PAUSE' });
       } else if (e.key === 'Escape') {
-        dispatch({ type: 'TIMELINE_STOP' });
+        dispatch({ type: 'STOP_DEBUGGER_VIEW' });
         dispatch({ type: 'CLEAR_PREVIEW' });
-      } else if (e.key === 'ArrowLeft' && e.shiftKey) {
-        for (let i = 0; i < 5; i += 1) dispatch({ type: 'STEP_BACKWARD' });
       } else if (e.key === 'ArrowRight' && e.shiftKey) {
-        for (let i = 0; i < 5; i += 1) void handleStepForward('manual');
-      } else if (e.key === 'ArrowLeft') {
-        dispatch({ type: 'STEP_BACKWARD' });
+        for (let i = 0; i < 5; i += 1) dispatch({ type: 'FORCE_TRACE_FORWARD' });
       } else if (e.key === 'ArrowRight') {
-        void handleStepForward('manual');
+        dispatch({ type: 'FORCE_TRACE_FORWARD' });
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [state.timelineState.playing, isBackendBusy]);
 
-  const canForward = state.terminalState.mode !== 'awaiting_input' && !isBackendBusy;
+  const canForward = !isBackendBusy;
 
   const addOutputEntries = (previousOutput, nextOutput) => {
     if (!nextOutput || nextOutput === previousOutput) return [];
@@ -1863,7 +2041,7 @@ function Ilcc() {
         onImport={onImport}
         onExport={onExport}
         onSelectSample={onSelectSample}
-        onStepForward={() => handleStepForward('manual')}
+        onForceTraceForward={() => dispatch({ type: 'FORCE_TRACE_FORWARD' })}
         backendBusy={isBackendBusy}
         canForward={canForward}
         debuggerActive={debuggerActive}
@@ -1956,7 +2134,7 @@ function Ilcc() {
   );
 }
 
-function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepForward, backendBusy, canForward, debuggerActive }) {
+function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTraceForward, backendBusy, canForward, debuggerActive }) {
   const fileRef = useRef(null);
   const [sampleChoice, setSampleChoice] = useState('');
   const [jumpCount, setJumpCount] = useState(5);
@@ -1999,19 +2177,8 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
               boxShadow: state.theme === 'dark' ? 'inset 0 0 0 1px rgba(255,255,255,.03)' : 'inset 0 0 0 1px rgba(0,0,0,.03)'
             }}
           >
-            <button className="asm-btn" title="Step Back 1" onClick={() => dispatch({ type: 'STEP_BACKWARD' })}>-1</button>
-            <button className="asm-btn" title="Step Forward 1" onClick={() => { if (canForward) void onStepForward(); }} disabled={!canForward}>+1</button>
-            <button className="asm-btn" title="Stop / Reset" onClick={() => dispatch({ type: 'TIMELINE_STOP' })}>Stop</button>
-            <button
-              className="asm-btn"
-              title="Step Back N"
-              onClick={() => {
-                const n = Math.max(1, Number(jumpCount) || 1);
-                for (let i = 0; i < n; i += 1) dispatch({ type: 'STEP_BACKWARD' });
-              }}
-            >
-              -N
-            </button>
+            <button className="asm-btn" title="Step Forward 1" onClick={() => { if (canForward) onForceTraceForward(); }} disabled={!canForward}>+1</button>
+            <button className="asm-btn" title="Stop / Reset" onClick={() => dispatch({ type: 'STOP_DEBUGGER_VIEW' })}>Stop</button>
             <input
               type="number"
               min={1}
@@ -2023,11 +2190,10 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
             <button
               className="asm-btn"
               title="Step Forward N"
-              onClick={async () => {
+              onClick={() => {
                 const n = Math.max(1, Number(jumpCount) || 1);
                 for (let i = 0; i < n; i += 1) {
-                  const ok = await onStepForward();
-                  if (!ok) break;
+                  onForceTraceForward();
                 }
               }}
               disabled={!canForward}
