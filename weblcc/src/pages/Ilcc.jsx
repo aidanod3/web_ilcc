@@ -1465,7 +1465,6 @@ function Ilcc() {
   const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
   const [isBackendBusy, setIsBackendBusy] = useState(false);
   const [editorTerminalSplit, setEditorTerminalSplit] = useState(62);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(300);
   const [rightPanelWidth, setRightPanelWidth] = useState(420);
   const [collapsed, setCollapsed] = useState({
     stack: false,
@@ -1504,29 +1503,13 @@ function Ilcc() {
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   };
-  const beginLeftPanelDrag = (e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startLeft = leftPanelWidth;
-    const onMove = (evt) => {
-      const dx = evt.clientX - startX;
-      const maxLeft = Math.max(260, window.innerWidth - rightPanelWidth - 520);
-      setLeftPanelWidth(clamp(startLeft + dx, 220, maxLeft));
-    };
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  };
   const beginRightPanelDrag = (e) => {
     e.preventDefault();
     const startX = e.clientX;
     const startRight = rightPanelWidth;
     const onMove = (evt) => {
       const dx = evt.clientX - startX;
-      const maxRight = Math.max(320, window.innerWidth - leftPanelWidth - 520);
+      const maxRight = Math.max(320, window.innerWidth - 520);
       setRightPanelWidth(clamp(startRight - dx, 300, maxRight));
     };
     const onUp = () => {
@@ -1922,12 +1905,7 @@ function Ilcc() {
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `${leftPanelWidth}px 8px minmax(420px, 1fr) 8px ${rightPanelWidth}px`, gap: 8, padding: 10 }}>
-          <StackPanel state={state} current={current} theme={t} collapsed={collapsed.stack} onToggle={() => setCollapsed((c) => ({ ...c, stack: !c.stack }))} />
-          <div className="asm-vsplitter" onMouseDown={beginLeftPanelDrag}>
-            <div className="asm-vsplitter-line" />
-          </div>
-
+        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `minmax(520px, 1fr) 8px ${rightPanelWidth}px`, gap: 8, padding: 10 }}>
           <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: `${collapsed.editor ? '42px' : `minmax(220px, ${editorTerminalSplit}fr)`} ${collapsed.editor || collapsed.terminal ? '0px' : '8px'} ${collapsed.terminal ? '42px' : `minmax(140px, ${100 - editorTerminalSplit}fr)`}`, gap: 10 }}>
             <EditorPane
               state={state}
@@ -1964,13 +1942,12 @@ function Ilcc() {
           <div className="asm-vsplitter" onMouseDown={beginRightPanelDrag}>
             <div className="asm-vsplitter-line" />
           </div>
-
-          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(170px, .9fr) minmax(260px, 1.8fr) minmax(180px, 1fr)', gap: 10 }}>
+          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(180px, .8fr) minmax(170px, .9fr) minmax(260px, 1.8fr)', gap: 10 }}>
+            <StackPanel state={state} current={current} theme={t} collapsed={collapsed.stack} onToggle={() => setCollapsed((c) => ({ ...c, stack: !c.stack }))} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, minHeight: 0 }}>
               <RegistersPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.registers} onToggle={() => setCollapsed((c) => ({ ...c, registers: !c.registers }))} />
               <FlagsPanel current={current} theme={t} collapsed={collapsed.flags} onToggle={() => setCollapsed((c) => ({ ...c, flags: !c.flags }))} />
             </div>
-
             <MemoryPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.memory} onToggle={() => setCollapsed((c) => ({ ...c, memory: !c.memory }))} />
           </div>
         </div>
