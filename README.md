@@ -1,101 +1,144 @@
 # ILCC Web Emulator and Automated Grading System
 
-## Project Overview
-This project is a web-based implementation of an **ILCC (Interactive Low Cost Computer) emulator system** intended for academic and instructional use. The system has two primary goals:
+## Project Origin and Team Structure
+This project started from a classroom need raised by **Charlie**, professor of Assembly at **SUNY New Paltz**:
+- He wanted an interactive way to teach assembly live during lecture.
+- He also wanted students to be able to run assembly code easily for labs and projects without local setup friction.
 
-1. Allow students to write and execute LCC assembly code in an interactive web environment  
-2. Automatically grade student submissions by executing their code and comparing it against reference solutions uploaded by an instructor
+Team organization:
+- Total team size: **5 members**
+- Split into **2 groups**:
+  - **Group 1 (3 members):** Main WebLCC IDE/frontend + trace backend integration
+  - **Group 2 (2 members):** Autograder backend flow and submission evaluation path
+- Both groups were aligned around one shared rule: use the **same emulator core** for consistent behavior.
 
-A core design decision of this project is that **both execution and grading rely on the same emulator and runtime logic**, ensuring consistency, correctness, and fairness in evaluation.
+## Project Goal
+ILCC provides:
+1. An interactive web IDE for writing and tracing LCC assembly programs.
+2. An automated grading path that executes student submissions against expected output.
 
----
+Core principle: **both paths use the same emulator core**, so classroom behavior and autograder behavior stay consistent.
 
-## Core Design Principle
-The most technically challenging and critical component of this project is the **assembly emulator and interpreter**.
+## The Problem
+Toolchain friction was the starting issue:
+- Students had different OS setups (macOS, Windows, Linux) and inconsistent local environments.
+- Assembly toolchain setup was error-prone and took class time away from learning.
+- Feedback loops were slow (edit -> compile -> run -> inspect), especially for beginners.
+- Grading consistency was hard when local runtime behavior differed from grader behavior.
 
-Both major features:
-- The main student-facing web application
-- The automated grading system
+## Solution
+- A browser-based ILCC editor experience for writing and tracing LCC code.
+- A main backend that manages stateful trace sessions and snapshot APIs.
+- A shared emulator core (assembler/interpreter) used by both IDE runtime and autograder.
+- A grading backend path that executes and compares submissions consistently.
 
-depend on the **exact same emulator**. As a result, this project follows a **backend-first approach**, prioritizing emulator correctness and stability before frontend development begins.
+## System Architecture
+![ILCC System Architecture](docs/system-architecture.png)
 
-Perfecting the emulator early allows all later features to reuse it without duplicating logic or introducing inconsistencies.
 
----
+## Trace Session Lifecycle
+![Trace Session Lifecycle](docs/tracing-life-cycle.png)
+
+### How tracing works 
+1. Frontend creates a trace session (`POST /api/trace/sessions`).
+2. Backend keeps stateful session data in memory.
+3. Frontend requests next transitions (`.../step`, `.../continue`).
+4. Backend returns snapshots (registers, memory, flags, stack, line context).
+5. Session ends by halt, delete, or TTL expiration.
+
+## Features
+- Syntax-highlighted editor for assembly instructions/labels/immediates.
+- Live terminal output panel for program I/O.
+- Stateful trace mode with register/memory/stack/flags visualization.
+- Forward tracing controls for guided instruction flow.
+- Backend API snapshots that keep UI deterministic.
+- Autograder execution path using the same emulator core.
+
+## Repository Map (Major Components)
+
+### Main Web IDE Frontend
+- `weblcc/src/pages/Ilcc.jsx`
+- `weblcc/src/main.jsx`
+- Responsibilities:
+  - Code editor + terminal UI
+  - Trace controls
+  - Panel rendering from backend snapshots
+
+### Main Web Backend (Trace APIs)
+- `backend/weblcc-backend/server.js`
+- Responsibilities:
+  - Trace session lifecycle management
+  - Step/continue orchestration
+  - Snapshot payload formatting for UI
+
+### Shared Emulator Core (Single Source of Truth)
+- `backend/emulator/src/core/assembler.js`
+- `backend/emulator/src/core/interpreter.js`
+- `backend/emulator/src/core/lcc.js`
+- Responsibilities:
+  - Assemble LCC source
+  - Execute instructions
+  - Produce runtime state + output
+
+### Autograder Backend
+- `backend/autograder-backend/main.py`
+- Responsibilities:
+  - Accept code submissions
+  - Execute via emulator path
+  - Compare actual vs expected output
+
+## APIs Used in Demo
+
+### Main Backend
+- `POST /api/trace/sessions`
+- `POST /api/trace/sessions/:id/step`
+- `POST /api/trace/sessions/:id/continue`
+- `DELETE /api/trace/sessions/:id`
+
+### Autograder Backend
+- `POST /execute`
 
 ## Technology Stack
+- Frontend: React + Vite
+- Main API Backend: Node.js + Express
+- Autograder API Backend: Python + FastAPI
+- Emulator Core: Custom LCC assembler/interpreter runtime (Node)
 
-### Backend
-- JavaScript (Node.js)
-- Custom ILCC Emulator (Assembles and Interprets LCC Assembly Code)
-- CLI-based execution (initial development phase)
-- Shared emulator logic for:
-  - Student code execution
-  - Reference solution execution
-  - Deterministic output comparison for grading
+## Scaling 
+- Containerized execution workers for stronger isolation.
+- Job queue model for compile/run/grade requests.
+- Horizontal scaling of API and worker tiers.
+- Multi-user session partitioning and rate limiting.
+- Centralized observability for trace + grading pipelines.
 
-### Frontend (later phase)
-- Web-based user interface (framework TBD)
-- Backend API for emulator execution
-- Code editor and output display
+## Future Roadmap
+- Additional architecture targets / instruction sets.
+- Richer debugger features (watch expressions, breakpoints revisit, timelines).
+- Better educational UX modes and guided explanations.
+- Instructor analytics and assignment-level grading dashboards.
+- CI-backed regression suites for emulator correctness.
+- Modular so that future developers can expand on the project
 
----
+## Run Instructions
 
-## Development Timeline
+### Main WebLCC (Frontend + Main Trace Backend)
+From the repository root:
 
-### Phase 1 — Emulator Development (Weeks 1–4)
-**Primary Objective:** Develop and perfect the ILCC emulator before major UI work.
+```bash
+npm install
+npm run dev
+```
 
-During this phase:
-- The team studies and extends the existing `lccjs` emulator
-- The emulator is tested extensively via:
-  - Terminal-based execution
-  - Optional temporary localhost testing
-- Emphasis is placed on:
-  - Correct parsing
-  - Correct execution semantics
-  - Reliable and reproducible output
+This starts both:
+- Web frontend (Vite)
+- Main trace backend (`backend/weblcc-backend`) on port `3002`
 
-This emulator will later be reused *unchanged* by both the main web application and the automated grading system.
+### Autograder Backend (FastAPI)
+Open a second terminal:
 
----
-
-### Phase 2 — Backend Integration
-Once the emulator is stable:
-- The same emulator logic is integrated into:
-  - The main ILCC web application
-  - The automated grading feature
-- Backend logic is implemented for:
-  - Running reference solutions
-  - Running student submissions
-  - Comparing outputs for grading
-
----
-
-### Phase 3 — Frontend Development
-After backend stability is achieved:
-- A web interface is developed for students and instructors
-- The frontend communicates with the emulator through a backend API
-- Execution output and grading feedback are presented to users
-
----
-
-## Team Structure and Responsibilities
-
-### Team 1 — Main Web Application (3 People)
-Responsible for:
-- Backend integration of the emulator into the primary web application
-- API design for code execution
-- Student-facing features (code editor, execution output, UI logic)
-- Coordinating with frontend developers on usability and integration
-
-### Team 2 — Automated Grading Feature (2 People)
-Responsible for:
-- Backend grading logic
-- Executing student submissions and reference solutions
-- Output comparison and grading correctness
-- Ensuring grading behavior matches the emulator used in the main web application
-
-Both teams rely on the **same shared emulator backend**, developed during Phase 1.
-
+```bash
+cd backend/autograder-backend
+python3 -m pip install fastapi uvicorn pydantic
+python3 -m uvicorn main:app --reload --port 8000
+```
 
