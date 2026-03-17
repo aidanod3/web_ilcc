@@ -1,15 +1,341 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Autograder.css";
 
-const STUDENTS = [
-  { id: 1, name: "Student Name", status: "Graded" },
-  { id: 2, name: "Student Name", status: "Graded" },
-  { id: 3, name: "Student Name", status: "InProg" },
-  { id: 4, name: "Student Name", status: "Ungraded" },
-  { id: 5, name: "Student Name", status: "Ungraded" },
-  { id: 6, name: "Student Name", status: "Ungraded" },
-  { id: 7, name: "Student Name", status: "Late" },
-  { id: 8, name: "Student Name", status: "NoSub" },
+const DEMO_STUDENTS = [
+  {
+    id: 1, name: "Alice Johnson", sid: "A12301", status: "Ungraded",
+    files: [
+      { name: "lab05.a", code: `; lab05.a — Alice Johnson (A12301)
+; Add two numbers read from input
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            lea   r0, prompt1
+            sout  r0
+            din   r1
+
+            lea   r0, prompt2
+            sout  r0
+            din   r2
+
+            add   r3, r1, r2
+            lea   r0, result
+            sout  r0
+            dout  r3
+            nl
+
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+prompt1:    .string "Enter first number: "
+prompt2:    .string "Enter second number: "
+result:     .string "Sum = "
+` },
+      { name: "lab05_test.a", code: `; lab05_test.a — Alice Johnson
+; Quick test with hardcoded values
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            mov   r1, 10
+            mov   r2, 25
+            add   r3, r1, r2
+
+            lea   r0, msg
+            sout  r0
+            dout  r3
+            nl
+
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+msg:        .string "Result: "
+` },
+      { name: "lab05_notes.a", code: `; lab05_notes.a — scratch / notes
+; Trying out pcoffset addressing
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            ld    r0, val1
+            ld    r1, val2
+            sub   r2, r0, r1
+            dout  r2
+            nl
+
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+val1:       .fill 42
+val2:       .fill 17
+` },
+    ],
+  },
+  {
+    id: 2, name: "Brian Kim", sid: "B44892", status: "Ungraded",
+    files: [
+      { name: "lab05.a", code: `; lab05.a — Brian Kim (B44892)
+; Multiply two numbers using repeated addition
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            lea   r0, p1
+            sout  r0
+            din   r1          ; multiplicand
+            lea   r0, p2
+            sout  r0
+            din   r2          ; multiplier
+
+            mov   r3, 0       ; accumulator
+loop:       brz   r2, done
+            add   r3, r3, r1
+            add   r2, r2, -1  ; NOTE: this should be sub r2,r2,1
+            br    loop
+done:       lea   r0, res
+            sout  r0
+            dout  r3
+            nl
+
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+p1:         .string "Enter A: "
+p2:         .string "Enter B: "
+res:        .string "A x B = "
+` },
+      { name: "lab05_v2.a", code: `; lab05_v2.a — Brian Kim revised
+; Fixed loop counter decrement
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            lea   r0, p1
+            sout  r0
+            din   r1
+            lea   r0, p2
+            sout  r0
+            din   r2
+
+            mov   r3, 0
+loop:       brz   r2, done
+            add   r3, r3, r1
+            sub   r2, r2, 1
+            br    loop
+done:       lea   r0, res
+            sout  r0
+            dout  r3
+            nl
+
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+p1:         .string "Enter A: "
+p2:         .string "Enter B: "
+res:        .string "Product: "
+` },
+    ],
+  },
+  {
+    id: 3, name: "Carlos Rivera", sid: "C77123", status: "Ungraded",
+    files: [
+      { name: "lab05.a", code: `; lab05.a — Carlos Rivera (C77123)
+; Fibonacci sequence — first N terms
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            lea   r0, prompt
+            sout  r0
+            din   r4          ; N
+
+            mov   r1, 0       ; fib(0)
+            mov   r2, 1       ; fib(1)
+            mov   r5, 0       ; counter
+
+loop:       cmp   r5, r4
+            brp   done
+            dout  r1
+            nl
+            add   r3, r1, r2
+            mov   r1, r2
+            mov   r2, r3
+            add   r5, r5, 1
+            br    loop
+
+done:       mov   sp, fp
+            pop   fp
+            pop   lr          ; MISSING: pop lr before ret — bug
+            ret
+
+prompt:     .string "How many Fibonacci terms? "
+` },
+      { name: "lab05_scratch.a", code: `; lab05_scratch.a — WIP, ignore
+; Testing conditional branches
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            din   r0
+            cmp   r0, 0
+            brn   negative
+            lea   r1, pos
+            sout  r1
+            br    end
+negative:   lea   r1, neg
+            sout  r1
+end:        nl
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+pos:        .string "positive"
+neg:        .string "negative"
+` },
+      { name: "lab05_final.a", code: `; lab05_final.a — Carlos Rivera FINAL
+; Corrected Fibonacci with proper epilogue
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            lea   r0, prompt
+            sout  r0
+            din   r4
+
+            mov   r1, 0
+            mov   r2, 1
+            mov   r5, 0
+
+loop:       cmp   r5, r4
+            brp   done
+            dout  r1
+            nl
+            add   r3, r1, r2
+            mov   r1, r2
+            mov   r2, r3
+            add   r5, r5, 1
+            br    loop
+
+done:       mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+prompt:     .string "How many Fibonacci terms? "
+` },
+    ],
+  },
+  {
+    id: 4, name: "Dana Patel", sid: "D90045", status: "Late",
+    files: [
+      { name: "lab05_late.a", code: `; lab05_late.a — Dana Patel (D90045) [LATE]
+; Counts down from N to 0
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            lea   r0, prompt
+            sout  r0
+            din   r1
+
+loop:       brn   r1, done
+            dout  r1
+            nl
+            sub   r1, r1, 1
+            br    loop
+
+done:       lea   r0, bye
+            sout  r0
+
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+prompt:     .string "Count down from: "
+bye:        .string "Done!\n"
+` },
+      { name: "lab05_late_v2.a", code: `; lab05_late_v2.a — Dana Patel revised
+; Fixed branch condition (brn → brnz issue)
+
+startup:    bl    main
+            halt
+
+main:       push  lr
+            push  fp
+            mov   fp, sp
+
+            lea   r0, prompt
+            sout  r0
+            din   r1
+
+loop:       brz   r1, done
+            dout  r1
+            nl
+            sub   r1, r1, 1
+            br    loop
+
+done:       lea   r0, bye
+            sout  r0
+
+            mov   sp, fp
+            pop   fp
+            pop   lr
+            ret
+
+prompt:     .string "Count down from: "
+bye:        .string "Done!\n"
+` },
+    ],
+  },
 ];
 
 const STATUS_META = {
@@ -50,7 +376,9 @@ export default function Autograder() {
   const [dark, setDark] = useState(false);
   const [toolbarPos, setToolbarPos] = useState({ bottom: 18, right: 18 });
   const [isDraggingZip, setIsDraggingZip] = useState(false);
-  const [zipFiles, setZipFiles] = useState([]);
+  const [submittedStudents, setSubmittedStudents] = useState([]);
+  const [activeStudentId, setActiveStudentId] = useState(null);
+  const [activeFileName, setActiveFileName] = useState(null);
   const dragRef = useRef(null);
   const importRef = useRef(null);
   const zipInputRef = useRef(null);
@@ -175,12 +503,8 @@ export default function Autograder() {
       alert('Please use a .zip file.');
       return;
     }
-    // Placeholder: wire this to backend parsing later.
+    // Placeholder: wire to backend parsing later.
     console.log('Selected zip file:', file.name);
-    setZipFiles((prev) => {
-      const next = [file.name, ...prev];
-      return next.slice(0, 5);
-    });
   };
 
   const handleZipDrop = (e) => {
@@ -203,6 +527,28 @@ export default function Autograder() {
     setIsDraggingZip(false);
   };
 
+  // ── Demo: load fake student submissions ───────────────
+  const handleSubmitFiles = () => {
+    setSubmittedStudents(DEMO_STUDENTS);
+    const first = DEMO_STUDENTS[0];
+    setActiveStudentId(first.id);
+    setActiveFileName(first.files[0].name);
+    setCode(first.files[0].code);
+    setSelectedStudent(0);
+  };
+
+  const handleSelectStudent = (student) => {
+    setActiveStudentId(student.id);
+    const firstFile = student.files[0];
+    setActiveFileName(firstFile.name);
+    setCode(firstFile.code);
+  };
+
+  const handleSelectFile = (file) => {
+    setActiveFileName(file.name);
+    setCode(file.code);
+  };
+
   // ── Save & next ───────────────────────────────────────
   const handleSaveNext = () => {
     setAutoSaved("just now");
@@ -220,9 +566,12 @@ export default function Autograder() {
     setScore(maxScore + totalDeducted);
   }, [deductions, maxScore]);
 
-  // Hide mock students for now; will be wired to real data.
-  const filtered = [];
-  const gradedCount = 0;
+  const activeStudent = submittedStudents.find(s => s.id === activeStudentId) || null;
+  const filtered = submittedStudents.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    s.sid.toLowerCase().includes(search.toLowerCase())
+  );
+  const gradedCount = submittedStudents.filter(s => s.status === "Graded").length;
 
   return (
     <div className={`ag-root${dark ? ' ag-dark' : ''}`}>
@@ -272,65 +621,97 @@ export default function Autograder() {
       {/* ── Panel 1: Students ────────────────────────── */}
       <div className="ag-panel ag-students">
         <div className="ag-panel-header">Panel 1: Students</div>
-        <div
-          className={`ag-zip-drop${isDraggingZip ? ' ag-zip-drop--active' : ''}`}
-          onDragOver={handleZipDragOver}
-          onDragLeave={handleZipDragLeave}
-          onDrop={handleZipDrop}
-          onClick={() => zipInputRef.current?.click()}
-        >
-          <span className="ag-zip-title">Drop Solutions.zip here</span>
-          <span className="ag-zip-subtitle">or drag it from your files to load labs &amp; students</span>
-          <input
-            ref={zipInputRef}
-            type="file"
-            accept=".zip"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              handleZipFile(f);
-              e.target.value = '';
-            }}
-          />
-        </div>
-        {zipFiles.length > 0 && (
-          <ul className="ag-zip-file-list">
-            {zipFiles.map((name, idx) => {
-              const label = name.replace(/\.zip$/i, '');
-              return (
-                <li key={`${name}-${idx}`} className="ag-zip-file-item">
-                  <button
-                    type="button"
-                    className="ag-zip-file-btn"
-                    onClick={() => console.log('Selected zip from list:', name)}
+
+        {submittedStudents.length === 0 ? (
+          <div style={{ padding: '12px 10px' }}>
+            <div
+              className={`ag-zip-drop${isDraggingZip ? ' ag-zip-drop--active' : ''}`}
+              onDragOver={handleZipDragOver}
+              onDragLeave={handleZipDragLeave}
+              onDrop={handleZipDrop}
+              onClick={() => zipInputRef.current?.click()}
+            >
+              <span className="ag-zip-title">Drop Solutions.zip here</span>
+              <span className="ag-zip-subtitle">or drag it from your files to load labs &amp; students</span>
+              <input ref={zipInputRef} type="file" accept=".zip" style={{ display: 'none' }}
+                onChange={(e) => { handleZipFile(e.target.files?.[0]); e.target.value = ''; }} />
+            </div>
+            <button
+              className="ag-btn ag-btn-save"
+              style={{ width: '100%', marginTop: 10, fontSize: 13 }}
+              onClick={handleSubmitFiles}
+            >
+              Submit Files (Demo)
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ padding: '8px 10px 4px' }}>
+              <input
+                className="ag-search"
+                placeholder="Search students…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+            <ul className="ag-student-list" style={{ flex: 1, overflowY: 'auto' }}>
+              {filtered.map(s => (
+                <li
+                  key={s.id}
+                  className={`ag-student-item${activeStudentId === s.id ? ' ag-student-item--active' : ''}`}
+                  onClick={() => handleSelectStudent(s)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span className="ag-student-name">{s.name}</span>
+                  <span className="ag-student-sid" style={{ fontSize: 11, opacity: 0.6, marginLeft: 6 }}>{s.sid}</span>
+                  <span
+                    className="ag-status-pill"
+                    style={{ background: STATUS_META[s.status]?.bg, color: STATUS_META[s.status]?.color, marginLeft: 'auto' }}
                   >
-                    {label}
-                  </button>
+                    {STATUS_META[s.status]?.label}
+                  </span>
                 </li>
-              );
-            })}
-          </ul>
+              ))}
+            </ul>
+            <div className="ag-list-footer">
+              <span className="ag-progress-pill">{gradedCount}/{submittedStudents.length}</span>
+              <span>{submittedStudents.length ? Math.round(gradedCount / submittedStudents.length * 100) : 0}% graded</span>
+            </div>
+          </>
         )}
-        <ul className="ag-student-list">
-          {zipFiles.length === 0 && (
-            <li className="ag-student-empty">No students loaded yet.</li>
-          )}
-        </ul>
-        <div className="ag-list-footer">
-          <span className="ag-progress-pill">{gradedCount}/0</span>
-          <span>0% graded</span>
-        </div>
       </div>
 
       {/* ── Panel 2: Student Code ────────────────────── */}
       <div className="ag-panel ag-code-panel">
-        <div className="ag-panel-header">Panel 2: Student Code</div>
-        <div className="ag-code-actions">
-          <label className="ag-upload-btn">
-            {fileLoading ? 'Loading…' : 'Upload File'}
-            <input type="file" accept="*/*" onChange={handleFile} style={{ display: 'none' }} />
-          </label>
+        <div className="ag-panel-header">
+          Panel 2: Student Code
+          {activeStudent && (
+            <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 8, opacity: 0.7 }}>
+              — {activeStudent.name}
+            </span>
+          )}
         </div>
+        {activeStudent ? (
+          <div className="ag-file-tabs">
+            {activeStudent.files.map(f => (
+              <button
+                key={f.name}
+                className={`ag-file-tab${activeFileName === f.name ? ' ag-file-tab--active' : ''}`}
+                onClick={() => handleSelectFile(f)}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="ag-code-actions">
+            <label className="ag-upload-btn">
+              {fileLoading ? 'Loading…' : 'Upload File'}
+              <input type="file" accept="*/*" onChange={handleFile} style={{ display: 'none' }} />
+            </label>
+          </div>
+        )}
         <textarea className="ag-code-editor" value={code} onChange={e => setCode(e.target.value)} spellCheck={false} />
       </div>
 

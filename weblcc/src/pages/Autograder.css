@@ -881,3 +881,39 @@
 .ag-dark .ag-deduction-del { color: #4a5568; }
 .ag-dark .ag-deduction-del:hover { background: #3a1010; color: #f87171; }
 .ag-dark .ag-toolbar-divider { background: #2e3f5c; }
+
+/* ── Student list active state & status pill ── */
+.ag-student-item--active { background: #dce8f8 !important; border-color: #4f80d0 !important; }
+.ag-dark .ag-student-item--active { background: #1a2e50 !important; border-color: #4f80d0 !important; }
+
+.ag-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── File tabs ── */
+.ag-file-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 0 4px;
+  flex-shrink: 0;
+}
+.ag-file-tab {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #b0c4e0;
+  background: #f0f4fa;
+  color: #334466;
+  cursor: pointer;
+}
+.ag-file-tab:hover { background: #dce8f8; border-color: #4f80d0; }
+.ag-file-tab--active { background: #4f80d0; border-color: #4f80d0; color: #fff; }
+.ag-dark .ag-file-tab { background: #1a2438; border-color: #2e3f5c; color: #7a9ab8; }
+.ag-dark .ag-file-tab--active { background: #2563eb; border-color: #2563eb; color: #fff; }
