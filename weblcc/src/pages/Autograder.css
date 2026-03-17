@@ -86,6 +86,64 @@
   scrollbar-width: thin;
   scrollbar-color: #c5cedd transparent;
 }
+.ag-student-empty {
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+.ag-zip-drop {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed #cbd5f5;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: default;
+}
+.ag-zip-drop--active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.ag-zip-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+.ag-zip-subtitle {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.ag-zip-file-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 2px;
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.ag-zip-file-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ag-zip-file-btn {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: #f3f4f6;
+  color: inherit;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+.ag-zip-file-btn:hover {
+  background: #e5e7eb;
+}
 .ag-student-list::-webkit-scrollbar { width: 4px; }
 .ag-student-list::-webkit-scrollbar-thumb { background: #c5cedd; border-radius: 4px; }
 
@@ -108,7 +166,7 @@
 }
 
 .ag-dot { font-size: 11px; flex-shrink: 0; line-height: 1; }
-.ag-student-name { flex: 1; font-size: 11px; font-weight: 600; color: #1a2035; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-student-name { flex: 1; font-size: 13px; font-weight: 600; color: #1a2035; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .ag-status-badge {
   font-size: 10px;
