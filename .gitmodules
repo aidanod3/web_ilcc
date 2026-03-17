@@ -1,3 +1,0 @@
-[submodule "backend/interactive_lccjs"]
-	path = backend/interactive_lccjs
-	url = https://github.com/ItBeCharlie/interactive_lccjs.git

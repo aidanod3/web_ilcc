@@ -1,0 +1,123 @@
+.content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 8px;
+    position: relative;
+    background:
+      radial-gradient(circle at 16% 18%, rgba(109, 74, 52, 0.26), transparent 42%),
+      radial-gradient(circle at 84% 82%, rgba(74, 48, 34, 0.28), transparent 44%),
+      linear-gradient(145deg, #070506 0%, #100b09 45%, #16100d 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    isolation: isolate;
+}
+
+.content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.22;
+    background:
+      radial-gradient(circle, rgba(214, 160, 118, 0.22) 1px, transparent 1.2px) 0 0 / 12px 12px,
+      radial-gradient(circle, rgba(214, 160, 118, 0.14) 1px, transparent 1.2px) 6px 6px / 12px 12px;
+    mix-blend-mode: screen;
+    z-index: 0;
+}
+
+.content > * {
+    position: relative;
+    z-index: 1;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sectionTitle {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    padding: 0 6px;
+    margin-bottom: 4px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.label {
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.value {
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.flagRow {
+    display: flex;
+    gap: 6px;
+    padding: 0 6px;
+}
+
+.flag {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 4px;
+}
+
+.flagLabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.flagValue {
+    font-size: 14px;
+    font-family: monospace;
+}
+
+.changed {
+    background: rgba(74, 222, 128, 0.25);
+    outline: 1px solid rgba(74, 222, 128, 0.55);
+}
+
+.studentMode {
+    background: rgba(247, 168, 0, 0.07);
+}
+
+.studentMode .sectionTitle {
+    font-size: 12px;
+    color: #ffd37a;
+}
+
+.studentMode .label,
+.studentMode .value {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.studentMode .flagLabel {
+    font-size: 12px;
+}
+
+.studentMode .flagValue {
+    font-size: 20px;
+    font-weight: 700;
+}

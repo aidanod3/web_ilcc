@@ -1,0 +1,126 @@
+.wrapper {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.toolbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid var(--bg3);
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.importBtn {
+    opacity: 0.5;
+    border: 1px solid rgba(247, 168, 0, 0.75);
+    background: linear-gradient(135deg, #f7a800 0%, #ffbf33 100%);
+    color: #1a1204;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 0 0 rgba(247, 168, 0, 0);
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.importBtn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow:
+      0 0 12px rgba(247, 168, 0, 0.45),
+      0 0 24px rgba(247, 168, 0, 0.24);
+}
+
+.importBtn:active {
+    transform: translateY(0);
+    box-shadow:
+      0 0 8px rgba(247, 168, 0, 0.35),
+      0 0 14px rgba(247, 168, 0, 0.18);
+}
+
+.fullscreenBtn {
+    border: 1px solid var(--border2);
+    background: var(--bg2);
+    color: var(--text);
+    opacity: 0.5;
+    width: 28px;
+    height: 25px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.fullscreenBtn:hover {
+    opacity: 1;
+    border-color: var(--gold);
+}
+
+.fileLabel {
+    flex: 1;
+    text-align: right;
+    font-size: 12px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hiddenInput {
+    display: none;
+}
+
+.editorHost {
+    flex: 1;
+    min-height: 0;
+}
+
+.editorHost :global(.cm-editor) {
+    height: 100%;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-top: 1px solid #2a2a2a;
+}
+
+.editorHost :global(.cm-scroller) {
+    overflow: auto;
+}
+
+.editorHost :global(.cm-content),
+.editorHost :global(.cm-line) {
+    color: #d4d4d4;
+}
+
+.editorHost :global(.cm-gutters) {
+    background:
+      radial-gradient(circle, rgba(210, 210, 210, 0.16) 1px, transparent 1.2px) 0 0 / 7px 7px,
+      radial-gradient(circle, rgba(210, 210, 210, 0.1) 1px, transparent 1.2px) 3.5px 3.5px / 7px 7px,
+      #171717;
+    color: #858585;
+    border-right: 1px solid #2a2a2a;
+}
+
+.editorHost :global(.cm-activeLineGutter),
+.editorHost :global(.cm-activeLine) {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.editorHost :global(.cm-activeLineGutter) {
+    color: #c6c6c6;
+}
+
+.wrapper:fullscreen {
+    background: var(--bg);
+}

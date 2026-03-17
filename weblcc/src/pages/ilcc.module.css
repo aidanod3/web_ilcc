@@ -1,0 +1,62 @@
+.appShell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.header {
+  height: 40px;
+}
+
+.dashboard {
+  flex: 1;
+  min-height: 0; /* ? */
+}
+
+
+/* .appShell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg);
+} */
+/* 
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.2fr 320px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.panel {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  animation: fadeUp 0.3s ease;
+}
+
+.panelRight {
+  composes: panel;
+  overflow: auto;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    overflow: auto;
+  }
+} */

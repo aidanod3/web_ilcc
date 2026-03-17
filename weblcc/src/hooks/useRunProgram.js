@@ -29,5 +29,9 @@ export function useRunProgram() {
     }
   }
 
-  return { isRunning, output, setOutput, handleRun };
+  function clearOutput() {
+    setOutput('');
+  }
+
+  return { isRunning, output, setOutput, handleRun, clearOutput };
 }

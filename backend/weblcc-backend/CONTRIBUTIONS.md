@@ -15,3 +15,10 @@ CED - Backend
 ## 2026-02-03 WEEK
 - Started implementing the trace system for step-by-step execution in the WebLCC frontend.
 - Attempted testing the Solutions `.a` files for emulator accuracy checks.
+
+## 2026-02-19 WEEK
+- Wired real trace data from the emulator (assembler + interpreter) into the backend API.
+- Added per-instruction trace snapshots (registers, flags, stack, memory) and pause handling for input traps.
+- Updated the WebLCC UI to render live trace state, highlight memory/stack tags, and show per-step PC/mnemonic details.
+- Split frontend layout into modular components and improved trace list formatting.
+- Set up workspace dev runner and port/proxy changes for running frontend + backend together.
