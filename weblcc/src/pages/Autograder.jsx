@@ -49,8 +49,11 @@ export default function Autograder() {
   const [fileLoading, setFileLoading] = useState(false);
   const [dark, setDark] = useState(false);
   const [toolbarPos, setToolbarPos] = useState({ bottom: 18, right: 18 });
+  const [isDraggingZip, setIsDraggingZip] = useState(false);
+  const [zipFiles, setZipFiles] = useState([]);
   const dragRef = useRef(null);
   const importRef = useRef(null);
+  const zipInputRef = useRef(null);
 
   // ── Toolbar drag ──────────────────────────────────────
   const handleToolbarMouseDown = (e) => {
@@ -165,11 +168,48 @@ export default function Autograder() {
   const removeDeduction = (id) =>
     setDeductions(prev => prev.filter(d => d.id !== id));
 
+  // ── ZIP drag & drop / click (Solutions.zip) ───────────
+  const handleZipFile = (file) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      alert('Please use a .zip file.');
+      return;
+    }
+    // Placeholder: wire this to backend parsing later.
+    console.log('Selected zip file:', file.name);
+    setZipFiles((prev) => {
+      const next = [file.name, ...prev];
+      return next.slice(0, 5);
+    });
+  };
+
+  const handleZipDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingZip(false);
+    const file = e.dataTransfer.files?.[0];
+    handleZipFile(file);
+  };
+
+  const handleZipDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingZip(true);
+  };
+
+  const handleZipDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingZip(false);
+  };
+
   // ── Save & next ───────────────────────────────────────
   const handleSaveNext = () => {
     setAutoSaved("just now");
     setTimeout(() => setAutoSaved("2s ago"), 2000);
-    setSelectedStudent(prev => (prev + 1) % STUDENTS.length);
+    if (STUDENTS.length > 0) {
+      setSelectedStudent(prev => (prev + 1) % STUDENTS.length);
+    }
   };
 
   const matched = actual && expected && actual.trim() === expected.trim();
@@ -180,11 +220,9 @@ export default function Autograder() {
     setScore(maxScore + totalDeducted);
   }, [deductions, maxScore]);
 
-  const filtered = STUDENTS.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.status.toLowerCase().includes(search.toLowerCase())
-  );
-  const gradedCount = STUDENTS.filter(s => s.status === "Graded").length;
+  // Hide mock students for now; will be wired to real data.
+  const filtered = [];
+  const gradedCount = 0;
 
   return (
     <div className={`ag-root${dark ? ' ag-dark' : ''}`}>
@@ -234,22 +272,53 @@ export default function Autograder() {
       {/* ── Panel 1: Students ────────────────────────── */}
       <div className="ag-panel ag-students">
         <div className="ag-panel-header">Panel 1: Students</div>
-        <input className="ag-search" placeholder="Search / Filter" value={search} onChange={e => setSearch(e.target.value)} />
+        <div
+          className={`ag-zip-drop${isDraggingZip ? ' ag-zip-drop--active' : ''}`}
+          onDragOver={handleZipDragOver}
+          onDragLeave={handleZipDragLeave}
+          onDrop={handleZipDrop}
+          onClick={() => zipInputRef.current?.click()}
+        >
+          <span className="ag-zip-title">Drop Solutions.zip here</span>
+          <span className="ag-zip-subtitle">or drag it from your files to load labs &amp; students</span>
+          <input
+            ref={zipInputRef}
+            type="file"
+            accept=".zip"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              handleZipFile(f);
+              e.target.value = '';
+            }}
+          />
+        </div>
+        {zipFiles.length > 0 && (
+          <ul className="ag-zip-file-list">
+            {zipFiles.map((name, idx) => {
+              const label = name.replace(/\.zip$/i, '');
+              return (
+                <li key={`${name}-${idx}`} className="ag-zip-file-item">
+                  <button
+                    type="button"
+                    className="ag-zip-file-btn"
+                    onClick={() => console.log('Selected zip from list:', name)}
+                  >
+                    {label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
         <ul className="ag-student-list">
-          {filtered.map((s, i) => {
-            const meta = STATUS_META[s.status];
-            return (
-              <li key={s.id} className={`ag-student-item ${selectedStudent === i ? 'ag-student-selected' : ''}`} onClick={() => setSelectedStudent(i)}>
-                <span className="ag-dot" style={{ color: meta.color }}>●</span>
-                <span className="ag-student-name">{s.name}</span>
-                <span className="ag-status-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
-              </li>
-            );
-          })}
+          {zipFiles.length === 0 && (
+            <li className="ag-student-empty">No students loaded yet.</li>
+          )}
         </ul>
         <div className="ag-list-footer">
-          <span className="ag-progress-pill">{gradedCount}/{STUDENTS.length}</span>
-          <span>{Math.round((gradedCount / STUDENTS.length) * 100)}% graded</span>
+          <span className="ag-progress-pill">{gradedCount}/0</span>
+          <span>0% graded</span>
         </div>
       </div>
 
