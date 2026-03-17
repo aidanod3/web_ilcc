@@ -1,15 +1,26 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import Autograder from './pages/Autograder.jsx';
+import { LabsProvider } from './context/LabsContext.jsx';
 import Ilcc from './pages/Ilcc.jsx';
+import Autograder from './pages/Autograder.jsx';
+import Management from './pages/Management.jsx';
+import LabModify from './pages/LabModify.jsx';
+import LabList from './pages/LabList.jsx';
+import Submissions from './pages/Submissions.jsx';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/ilcc" replace />} />
-        <Route path="/ilcc" element={<Ilcc />} />
-        <Route path="/autograder" element={<Autograder />} />
-      </Routes>
-    </BrowserRouter>
+    <LabsProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/ilcc" replace />} />
+          <Route path="/ilcc" element={<Ilcc />} />
+          <Route path="/autograder" element={<Autograder />} />
+          <Route path="/management" element={<Management />} />
+          <Route path="/labmodify" element={<LabModify />} />
+          <Route path="/lablist" element={<LabList />} />
+          <Route path="/submissions" element={<Submissions />} />
+        </Routes>
+      </BrowserRouter>
+    </LabsProvider>
   );
 }
