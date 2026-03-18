@@ -376,6 +376,10 @@ export default function Autograder() {
   const [dark, setDark] = useState(false);
   const [toolbarPos, setToolbarPos] = useState({ bottom: 18, right: 18 });
   const [isDraggingZip, setIsDraggingZip] = useState(false);
+  // STORED ZIP: solutionsZipFile (solutions), submissionsZipFile (student submissions via Upload File)
+  const [solutionsZipFile, setSolutionsZipFile] = useState(null);
+  const [submissionsZipFile, setSubmissionsZipFile] = useState(null);
+  const [submissionFiles, setSubmissionFiles] = useState([]); // parsed .a files from submissions zip
   const [submittedStudents, setSubmittedStudents] = useState([]);
   const [activeStudentId, setActiveStudentId] = useState(null);
   const [activeFileName, setActiveFileName] = useState(null);
@@ -436,10 +440,51 @@ export default function Autograder() {
     URL.revokeObjectURL(url);
   };
 
-  // ── Student code file upload ──────────────────────────
+  // ── Student submissions upload (via Upload File) ──────
+  const sendSubmissionsZipToBackend = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      // NOTE: direct call to FastAPI autograder backend
+      const resp = await fetch('http://127.0.0.1:8000/parse-submissions', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        console.error('parse-submissions failed:', resp.status, txt);
+        alert(`parse-submissions error: ${resp.status}`);
+        return;
+      }
+      const data = await resp.json().catch(() => null);
+      console.log('Parsed submissions response:', data);
+      // Expecting shape: { files: [ { folder, name, path, code }, ... ] }
+      if (data && Array.isArray(data.files) && data.files.length > 0) {
+        setSubmissionFiles(data.files);
+        // Default Panel 2 to first file's code
+        if (typeof data.files[0].code === 'string') {
+          setCode(data.files[0].code);
+        }
+      } else {
+        console.warn('No files array in response; raw data:', data);
+      }
+    } catch (err) {
+      console.error('Failed to parse submissions zip:', err);
+      alert('Failed to reach autograder backend. See console for details.');
+    }
+  };
+
+  // ── Student code file upload / submissions zip ────────
   const handleFile = (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
+    // If a ZIP is uploaded here, store it in submissionsZipFile instead of loading as text.
+    if (f.name.toLowerCase().endsWith('.zip')) {
+      setSubmissionsZipFile(f);
+       // NOTE: this sends the stored submissions ZIP to the FastAPI backend (/parse-submissions).
+      sendSubmissionsZipToBackend(f);
+      return;
+    }
     setFileLoading(true);
     const reader = new FileReader();
     reader.onload = (ev) => { setCode(String(ev.target.result || "")); setFileLoading(false); };
@@ -503,6 +548,7 @@ export default function Autograder() {
       alert('Please use a .zip file.');
       return;
     }
+    setSolutionsZipFile(file);
     // Placeholder: wire to backend parsing later.
     console.log('Selected zip file:', file.name);
   };
@@ -618,68 +664,45 @@ export default function Autograder() {
         </button>
       </div>
 
-      {/* ── Panel 1: Students ────────────────────────── */}
+      {/* ── Panel 1: Students (Submission) ─────────────── */}
       <div className="ag-panel ag-students">
         <div className="ag-panel-header">Panel 1: Students</div>
-
-        {submittedStudents.length === 0 ? (
-          <div style={{ padding: '12px 10px' }}>
-            <div
-              className={`ag-zip-drop${isDraggingZip ? ' ag-zip-drop--active' : ''}`}
-              onDragOver={handleZipDragOver}
-              onDragLeave={handleZipDragLeave}
-              onDrop={handleZipDrop}
-              onClick={() => zipInputRef.current?.click()}
-            >
-              <span className="ag-zip-title">Drop Solutions.zip here</span>
-              <span className="ag-zip-subtitle">or drag it from your files to load labs &amp; students</span>
-              <input ref={zipInputRef} type="file" accept=".zip" style={{ display: 'none' }}
-                onChange={(e) => { handleZipFile(e.target.files?.[0]); e.target.value = ''; }} />
-            </div>
-            <button
-              className="ag-btn ag-btn-save"
-              style={{ width: '100%', marginTop: 10, fontSize: 13 }}
-              onClick={handleSubmitFiles}
-            >
-              Submit Files (Demo)
-            </button>
+        <div style={{ padding: '12px 10px' }}>
+          <div
+            className={`ag-zip-drop${isDraggingZip ? ' ag-zip-drop--active' : ''}`}
+            onDragOver={handleZipDragOver}
+            onDragLeave={handleZipDragLeave}
+            onDrop={handleZipDrop}
+            onClick={() => zipInputRef.current?.click()}
+          >
+            <span className="ag-zip-title">Drop Solutions.zip here</span>
+            <span className="ag-zip-subtitle">or drag it from your files to load labs &amp; students</span>
+            <input
+              ref={zipInputRef}
+              type="file"
+              accept=".zip"
+              style={{ display: 'none' }}
+              onChange={(e) => { handleZipFile(e.target.files?.[0]); e.target.value = ''; }}
+            />
           </div>
-        ) : (
-          <>
-            <div style={{ padding: '8px 10px 4px' }}>
-              <input
-                className="ag-search"
-                placeholder="Search students…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box' }}
-              />
-            </div>
-            <ul className="ag-student-list" style={{ flex: 1, overflowY: 'auto' }}>
-              {filtered.map(s => (
-                <li
-                  key={s.id}
-                  className={`ag-student-item${activeStudentId === s.id ? ' ag-student-item--active' : ''}`}
-                  onClick={() => handleSelectStudent(s)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span className="ag-student-name">{s.name}</span>
-                  <span className="ag-student-sid" style={{ fontSize: 11, opacity: 0.6, marginLeft: 6 }}>{s.sid}</span>
-                  <span
-                    className="ag-status-pill"
-                    style={{ background: STATUS_META[s.status]?.bg, color: STATUS_META[s.status]?.color, marginLeft: 'auto' }}
+          {submissionFiles.length > 0 && (
+            <ul className="ag-zip-file-list">
+              {submissionFiles.map((f, idx) => (
+                <li key={f.path || idx} className="ag-zip-file-item">
+                  <button
+                    className="ag-zip-file-btn"
+                    onClick={() => { if (typeof f.code === 'string') setCode(f.code); }}
                   >
-                    {STATUS_META[s.status]?.label}
-                  </span>
+                    <span className="ag-zip-file-label">
+                      {f.folder ? `${f.folder}/` : ''}
+                      {f.name}
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
-            <div className="ag-list-footer">
-              <span className="ag-progress-pill">{gradedCount}/{submittedStudents.length}</span>
-              <span>{submittedStudents.length ? Math.round(gradedCount / submittedStudents.length * 100) : 0}% graded</span>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── Panel 2: Student Code ────────────────────── */}

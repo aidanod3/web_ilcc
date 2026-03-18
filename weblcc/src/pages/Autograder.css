@@ -45,6 +45,25 @@
   color: #0f1b35;
   letter-spacing: -0.3px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ag-back-btn {
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.ag-back-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
 }
 
 /* ─────────────────────────────────────────
@@ -125,9 +144,7 @@
 }
 
 .ag-zip-file-item {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .ag-zip-file-btn {
@@ -140,9 +157,20 @@
   cursor: pointer;
   border-radius: 8px;
   transition: background 0.15s ease;
+  overflow: hidden;
 }
 .ag-zip-file-btn:hover {
   background: #e5e7eb;
+}
+
+.ag-zip-file-label {
+  display: inline-block;
+  max-width: 100%;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  /* Allow wrapping so full folder/filename is visible */
+  white-space: normal;
+  word-break: break-all;
 }
 .ag-student-list::-webkit-scrollbar { width: 4px; }
 .ag-student-list::-webkit-scrollbar-thumb { background: #c5cedd; border-radius: 4px; }
