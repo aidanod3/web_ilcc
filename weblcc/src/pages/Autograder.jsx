@@ -357,7 +357,7 @@ const IconTrash   = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="
 export default function Autograder() {
   const [selectedStudent, setSelectedStudent] = useState(0);
   const [code, setCode] = useState(`c0605.a\n\nmain:\n    push lr\n    push fp\n    mov fp, sp\n    ; load values\n    mov r1, 5`);
-  const [reference] = useState(`c0605_sol.a\n\nmain:\n    push lr\n    push fp\n    mov fp, sp\n    ; setup frame\n    mov r1, 5`);
+  const [reference] = useState(`main:\n    push lr\n    push fp\n    mov fp, sp\n    mov r1, 5\n    dout r1`);
   const [input, setInput] = useState("5 10 -3");
   const [expected, setExpected] = useState("15 -30");
   const [actual, setActual] = useState("");
@@ -370,6 +370,9 @@ export default function Autograder() {
   const [message, setMessage] = useState("Good work! Check pcoffset in Q3 (+1 for PC advance). Fix epilogue in Q5: mov sp,fp before pops.");
   const [isChecking, setIsChecking] = useState(false);
   const [mismatchLine, setMismatchLine] = useState(2);
+  const [gradeMatch, setGradeMatch] = useState(null); // null until "Run Code" is pressed
+  const [gradeMessage, setGradeMessage] = useState(""); // message from /grade endpoint
+  const [outputMatched, setOutputMatched] = useState(null); // null until "Run Code" is pressed
   const [search, setSearch] = useState("");
   const [autoSaved, setAutoSaved] = useState("2s ago");
   const [fileLoading, setFileLoading] = useState(false);
@@ -497,36 +500,63 @@ export default function Autograder() {
     setIsChecking(true);
     setActual("");
     setMismatchLine(null);
+    setGradeMatch(null);
+    setGradeMessage("");
     try {
-      const payload = { source: code };
-      const candidates = ['/api/run'];
-      let finalData = null, lastError = null;
-      for (const url of candidates) {
-        try {
-          const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          const raw  = await resp.text().catch(() => '');
-          let data;
-          try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { _rawText: raw }; }
-          if (resp.ok) { finalData = data; break; }
-          lastError = { status: resp.status, detail: String(data?.error || `HTTP ${resp.status}`) };
-        } catch (err) { lastError = { status: 0, detail: err.message || 'Network error' }; }
+      setOutputMatched(null);
+
+      // 1) Code comparison (Panel 2 code vs Panel 3 reference)
+      const gradeResp = await fetch('http://127.0.0.1:8000/grade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentCode: code,
+          solutionCode: reference,
+        }),
+      });
+
+      if (!gradeResp.ok) {
+        const txt = await gradeResp.text().catch(() => "");
+        console.error("grade failed:", gradeResp.status, txt);
+        alert(`grade error: ${gradeResp.status}`);
+        return;
       }
-      if (finalData) {
-        if (finalData.error) {
-          setActual(`Error: ${finalData.error}`);
-        } else {
-          const result = (finalData.stdout || '').trim() || (finalData.stderr || '').trim() || 'No output.';
-          setActual(result);
-          const expLines = expected.split('\n'), actLines = result.split('\n');
-          let mLine = null;
-          for (let i = 0; i < Math.max(expLines.length, actLines.length); i++) {
-            if ((expLines[i] || '') !== (actLines[i] || '')) { mLine = i + 1; break; }
-          }
-          setMismatchLine(mLine);
-        }
-      } else {
-        setActual(lastError?.detail || 'Unable to reach backend.');
-      }
+
+      const gradeData = await gradeResp.json().catch(() => null);
+      setGradeMatch(!!gradeData?.isCorrect);
+      setGradeMessage(String(gradeData?.message || ""));
+
+      // 2) Run both programs and display their outputs
+      const runOne = async (source) => {
+        const resp = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        const stdout = String(data?.stdout || '').trim();
+        const stderr = String(data?.stderr || '').trim();
+        return stdout || stderr || 'No output.';
+      };
+
+      const [studentOut, referenceOut] = await Promise.all([
+        runOne(code),
+        runOne(reference),
+      ]);
+
+      // Compare only what appears after the word "output" (e.g. "output: ...").
+      const extractAfterOutput = (text) => {
+        const s = String(text || "");
+        const m = s.match(/output\s*:?\s*([\s\S]*)/i);
+        return (m && m[1] !== undefined ? m[1] : s).trim();
+      };
+
+      const studentExtracted = extractAfterOutput(studentOut);
+      const referenceExtracted = extractAfterOutput(referenceOut);
+
+      setActual(studentExtracted);
+      setExpected(referenceExtracted);
+      setOutputMatched(studentExtracted.trim() === referenceExtracted.trim());
     } catch (error) { setActual(String(error)); }
     finally { setIsChecking(false); }
   };
@@ -604,7 +634,7 @@ export default function Autograder() {
     }
   };
 
-  const matched = actual && expected && actual.trim() === expected.trim();
+  const hasRun = outputMatched !== null;
   const totalDeducted = deductions.reduce((sum, d) => sum + (Number(d.pts) || 0), 0);
 
   // Auto-calculate score whenever deductions or maxScore change
@@ -756,17 +786,24 @@ export default function Autograder() {
 
       {/* ── Panel 5: Output ──────────────────────────── */}
       <div className="ag-panel ag-output-panel">
-        <div className="ag-panel-header">Panel 5: Output</div>
-        <div className={`ag-output-box ag-expected ${matched === true ? 'ag-match' : ''}`}>
-          <span className="ag-output-label">Expected:</span>
+        <div className="ag-panel-header">
+          <span>Panel 5: Output</span>
+          {hasRun && gradeMatch !== null && (
+            <span className={`ag-code-compare-badge ${gradeMatch ? "ag-code-compare-badge--ok" : "ag-code-compare-badge--bad"}`}>
+              {gradeMatch ? "✓ Code Match" : "✗ Code Mismatch"}
+            </span>
+          )}
+        </div>
+        <div className={`ag-output-box ag-expected ${hasRun ? (outputMatched ? "ag-match" : "ag-mismatch") : ""}`}>
+          <span className="ag-output-label">Panel 3 Output:</span>
           <textarea className="ag-output-inline-input" value={expected} onChange={e => setExpected(e.target.value)} />
         </div>
-        <div className={`ag-output-box ag-actual ${actual && !matched ? 'ag-mismatch' : ''} ${matched ? 'ag-match' : ''}`}>
-          <span className="ag-output-label">Actual:</span>
+        <div className={`ag-output-box ag-actual ${hasRun ? (outputMatched ? "ag-match" : "ag-mismatch") : ""}`}>
+          <span className="ag-output-label">Panel 2 Output:</span>
           <span className="ag-output-value">{actual || '—'}</span>
         </div>
-        {actual && mismatchLine && !matched && <div className="ag-mismatch-msg">MISMATCH on line {mismatchLine}</div>}
-        {matched && <div className="ag-match-msg">✓ OUTPUT MATCHES</div>}
+        {hasRun && outputMatched && <div className="ag-match-msg">✓ OUTPUT MATCHES</div>}
+        {hasRun && !outputMatched && <div className="ag-mismatch-msg">✗ OUTPUT DOES NOT MATCH</div>}
       </div>
 
       {/* ── Panel 6: Feedback ────────────────────────── */}

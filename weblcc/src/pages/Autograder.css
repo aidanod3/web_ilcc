@@ -400,6 +400,23 @@
 .ag-actual { border-color: #f87171; background: #fff5f5; }
 .ag-actual .ag-output-label { color: #dc2626; }
 
+/* Panel 2 output (Actual) default should be light blue instead of red */
+.ag-output-panel .ag-actual {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+.ag-output-panel .ag-actual .ag-output-label {
+  color: #1d4ed8;
+}
+
+.ag-dark .ag-output-panel .ag-actual {
+  border-color: #3b82f6;
+  background: #0b2147;
+}
+.ag-dark .ag-output-panel .ag-actual .ag-output-label {
+  color: #93c5fd;
+}
+
 .ag-match    { border-color: #22c55e !important; background: #f0fdf6 !important; }
 .ag-mismatch { border-color: #ef4444 !important; background: #fff5f5 !important; }
 
@@ -453,6 +470,59 @@
   padding: 4px 0 0;
   flex-shrink: 0;
 }
+
+/* Panel 5: Code comparison container */
+.ag-output-code-compare {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 2px solid #d0d9ea;
+  background: #f8fafd;
+}
+
+.ag-code-compare-title {
+  font-weight: 800;
+  font-size: 11px;
+  color: #0f1b35;
+  text-align: center;
+  margin-bottom: 4px;
+  font-family: 'Source Sans 3', sans-serif;
+}
+
+.ag-code-compare-message {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a2035;
+  text-align: center;
+  padding-top: 4px;
+  word-break: break-word;
+}
+
+/* Small badge near Panel 5 header */
+.ag-code-compare-badge {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: #22c55e;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.ag-code-compare-badge--bad { background: #ef4444; }
+
+.ag-dark .ag-output-code-compare {
+  background: #0d1220;
+  border-color: #2e4060;
+}
+
+.ag-dark .ag-code-compare-title,
+.ag-dark .ag-code-compare-message {
+  color: #c8d8f0;
+}
+
+.ag-dark .ag-code-compare-badge { opacity: 0.98; }
 
 /* ─────────────────────────────────────────
    PANEL 6: FEEDBACK
