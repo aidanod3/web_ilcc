@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Autograder.css";
+import CodeMirror from "@uiw/react-codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 const DEMO_STUDENTS = [
   {
@@ -765,13 +767,25 @@ export default function Autograder() {
             </label>
           </div>
         )}
-        <textarea className="ag-code-editor" value={code} onChange={e => setCode(e.target.value)} spellCheck={false} />
+        <CodeMirror
+          value={code}
+          onChange={val => setCode(val)}
+          theme={dark ? oneDark : 'light'}
+          basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
+          style={{ flex: 1, overflow: 'auto', fontSize: 13, borderRadius: 8 }}
+        />
       </div>
 
       {/* ── Panel 3: Reference ───────────────────────── */}
       <div className="ag-panel ag-ref-panel">
         <div className="ag-panel-header">Panel 3: Reference</div>
-        <pre className="ag-reference">{reference}</pre>
+        <CodeMirror
+          value={reference}
+          readOnly
+          theme={dark ? oneDark : 'light'}
+          basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
+          style={{ flex: 1, overflow: 'auto', fontSize: 13, borderRadius: 8 }}
+        />
       </div>
 
       {/* ── Panel 4: Input ───────────────────────────── */}
