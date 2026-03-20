@@ -233,6 +233,7 @@
   grid-column: 2;
   grid-row: 1;
   background: #151d2e;
+  min-height: 0; /* allow flex children to size correctly */
 }
 
 .ag-code-panel .ag-panel-header { color: #e8f0ff; }
@@ -264,6 +265,7 @@
   flex: 1;
   width: 100%;
   min-height: 0;
+  height: 100%;
   background: #0d1525;
   color: #7ecfea;
   font-family: 'IBM Plex Mono', monospace;
@@ -289,6 +291,7 @@
   grid-column: 3;
   grid-row: 1;
   background: #151d2e;
+  min-height: 0; /* allow flex children to size correctly */
 }
 
 .ag-ref-panel .ag-panel-header { color: #e8f0ff; }
@@ -298,6 +301,7 @@
   flex: 1;
   width: 100%;
   min-height: 0;
+  height: 100%;
   background: #0d1525;
   color: #5dd8a0;
   font-family: 'IBM Plex Mono', monospace;
@@ -313,6 +317,21 @@
 }
 .ag-reference::-webkit-scrollbar { width: 5px; }
 .ag-reference::-webkit-scrollbar-thumb { background: #2e4060; border-radius: 4px; }
+
+/* CodeMirror stretch fix (Panel 2 + 3) */
+.ag-code-panel .cm-editor,
+.ag-code-panel .cm-scroller,
+.ag-code-panel .cm-content,
+.ag-ref-panel .cm-editor,
+.ag-ref-panel .cm-scroller,
+.ag-ref-panel .cm-content {
+  height: 100%;
+}
+
+.ag-code-panel .cm-scroller,
+.ag-ref-panel .cm-scroller {
+  overflow: auto;
+}
 
 /* ─────────────────────────────────────────
    PANEL 4: INPUT
