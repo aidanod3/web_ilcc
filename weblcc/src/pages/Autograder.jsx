@@ -381,8 +381,7 @@ export default function Autograder() {
   const [dark, setDark] = useState(false);
   const [toolbarPos, setToolbarPos] = useState({ bottom: 18, right: 18 });
   const [isDraggingZip, setIsDraggingZip] = useState(false);
-  // STORED ZIP: solutionsZipFile (solutions), submissionsZipFile (student submissions via Upload File)
-  const [solutionsZipFile, setSolutionsZipFile] = useState(null);
+  // STORED ZIP: student submissions ZIP (contains folders with .a files)
   const [submissionsZipFile, setSubmissionsZipFile] = useState(null);
   const [submissionFiles, setSubmissionFiles] = useState([]); // parsed .a files from submissions zip
   const [submittedStudents, setSubmittedStudents] = useState([]);
@@ -466,6 +465,7 @@ export default function Autograder() {
       // Expecting shape: { files: [ { folder, name, path, code }, ... ] }
       if (data && Array.isArray(data.files) && data.files.length > 0) {
         setSubmissionFiles(data.files);
+        setSelectedStudent(0);
         // Default Panel 2 to first file's code
         if (typeof data.files[0].code === 'string') {
           setCode(data.files[0].code);
@@ -580,9 +580,17 @@ export default function Autograder() {
       alert('Please use a .zip file.');
       return;
     }
-    setSolutionsZipFile(file);
-    // Placeholder: wire to backend parsing later.
-    console.log('Selected zip file:', file.name);
+    // Reset previously parsed files so the UI reflects the new submission batch.
+    setSubmissionsZipFile(file);
+    setSubmissionFiles([]);
+    setActiveStudentId(null);
+    setActiveFileName(null);
+    setSelectedStudent(0);
+    setCode("");
+    setFileLoading(true);
+
+    // Uses the Python parser in backend/autograder-backend/main.py (/parse-submissions).
+    sendSubmissionsZipToBackend(file).finally(() => setFileLoading(false));
   };
 
   const handleZipDrop = (e) => {
@@ -631,8 +639,13 @@ export default function Autograder() {
   const handleSaveNext = () => {
     setAutoSaved("just now");
     setTimeout(() => setAutoSaved("2s ago"), 2000);
-    if (STUDENTS.length > 0) {
-      setSelectedStudent(prev => (prev + 1) % STUDENTS.length);
+    if (submissionFiles.length > 0) {
+      setSelectedStudent(prev => {
+        const next = (prev + 1) % submissionFiles.length;
+        const nextFile = submissionFiles[next];
+        if (nextFile && typeof nextFile.code === "string") setCode(nextFile.code);
+        return next;
+      });
     }
   };
 
@@ -643,6 +656,20 @@ export default function Autograder() {
   useEffect(() => {
     setScore(maxScore + totalDeducted);
   }, [deductions, maxScore]);
+
+  const submissionBundleText = submissionFiles.length
+    ? submissionFiles
+        .map((f) => {
+          const label = `${f.folder ? f.folder + "/" : ""}${f.name}`;
+          return `; --- ${label} ---\n\n${String(f.code ?? "")}`;
+        })
+        .join("\n\n")
+    : "Drop Submissions.zip to view the parsed .a files here.";
+
+  const currentSubmissionLabel =
+    submissionFiles.length > 0 && submissionFiles[selectedStudent]
+      ? `${submissionFiles[selectedStudent].folder ? submissionFiles[selectedStudent].folder + "/" : ""}${submissionFiles[selectedStudent].name}`
+      : "";
 
   const activeStudent = submittedStudents.find(s => s.id === activeStudentId) || null;
   const filtered = submittedStudents.filter(s =>
@@ -707,7 +734,7 @@ export default function Autograder() {
             onDrop={handleZipDrop}
             onClick={() => zipInputRef.current?.click()}
           >
-            <span className="ag-zip-title">Drop Solutions.zip here</span>
+              <span className="ag-zip-title">Drop Submissions.zip here</span>
             <span className="ag-zip-subtitle">or drag it from your files to load labs &amp; students</span>
             <input
               ref={zipInputRef}
@@ -717,23 +744,6 @@ export default function Autograder() {
               onChange={(e) => { handleZipFile(e.target.files?.[0]); e.target.value = ''; }}
             />
           </div>
-          {submissionFiles.length > 0 && (
-            <ul className="ag-zip-file-list">
-              {submissionFiles.map((f, idx) => (
-                <li key={f.path || idx} className="ag-zip-file-item">
-                  <button
-                    className="ag-zip-file-btn"
-                    onClick={() => { if (typeof f.code === 'string') setCode(f.code); }}
-                  >
-                    <span className="ag-zip-file-label">
-                      {f.folder ? `${f.folder}/` : ''}
-                      {f.name}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
 
@@ -741,32 +751,12 @@ export default function Autograder() {
       <div className="ag-panel ag-code-panel">
         <div className="ag-panel-header">
           Panel 2: Student Code
-          {activeStudent && (
+          {currentSubmissionLabel && (
             <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 8, opacity: 0.7 }}>
-              — {activeStudent.name}
+              — {currentSubmissionLabel}
             </span>
           )}
         </div>
-        {activeStudent ? (
-          <div className="ag-file-tabs">
-            {activeStudent.files.map(f => (
-              <button
-                key={f.name}
-                className={`ag-file-tab${activeFileName === f.name ? ' ag-file-tab--active' : ''}`}
-                onClick={() => handleSelectFile(f)}
-              >
-                {f.name}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="ag-code-actions">
-            <label className="ag-upload-btn">
-              {fileLoading ? 'Loading…' : 'Upload File'}
-              <input type="file" accept="*/*" onChange={handleFile} style={{ display: 'none' }} />
-            </label>
-          </div>
-        )}
         <CodeMirror
           value={code}
           onChange={val => setCode(val)}
@@ -778,9 +768,9 @@ export default function Autograder() {
 
       {/* ── Panel 3: Reference ───────────────────────── */}
       <div className="ag-panel ag-ref-panel">
-        <div className="ag-panel-header">Panel 3: Reference</div>
+        <div className="ag-panel-header">Panel 3: Dropped Submissions</div>
         <CodeMirror
-          value={reference}
+          value={submissionBundleText}
           readOnly
           theme={dark ? oneDark : 'light'}
           basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
@@ -809,7 +799,7 @@ export default function Autograder() {
           )}
         </div>
         <div className={`ag-output-box ag-expected ${hasRun ? (outputMatched ? "ag-match" : "ag-mismatch") : ""}`}>
-          <span className="ag-output-label">Panel 3 Output:</span>
+          <span className="ag-output-label">Reference Output:</span>
           <textarea className="ag-output-inline-input" value={expected} onChange={e => setExpected(e.target.value)} />
         </div>
         <div className={`ag-output-box ag-actual ${hasRun ? (outputMatched ? "ag-match" : "ag-mismatch") : ""}`}>
@@ -884,7 +874,14 @@ export default function Autograder() {
         </div>
 
         <div className="ag-feedback-actions">
-          <button className="ag-btn ag-btn-save" onClick={handleSaveNext}>Save &amp; Next</button>
+          <button
+            className="ag-btn ag-btn-save"
+            onClick={handleSaveNext}
+            disabled={submissionFiles.length === 0}
+            title={submissionFiles.length === 0 ? "Drop Submissions.zip first" : "Save current and load next .a file"}
+          >
+            Save &amp; Next
+          </button>
           <button className="ag-btn ag-btn-skip">Skip</button>
         </div>
 
