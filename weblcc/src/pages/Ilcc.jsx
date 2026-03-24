@@ -5,39 +5,80 @@ const FLAG_NAMES = ['N', 'Z', 'P', 'C', 'V'];
 
 const THEME = {
   dark: {
-    bg: '#0e0e0f',
-    panel: '#18181b',
-    panel2: '#1e1e22',
-    border: '#2a2a2f',
-    text: '#e2e2e5',
-    mut: '#8a8a96',
-    accent: '#f7a800',
-    red: '#ff5f5f',
-    green: '#3ddc84',
-    orange: '#ffb457',
-    yellow: '#ffd866',
-    cyan: '#4fd8ff',
+    label: 'Dark',
+    bg: '#0e0e0f', panel: '#18181b', panel2: '#1e1e22', border: '#2a2a2f',
+    text: '#e2e2e5', mut: '#8a8a96',
+    accent: '#f7a800', red: '#ff5f5f', green: '#3ddc84', orange: '#ffb457',
+    yellow: '#ffd866', cyan: '#4fd8ff',
     activeLine: 'rgba(79,124,255,0.18)',
     activeLineFlashFwd: 'rgba(79,124,255,0.4)',
-    activeLineFlashBack: 'rgba(255,180,87,0.35)'
+    activeLineFlashBack: 'rgba(255,180,87,0.35)',
+    editorBg: '#151518', gutter: '#141418', terminal: '#111217',
+    terminalInput: '#2f3036',
+    shadow: '0 8px 20px rgba(0,0,0,.35)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.03)',
+    focusGrad: 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(24,24,27,.88))',
   },
   light: {
-    bg: '#f7f7f8',
-    panel: '#ffffff',
-    panel2: '#f2f2f5',
-    border: '#dadbe2',
-    text: '#1d1e23',
-    mut: '#5b5f6a',
-    accent: '#c98700',
-    red: '#e03434',
-    green: '#1a9e5c',
-    orange: '#c9781d',
-    yellow: '#9f7a00',
-    cyan: '#0f7fa3',
+    label: 'Light',
+    bg: '#f7f7f8', panel: '#ffffff', panel2: '#f2f2f5', border: '#dadbe2',
+    text: '#1d1e23', mut: '#5b5f6a',
+    accent: '#c98700', red: '#e03434', green: '#1a9e5c', orange: '#c9781d',
+    yellow: '#9f7a00', cyan: '#0f7fa3',
     activeLine: 'rgba(58,99,232,0.12)',
     activeLineFlashFwd: 'rgba(58,99,232,0.3)',
-    activeLineFlashBack: 'rgba(201,120,29,0.28)'
-  }
+    activeLineFlashBack: 'rgba(201,120,29,0.28)',
+    editorBg: '#f9f9fb', gutter: '#f5f5f9', terminal: '#eef0f6',
+    terminalInput: '#d5d7e1',
+    shadow: '0 8px 20px rgba(0,0,0,.12)',
+    insetShadow: 'inset 0 0 0 1px rgba(0,0,0,.03)',
+    focusGrad: 'linear-gradient(180deg, rgba(201,135,0,.10), rgba(255,255,255,.92))',
+  },
+  midnight: {
+    label: 'Midnight',
+    bg: '#011627', panel: '#022140', panel2: '#01283a', border: '#0a3b5c',
+    text: '#d6deeb', mut: '#5f7e97',
+    accent: '#ffcb6b', red: '#ef5350', green: '#addb67', orange: '#f78c6c',
+    yellow: '#ffcb6b', cyan: '#80cbc4',
+    activeLine: 'rgba(0,119,186,0.25)',
+    activeLineFlashFwd: 'rgba(0,119,186,0.45)',
+    activeLineFlashBack: 'rgba(247,140,108,0.35)',
+    editorBg: '#01283a', gutter: '#01283a', terminal: '#011627',
+    terminalInput: '#023a5a',
+    shadow: '0 8px 20px rgba(0,0,0,.5)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(255,203,107,.10), rgba(2,33,64,.88))',
+  },
+  dracula: {
+    label: 'Dracula',
+    bg: '#282a36', panel: '#21222c', panel2: '#1e1f29', border: '#44475a',
+    text: '#f8f8f2', mut: '#6272a4',
+    accent: '#bd93f9', red: '#ff5555', green: '#50fa7b', orange: '#ffb86c',
+    yellow: '#f1fa8c', cyan: '#8be9fd',
+    activeLine: 'rgba(189,147,249,0.15)',
+    activeLineFlashFwd: 'rgba(189,147,249,0.35)',
+    activeLineFlashBack: 'rgba(255,184,108,0.3)',
+    editorBg: '#1e1f29', gutter: '#1e1f29', terminal: '#191a26',
+    terminalInput: '#383b4d',
+    shadow: '0 8px 20px rgba(0,0,0,.4)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(189,147,249,.12), rgba(30,31,41,.88))',
+  },
+  monokai: {
+    label: 'Monokai',
+    bg: '#272822', panel: '#1e1f1a', panel2: '#191a16', border: '#3d3d32',
+    text: '#f8f8f2', mut: '#75715e',
+    accent: '#a6e22e', red: '#f92672', green: '#a6e22e', orange: '#fd971f',
+    yellow: '#e6db74', cyan: '#66d9e8',
+    activeLine: 'rgba(166,226,46,0.12)',
+    activeLineFlashFwd: 'rgba(166,226,46,0.3)',
+    activeLineFlashBack: 'rgba(249,38,114,0.25)',
+    editorBg: '#191a16', gutter: '#191a16', terminal: '#1a1b16',
+    terminalInput: '#35362e',
+    shadow: '0 8px 20px rgba(0,0,0,.4)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(166,226,46,.10), rgba(30,31,26,.88))',
+  },
 };
 
 const SAMPLE_CODE = `; Add two input numbers (LCC)\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, promptA\n            sout r0\n            din r1\n\n            lea r0, promptB\n            sout r0\n            din r2\n\n            add r3, r1, r2\n            lea r0, sumMsg\n            sout r0\n            dout r3\n            nl\n\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\npromptA:    .string \"Enter first number: \"\npromptB:    .string \"Enter second number: \"\nsumMsg:     .string \"Sum: \"\n`;
@@ -1521,8 +1562,13 @@ function reducer(state, action) {
         }
       };
 
-    case 'TOGGLE_THEME':
-      return { ...state, theme: state.theme === 'dark' ? 'light' : 'dark' };
+    case 'SET_THEME':
+      return { ...state, theme: action.theme };
+    case 'TOGGLE_THEME': {
+      const themeKeys = Object.keys(THEME);
+      const nextIdx = (themeKeys.indexOf(state.theme) + 1) % themeKeys.length;
+      return { ...state, theme: themeKeys[nextIdx] };
+    }
 
     case 'SET_EDITING_BREAKPOINT':
       return { ...state, editingBreakpoint: action.line ?? null };
@@ -2173,8 +2219,8 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
               padding: '0 8px',
               borderRadius: 999,
               border: `1px solid ${THEME[state.theme].border}`,
-              background: state.theme === 'dark' ? '#111217' : '#eef0f6',
-              boxShadow: state.theme === 'dark' ? 'inset 0 0 0 1px rgba(255,255,255,.03)' : 'inset 0 0 0 1px rgba(0,0,0,.03)'
+              background: THEME[state.theme].terminal,
+              boxShadow: THEME[state.theme].insetShadow
             }}
           >
             <button className="asm-btn" title="Step Forward 1" onClick={() => { if (canForward) onForceTraceForward(); }} disabled={!canForward}>+1</button>
@@ -2218,7 +2264,17 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
         }} />
         <button className="asm-btn" onClick={() => fileRef.current && fileRef.current.click()}>Import</button>
         <button className="asm-btn" onClick={onExport}>Export</button>
-        <button className="asm-btn" onClick={() => dispatch({ type: 'TOGGLE_THEME' })}>{state.theme === 'dark' ? 'Light' : 'Dark'}</button>
+        <select
+          value={state.theme}
+          onChange={(e) => dispatch({ type: 'SET_THEME', theme: e.target.value })}
+          className="asm-btn"
+          style={{ paddingRight: 6, cursor: 'pointer' }}
+          title="Editor theme"
+        >
+          {Object.entries(THEME).map(([key, t]) => (
+            <option key={key} value={key}>{t.label}</option>
+          ))}
+        </select>
         <img
           src="/newpaltz_logo_dark.webp"
           alt="New Paltz State University of New York"
@@ -2309,7 +2365,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                     border: `1px solid ${THEME[state.theme].border}`,
                     borderRadius: 8,
                     background: THEME[state.theme].panel,
-                    boxShadow: state.theme === 'dark' ? '0 8px 20px rgba(0,0,0,.35)' : '0 8px 20px rgba(0,0,0,.12)',
+                    boxShadow: THEME[state.theme].shadow,
                     overflow: 'hidden'
                   }}
                 >
@@ -2343,7 +2399,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
       {!collapsed ? (
         <>
           {isEditingFileName ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderBottom: `1px solid ${THEME[state.theme].border}`, background: state.theme === 'dark' ? '#141418' : '#f5f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderBottom: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].gutter }}>
               <span style={{ fontSize: 12, color: THEME[state.theme].mut }}>Edit file name</span>
               <input
                 value={fileNameDraft}
@@ -2369,7 +2425,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
             </div>
           ) : null}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', borderBottom: `1px solid ${THEME[state.theme].border}`, padding: '6px 8px', background: state.theme === 'dark' ? '#141418' : '#f5f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', borderBottom: `1px solid ${THEME[state.theme].border}`, padding: '6px 8px', background: THEME[state.theme].gutter }}>
             {state.tabs.map((tab) => (
               <div
                 key={tab.id}
@@ -2425,7 +2481,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
               style={{
                 overflow: 'hidden',
                 borderRight: `1px solid ${THEME[state.theme].border}`,
-                background: state.theme === 'dark' ? '#141418' : '#f5f5f9'
+                background: THEME[state.theme].gutter
               }}
             >
               {lines.map((line, idx) => {
@@ -2513,7 +2569,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                   height: '100%',
                   border: 'none',
                   outline: 'none',
-                  background: state.theme === 'dark' ? '#151518' : '#f9f9fb',
+                  background: THEME[state.theme].editorBg,
                   color: 'transparent',
                   caretColor: THEME[state.theme].text,
                   padding: 8,
@@ -2530,9 +2586,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
             <div
               style={{
                 borderTop: `1px solid ${THEME[state.theme].border}`,
-                background: state.theme === 'dark'
-                  ? 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(24,24,27,.88))'
-                  : 'linear-gradient(180deg, rgba(201,135,0,.10), rgba(255,255,255,.92))',
+                background: THEME[state.theme].focusGrad,
                 padding: '8px 12px'
               }}
             >
@@ -2915,11 +2969,11 @@ function TimelinePanel({ state, dispatch, current, timelineVisualLine, trackRef,
                   height: 30,
                   borderRadius: 8,
                   border: `1px solid ${THEME[state.theme].border}`,
-                  background: state.theme === 'dark' ? '#121216' : '#ffffff',
+                  background: THEME[state.theme].terminal,
                   color: THEME[state.theme].text,
                   padding: '0 10px',
                   fontWeight: 600,
-                  boxShadow: state.theme === 'dark' ? 'inset 0 0 0 1px rgba(255,255,255,.03)' : 'inset 0 0 0 1px rgba(0,0,0,.03)'
+                  boxShadow: THEME[state.theme].insetShadow
                 }}
               />
               <span style={{ fontSize: 12 }}>s/line</span>
@@ -2958,7 +3012,7 @@ function TimelinePanel({ state, dispatch, current, timelineVisualLine, trackRef,
                     borderRadius: 999,
                     background: state.timelineState.educationMode
                       ? 'rgba(247,168,0,.55)'
-                      : (state.theme === 'dark' ? '#2f3036' : '#d5d7e1'),
+                      : THEME[state.theme].terminalInput,
                     transition: 'background 180ms ease'
                   }}
                 >
@@ -2993,7 +3047,7 @@ function TimelinePanel({ state, dispatch, current, timelineVisualLine, trackRef,
               if (e.key === 'ArrowLeft') onSetTimelineLine((v) => clamp((typeof v === 'number' ? v : currentIndex) - 1, 0, total));
               if (e.key === 'ArrowRight') onSetTimelineLine((v) => clamp((typeof v === 'number' ? v : currentIndex) + 1, 0, total));
             }}
-            style={{ position: 'relative', height: 48, borderRadius: 8, border: `1px solid ${THEME[state.theme].border}`, overflow: 'hidden', cursor: 'pointer', background: state.theme === 'dark' ? '#111214' : '#eceef3' }}
+            style={{ position: 'relative', height: 48, borderRadius: 8, border: `1px solid ${THEME[state.theme].border}`, overflow: 'hidden', cursor: 'pointer', background: THEME[state.theme].terminal }}
           >
             <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: 10, background: 'linear-gradient(90deg, rgba(79,124,255,.65), rgba(79,124,255,.2))', width: `${playheadPercent}%`, transition: state.timelineState.playing ? 'none' : 'width 200ms ease' }} />
             <div style={{ position: 'absolute', left: 0, top: 12, right: 0, height: 14, display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, total + 1)}, 1fr)` }}>
