@@ -895,7 +895,7 @@ export default function Autograder() {
         {/* LCC switch */}
         <button
           className="ag-toolbar-btn ag-toolbar-lcc"
-          onClick={() => window.location.href = '/main'}
+          onClick={() => window.location.href = '/ilcc'}
           title="Switch to LCC Emulator"
         >
           LCC

@@ -2291,6 +2291,43 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
   );
 }
 
+// ── LCC Assembly Auto-Formatter ───────────────────────────────────────────────
+function fmtSplitComment(line) {
+  let inStr = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') inStr = !inStr;
+    if (!inStr && line[i] === ';') return { code: line.slice(0, i), comment: line.slice(i).trim() };
+  }
+  return { code: line, comment: '' };
+}
+function fmtInstrPart(instr) {
+  const parts = instr.trim().split(/\s+/);
+  const mnemonic = parts[0];
+  if (parts.length === 1) return mnemonic;
+  return mnemonic.padEnd(6) + parts.slice(1).join(' ').replace(/\s*,\s*/g, ', ');
+}
+function formatLCCAssembly(source) {
+  const INDENT = ' '.repeat(12);
+  return source.split('\n').map(rawLine => {
+    const trimmed = rawLine.trimEnd().trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith(';')) return trimmed;
+    const { code, comment } = fmtSplitComment(trimmed);
+    const c = code.trim();
+    if (!c) return comment ? '; ' + comment.replace(/^;+\s*/, '') : '';
+    const suffix = comment ? '  ' + comment : '';
+    const lm = c.match(/^([A-Za-z_$.][A-Za-z0-9_$.]*):\s*(.*)/);
+    if (lm) {
+      const label = lm[1] + ':';
+      const rest = lm[2].trim();
+      if (!rest) return label + suffix;
+      return label + ' '.repeat(Math.max(1, 12 - label.length)) + fmtInstrPart(rest) + suffix;
+    }
+    return INDENT + fmtInstrPart(c) + suffix;
+  }).join('\n');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLineBreakpoint, onRunProgram, onStopDebug, backendBusy, showFocusZoom, collapsed, onToggle }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFileMenu, setShowFileMenu] = useState(false);
@@ -2339,6 +2376,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="asm-btn asm-btn-gold" onClick={onRunProgram} disabled={backendBusy}>Run</button>
             <button className="asm-btn" onClick={onStopDebug} disabled={backendBusy}>Stop</button>
+            <button className="asm-btn" onClick={() => dispatch({ type: 'UPDATE_SOURCE', source: formatLCCAssembly(state.source) })} title="Auto-format LCC assembly">Format</button>
             <button className="asm-btn" onClick={() => dispatch({ type: 'ADD_TAB' })}>+</button>
             <button className="asm-btn" onClick={async () => {
               if (!wrapperRef.current) return;
