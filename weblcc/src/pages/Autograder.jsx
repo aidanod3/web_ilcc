@@ -392,7 +392,7 @@ export default function Autograder() {
   const [autoSaved, setAutoSaved] = useState("2s ago");
   const [fileLoading, setFileLoading] = useState(false);
   const [referenceFileLoading, setReferenceFileLoading] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [theme, setTheme] = useState('dark');
   const [toolbarPos, setToolbarPos] = useState({ bottom: 18, right: 18 });
   const [isDraggingZip, setIsDraggingZip] = useState(false);
   // STORED ZIP: solutionsZipFile (solutions), submissionsZipFile (student submissions via Upload File)
@@ -853,7 +853,7 @@ export default function Autograder() {
     : null;
 
   return (
-    <div className={`ag-root${dark ? ' ag-dark' : ''}`}>
+    <div className="ag-root" data-theme={theme}>
 
       {/* ── Floating toolbar ─────────────────────────── */}
       <div
@@ -863,14 +863,19 @@ export default function Autograder() {
         style={{ bottom: toolbarPos.bottom, right: toolbarPos.right }}
         title="Drag to move"
       >
-        {/* Dark / Light toggle */}
-        <button
-          className="ag-toolbar-btn"
-          onClick={() => setDark(d => !d)}
-          title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        {/* Theme selector */}
+        <select
+          className="ag-toolbar-theme-select"
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+          title="Editor theme"
         >
-          {dark ? <IconSun /> : <IconMoon />}
-        </button>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="midnight">Midnight</option>
+          <option value="dracula">Dracula</option>
+          <option value="monokai">Monokai</option>
+        </select>
 
         <div className="ag-toolbar-divider" />
 
@@ -999,7 +1004,7 @@ export default function Autograder() {
         <CodeMirror
           value={code}
           onChange={val => setCode(val)}
-          theme={dark ? oneDark : 'light'}
+          theme={theme !== 'light' ? oneDark : 'light'}
           basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
           style={{ flex: 1, overflow: 'auto', fontSize: 13, borderRadius: 8 }}
         />
@@ -1058,7 +1063,7 @@ export default function Autograder() {
         <CodeMirror
           value={reference}
           readOnly
-          theme={dark ? oneDark : 'light'}
+          theme={theme !== 'light' ? oneDark : 'light'}
           basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
           style={{ flex: 1, overflow: 'auto', fontSize: 13, borderRadius: 8 }}
         />
