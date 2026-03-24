@@ -296,6 +296,69 @@
 
 .ag-ref-panel .ag-panel-header { color: #e8f0ff; }
 
+.ag-ref-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.ag-ref-active-file {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a5b8d4;
+  max-width: min(200px, 40vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ag-ref-file-idx {
+  font-weight: 700;
+  color: #7ecfea;
+  opacity: 0.9;
+}
+
+.ag-ref-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ag-ref-nav-btns .ag-upload-btn {
+  min-width: 28px;
+  padding: 2px 8px;
+}
+
+/* Panel 2 / 3 — double-click (outside editor) to expand */
+.ag-panel.ag-panel--fullscreen {
+  position: fixed;
+  z-index: 2000;
+  inset: 12px;
+  width: auto;
+  max-width: none;
+  height: auto;
+  max-height: none;
+  margin: 0;
+  grid-column: unset;
+  grid-row: unset;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+}
+
+.ag-dark .ag-panel.ag-panel--fullscreen {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+}
+
+.ag-panel--fullscreen .cm-editor {
+  flex: 1;
+  min-height: 0;
+}
+
 /* scrollable reference — fills remaining panel height */
 .ag-reference {
   flex: 1;

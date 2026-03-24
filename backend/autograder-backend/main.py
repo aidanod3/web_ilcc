@@ -141,7 +141,9 @@ async def parse_submissions(file: UploadFile = File(...)):
             for info in zf.infolist():
                 if info.is_dir():
                     continue
-                if not info.filename.lower().endswith(".a"):
+                lower_name = info.filename.lower()
+                # Accept canonical `.a` files and common exported variant `.a.txt`.
+                if not (lower_name.endswith(".a") or lower_name.endswith(".a.txt")):
                     continue
 
                 with zf.open(info, "r") as f:
