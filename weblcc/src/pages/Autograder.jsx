@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Autograder.css";
+import CodeMirror from "@uiw/react-codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 const DEMO_STUDENTS = [
   {
@@ -354,10 +356,23 @@ const IconExport  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="
 const IconPlus    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const IconTrash   = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
 
+function filterParsedZipEntries(files) {
+  if (!Array.isArray(files)) return [];
+  return files.filter((f) => {
+    const path = String(f?.path || "").toLowerCase();
+    const name = String(f?.name || "").toLowerCase();
+    const code = String(f?.code || "");
+    if (path.includes("__macosx/")) return false;
+    if (name.startsWith("._") || path.includes("/._")) return false;
+    if (code.includes("\u0000")) return false;
+    return true;
+  });
+}
+
 export default function Autograder() {
   const [selectedStudent, setSelectedStudent] = useState(0);
   const [code, setCode] = useState(`c0605.a\n\nmain:\n    push lr\n    push fp\n    mov fp, sp\n    ; load values\n    mov r1, 5`);
-  const [reference] = useState(`c0605_sol.a\n\nmain:\n    push lr\n    push fp\n    mov fp, sp\n    ; setup frame\n    mov r1, 5`);
+  const [reference, setReference] = useState(`main:\n    push lr\n    push fp\n    mov fp, sp\n    mov r1, 5\n    dout r1`);
   const [input, setInput] = useState("5 10 -3");
   const [expected, setExpected] = useState("15 -30");
   const [actual, setActual] = useState("");
@@ -370,15 +385,28 @@ export default function Autograder() {
   const [message, setMessage] = useState("Good work! Check pcoffset in Q3 (+1 for PC advance). Fix epilogue in Q5: mov sp,fp before pops.");
   const [isChecking, setIsChecking] = useState(false);
   const [mismatchLine, setMismatchLine] = useState(2);
+  const [gradeMatch, setGradeMatch] = useState(null); // null until "Run Code" is pressed
+  const [gradeMessage, setGradeMessage] = useState(""); // message from /grade endpoint
+  const [outputMatched, setOutputMatched] = useState(null); // null until "Run Code" is pressed
   const [search, setSearch] = useState("");
   const [autoSaved, setAutoSaved] = useState("2s ago");
   const [fileLoading, setFileLoading] = useState(false);
+  const [referenceFileLoading, setReferenceFileLoading] = useState(false);
   const [dark, setDark] = useState(false);
   const [toolbarPos, setToolbarPos] = useState({ bottom: 18, right: 18 });
   const [isDraggingZip, setIsDraggingZip] = useState(false);
+  // STORED ZIP: solutionsZipFile (solutions), submissionsZipFile (student submissions via Upload File)
+  const [solutionsZipFile, setSolutionsZipFile] = useState(null);
+  const [submissionsZipFile, setSubmissionsZipFile] = useState(null);
+  const [solutionFiles, setSolutionFiles] = useState([]); // hidden Panel 3 file list
+  const [activeSolutionIndex, setActiveSolutionIndex] = useState(0);
+  const [submissionFiles, setSubmissionFiles] = useState([]); // parsed .a files from submissions zip
+  const [activeSubmissionIndex, setActiveSubmissionIndex] = useState(0);
   const [submittedStudents, setSubmittedStudents] = useState([]);
   const [activeStudentId, setActiveStudentId] = useState(null);
   const [activeFileName, setActiveFileName] = useState(null);
+  /** Panel 2 / 3: double-click (outside CodeMirror) to expand; Esc or double-click again to exit */
+  const [expandedEditorPanel, setExpandedEditorPanel] = useState(null); // null | 'code' | 'reference'
   const dragRef = useRef(null);
   const importRef = useRef(null);
   const zipInputRef = useRef(null);
@@ -436,14 +464,132 @@ export default function Autograder() {
     URL.revokeObjectURL(url);
   };
 
-  // ── Student code file upload ──────────────────────────
+  // ── Student submissions upload (via Upload File) ──────
+  const sendSubmissionsZipToBackend = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      // NOTE: direct call to FastAPI autograder backend
+      const resp = await fetch('http://127.0.0.1:8000/parse-submissions', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        console.error('parse-submissions failed:', resp.status, txt);
+        alert(`parse-submissions error: ${resp.status}`);
+        return;
+      }
+      const data = await resp.json().catch(() => null);
+      console.log('Parsed submissions response:', data);
+      // Expecting shape: { files: [ { folder, name, path, code }, ... ] }
+      const filteredFiles = filterParsedZipEntries(data?.files);
+      if (filteredFiles.length > 0) {
+        setSubmissionFiles(filteredFiles);
+        setActiveSubmissionIndex(0);
+        setActiveFileName(filteredFiles[0].name || null);
+        if (typeof filteredFiles[0].code === 'string') {
+          setCode(filteredFiles[0].code);
+        }
+      } else {
+        setSubmissionFiles([]);
+        setActiveSubmissionIndex(0);
+        console.warn('No valid submission files found; raw data:', data);
+        alert('No valid .a source files found in this zip.');
+      }
+    } catch (err) {
+      console.error('Failed to parse submissions zip:', err);
+      alert('Failed to reach autograder backend. See console for details.');
+    }
+  };
+
+  // ── Solutions upload for Panel 3 (via Upload File) ────
+  const sendSolutionsZipToBackend = async (file) => {
+    setReferenceFileLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      // Reuse main.py ZIP parser endpoint for solution archives.
+      const resp = await fetch('http://127.0.0.1:8000/parse-submissions', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        console.error('parse-submissions (solutions) failed:', resp.status, txt);
+        alert(`parse-submissions error: ${resp.status}`);
+        return;
+      }
+      const data = await resp.json().catch(() => null);
+      console.log('Parsed solutions response:', data);
+      // Ignore macOS metadata/resource-fork entries (e.g. __MACOSX, ._* files)
+      const filteredFiles = filterParsedZipEntries(data?.files);
+
+      if (filteredFiles.length > 0) {
+        setSolutionFiles(filteredFiles);
+        setActiveSolutionIndex(0);
+        if (typeof filteredFiles[0].code === 'string') {
+          setReference(filteredFiles[0].code);
+        }
+      } else {
+        setSolutionFiles([]);
+        setActiveSolutionIndex(0);
+        console.warn('No valid solution files found; raw data:', data);
+        alert('No valid .a source files found in this zip.');
+      }
+    } catch (err) {
+      console.error('Failed to parse solutions zip:', err);
+      alert('Failed to reach autograder backend. See console for details.');
+    } finally {
+      setReferenceFileLoading(false);
+    }
+  };
+
+  // ── Student code file upload / submissions zip ────────
   const handleFile = (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
+    // If a ZIP is uploaded here, store it in submissionsZipFile instead of loading as text.
+    if (f.name.toLowerCase().endsWith('.zip')) {
+      setSubmissionsZipFile(f);
+       // NOTE: this sends the stored submissions ZIP to the FastAPI backend (/parse-submissions).
+      sendSubmissionsZipToBackend(f);
+      return;
+    }
     setFileLoading(true);
     const reader = new FileReader();
-    reader.onload = (ev) => { setCode(String(ev.target.result || "")); setFileLoading(false); };
+    reader.onload = (ev) => {
+      const text = String(ev.target.result || "");
+      setCode(text);
+      setSubmissionFiles([{ name: f.name, path: f.name, code: text }]);
+      setActiveSubmissionIndex(0);
+      setActiveFileName(f.name);
+      setFileLoading(false);
+    };
     reader.onerror = () => setFileLoading(false);
+    reader.readAsText(f);
+  };
+
+  const handleReferenceFile = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (f.name.toLowerCase().endsWith('.zip')) {
+      setSolutionsZipFile(f);
+      sendSolutionsZipToBackend(f);
+      return;
+    }
+    setSolutionFiles([{ name: f.name, path: f.name, code: "" }]);
+    setActiveSolutionIndex(0);
+    setReferenceFileLoading(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const loaded = String(ev.target.result || "");
+      setReference(loaded);
+      setSolutionFiles([{ name: f.name, path: f.name, code: loaded }]);
+      setActiveSolutionIndex(0);
+      setReferenceFileLoading(false);
+    };
+    reader.onerror = () => setReferenceFileLoading(false);
     reader.readAsText(f);
   };
 
@@ -452,36 +598,63 @@ export default function Autograder() {
     setIsChecking(true);
     setActual("");
     setMismatchLine(null);
+    setGradeMatch(null);
+    setGradeMessage("");
     try {
-      const payload = { source: code };
-      const candidates = ['/api/run'];
-      let finalData = null, lastError = null;
-      for (const url of candidates) {
-        try {
-          const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          const raw  = await resp.text().catch(() => '');
-          let data;
-          try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { _rawText: raw }; }
-          if (resp.ok) { finalData = data; break; }
-          lastError = { status: resp.status, detail: String(data?.error || `HTTP ${resp.status}`) };
-        } catch (err) { lastError = { status: 0, detail: err.message || 'Network error' }; }
+      setOutputMatched(null);
+
+      // 1) Code comparison (Panel 2 code vs Panel 3 reference)
+      const gradeResp = await fetch('http://127.0.0.1:8000/grade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentCode: code,
+          solutionCode: reference,
+        }),
+      });
+
+      if (!gradeResp.ok) {
+        const txt = await gradeResp.text().catch(() => "");
+        console.error("grade failed:", gradeResp.status, txt);
+        alert(`grade error: ${gradeResp.status}`);
+        return;
       }
-      if (finalData) {
-        if (finalData.error) {
-          setActual(`Error: ${finalData.error}`);
-        } else {
-          const result = (finalData.stdout || '').trim() || (finalData.stderr || '').trim() || 'No output.';
-          setActual(result);
-          const expLines = expected.split('\n'), actLines = result.split('\n');
-          let mLine = null;
-          for (let i = 0; i < Math.max(expLines.length, actLines.length); i++) {
-            if ((expLines[i] || '') !== (actLines[i] || '')) { mLine = i + 1; break; }
-          }
-          setMismatchLine(mLine);
-        }
-      } else {
-        setActual(lastError?.detail || 'Unable to reach backend.');
-      }
+
+      const gradeData = await gradeResp.json().catch(() => null);
+      setGradeMatch(!!gradeData?.isCorrect);
+      setGradeMessage(String(gradeData?.message || ""));
+
+      // 2) Run both programs and display their outputs
+      const runOne = async (source) => {
+        const resp = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        const stdout = String(data?.stdout || '').trim();
+        const stderr = String(data?.stderr || '').trim();
+        return stdout || stderr || 'No output.';
+      };
+
+      const [studentOut, referenceOut] = await Promise.all([
+        runOne(code),
+        runOne(reference),
+      ]);
+
+      // Compare only what appears after the word "output" (e.g. "output: ...").
+      const extractAfterOutput = (text) => {
+        const s = String(text || "");
+        const m = s.match(/output\s*:?\s*([\s\S]*)/i);
+        return (m && m[1] !== undefined ? m[1] : s).trim();
+      };
+
+      const studentExtracted = extractAfterOutput(studentOut);
+      const referenceExtracted = extractAfterOutput(referenceOut);
+
+      setActual(studentExtracted);
+      setExpected(referenceExtracted);
+      setOutputMatched(studentExtracted.trim() === referenceExtracted.trim());
     } catch (error) { setActual(String(error)); }
     finally { setIsChecking(false); }
   };
@@ -503,6 +676,7 @@ export default function Autograder() {
       alert('Please use a .zip file.');
       return;
     }
+    setSolutionsZipFile(file);
     // Placeholder: wire to backend parsing later.
     console.log('Selected zip file:', file.name);
   };
@@ -547,6 +721,74 @@ export default function Autograder() {
   const handleSelectFile = (file) => {
     setActiveFileName(file.name);
     setCode(file.code);
+    if (activeStudent) {
+      const i = activeStudent.files.findIndex((x) => x.name === file.name);
+      if (i >= 0) setActiveSubmissionIndex(i);
+    }
+  };
+
+  const handleEditorPanelDoubleClick = (which, e) => {
+    if (
+      e.target.closest('button') ||
+      e.target.closest('label') ||
+      e.target.closest('input') ||
+      e.target.closest('.cm-editor') ||
+      e.target.closest('.cm-gutters') ||
+      e.target.closest('.cm-scroller')
+    ) {
+      return;
+    }
+    setExpandedEditorPanel((prev) => (prev === which ? null : which));
+  };
+
+  const handlePrevPanel2File = () => {
+    if (activeStudent) {
+      const files = activeStudent.files;
+      if (files.length <= 1) return;
+      const idx = files.findIndex((x) => x.name === activeFileName);
+      const cur = idx >= 0 ? idx : 0;
+      const next = (cur - 1 + files.length) % files.length;
+      handleSelectFile(files[next]);
+      return;
+    }
+    if (submissionFiles.length <= 1) return;
+    const next = (activeSubmissionIndex - 1 + submissionFiles.length) % submissionFiles.length;
+    setActiveSubmissionIndex(next);
+    const sf = submissionFiles[next];
+    setActiveFileName(sf.name || null);
+    setCode(typeof sf.code === 'string' ? sf.code : '');
+  };
+
+  const handleNextPanel2File = () => {
+    if (activeStudent) {
+      const files = activeStudent.files;
+      if (files.length <= 1) return;
+      const idx = files.findIndex((x) => x.name === activeFileName);
+      const cur = idx >= 0 ? idx : 0;
+      const next = (cur + 1) % files.length;
+      handleSelectFile(files[next]);
+      return;
+    }
+    if (submissionFiles.length <= 1) return;
+    const next = (activeSubmissionIndex + 1) % submissionFiles.length;
+    setActiveSubmissionIndex(next);
+    const sf = submissionFiles[next];
+    setActiveFileName(sf.name || null);
+    setCode(typeof sf.code === 'string' ? sf.code : '');
+  };
+
+  const handlePrevSolutionFile = () => {
+    if (!solutionFiles.length) return;
+    const nextIndex = (activeSolutionIndex - 1 + solutionFiles.length) % solutionFiles.length;
+    setActiveSolutionIndex(nextIndex);
+    setReference(solutionFiles[nextIndex]?.code || "");
+  };
+
+  const handleNextSolutionFile = () => {
+    if (!solutionFiles.length) return;
+    const nextIndex = (activeSolutionIndex + 1) % solutionFiles.length;
+    setActiveSolutionIndex(nextIndex);
+    setReference(solutionFiles[nextIndex]?.code || "");
   };
 
   // ── Save & next ───────────────────────────────────────
@@ -558,7 +800,7 @@ export default function Autograder() {
     }
   };
 
-  const matched = actual && expected && actual.trim() === expected.trim();
+  const hasRun = outputMatched !== null;
   const totalDeducted = deductions.reduce((sum, d) => sum + (Number(d.pts) || 0), 0);
 
   // Auto-calculate score whenever deductions or maxScore change
@@ -566,12 +808,49 @@ export default function Autograder() {
     setScore(maxScore + totalDeducted);
   }, [deductions, maxScore]);
 
+  useEffect(() => {
+    if (!expandedEditorPanel) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setExpandedEditorPanel(null);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [expandedEditorPanel]);
+
   const activeStudent = submittedStudents.find(s => s.id === activeStudentId) || null;
   const filtered = submittedStudents.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.sid.toLowerCase().includes(search.toLowerCase())
   );
   const gradedCount = submittedStudents.filter(s => s.status === "Graded").length;
+
+  const activeSolutionEntry = solutionFiles[activeSolutionIndex] ?? null;
+  const activeSolutionDisplayName = activeSolutionEntry
+    ? (activeSolutionEntry.name || activeSolutionEntry.path?.split('/').filter(Boolean).pop() || 'file')
+    : null;
+
+  let panel2ActiveFileEntry = null;
+  let panel2FileIndex = 0;
+  let panel2FileCount = 0;
+  if (activeStudent) {
+    const files = activeStudent.files;
+    panel2FileCount = files.length;
+    const idx = files.findIndex((x) => x.name === activeFileName);
+    panel2FileIndex = idx >= 0 ? idx : 0;
+    panel2ActiveFileEntry = files[panel2FileIndex] || null;
+  } else if (submissionFiles.length > 0) {
+    panel2FileCount = submissionFiles.length;
+    panel2FileIndex = Math.min(activeSubmissionIndex, submissionFiles.length - 1);
+    panel2ActiveFileEntry = submissionFiles[panel2FileIndex] || null;
+  }
+  const panel2DisplayName = panel2ActiveFileEntry
+    ? (panel2ActiveFileEntry.name || panel2ActiveFileEntry.path?.split('/').filter(Boolean).pop() || 'file')
+    : null;
 
   return (
     <div className={`ag-root${dark ? ' ag-dark' : ''}`}>
@@ -618,79 +897,84 @@ export default function Autograder() {
         </button>
       </div>
 
-      {/* ── Panel 1: Students ────────────────────────── */}
+      {/* ── Panel 1: Students (Submission) ─────────────── */}
       <div className="ag-panel ag-students">
         <div className="ag-panel-header">Panel 1: Students</div>
-
-        {submittedStudents.length === 0 ? (
-          <div style={{ padding: '12px 10px' }}>
-            <div
-              className={`ag-zip-drop${isDraggingZip ? ' ag-zip-drop--active' : ''}`}
-              onDragOver={handleZipDragOver}
-              onDragLeave={handleZipDragLeave}
-              onDrop={handleZipDrop}
-              onClick={() => zipInputRef.current?.click()}
-            >
-              <span className="ag-zip-title">Drop Solutions.zip here</span>
-              <span className="ag-zip-subtitle">or drag it from your files to load labs &amp; students</span>
-              <input ref={zipInputRef} type="file" accept=".zip" style={{ display: 'none' }}
-                onChange={(e) => { handleZipFile(e.target.files?.[0]); e.target.value = ''; }} />
-            </div>
-            <button
-              className="ag-btn ag-btn-save"
-              style={{ width: '100%', marginTop: 10, fontSize: 13 }}
-              onClick={handleSubmitFiles}
-            >
-              Submit Files (Demo)
-            </button>
-          </div>
-        ) : (
-          <>
-            <div style={{ padding: '8px 10px 4px' }}>
-              <input
-                className="ag-search"
-                placeholder="Search students…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box' }}
-              />
-            </div>
-            <ul className="ag-student-list" style={{ flex: 1, overflowY: 'auto' }}>
-              {filtered.map(s => (
-                <li
-                  key={s.id}
-                  className={`ag-student-item${activeStudentId === s.id ? ' ag-student-item--active' : ''}`}
-                  onClick={() => handleSelectStudent(s)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span className="ag-student-name">{s.name}</span>
-                  <span className="ag-student-sid" style={{ fontSize: 11, opacity: 0.6, marginLeft: 6 }}>{s.sid}</span>
-                  <span
-                    className="ag-status-pill"
-                    style={{ background: STATUS_META[s.status]?.bg, color: STATUS_META[s.status]?.color, marginLeft: 'auto' }}
+        <div style={{ padding: '12px 10px' }}>
+          {submissionFiles.length > 0 && (
+            <ul className="ag-zip-file-list">
+              {submissionFiles.map((f, idx) => (
+                <li key={f.path || idx} className="ag-zip-file-item">
+                  <button
+                    className="ag-zip-file-btn"
+                    onClick={() => {
+                      setActiveSubmissionIndex(idx);
+                      setActiveFileName(f.name || null);
+                      if (typeof f.code === 'string') setCode(f.code);
+                    }}
                   >
-                    {STATUS_META[s.status]?.label}
-                  </span>
+                    <span className="ag-zip-file-label">
+                      {f.folder ? `${f.folder}/` : ''}
+                      {f.name}
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
-            <div className="ag-list-footer">
-              <span className="ag-progress-pill">{gradedCount}/{submittedStudents.length}</span>
-              <span>{submittedStudents.length ? Math.round(gradedCount / submittedStudents.length * 100) : 0}% graded</span>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       {/* ── Panel 2: Student Code ────────────────────── */}
-      <div className="ag-panel ag-code-panel">
+      <div
+        className={`ag-panel ag-code-panel${expandedEditorPanel === 'code' ? ' ag-panel--fullscreen' : ''}`}
+        onDoubleClick={(e) => handleEditorPanelDoubleClick('code', e)}
+        title="Double-click header or margins to expand (Esc to exit)"
+      >
         <div className="ag-panel-header">
-          Panel 2: Student Code
-          {activeStudent && (
-            <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 8, opacity: 0.7 }}>
-              — {activeStudent.name}
-            </span>
-          )}
+          <span>
+            Panel 2: Student Code
+            {activeStudent && (
+              <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 8, opacity: 0.7 }}>
+                — {activeStudent.name}
+              </span>
+            )}
+          </span>
+          <div className="ag-ref-header-right ag-code-panel-file-header">
+            {panel2FileCount > 0 && panel2DisplayName && (
+              <span
+                className="ag-ref-active-file"
+                title={panel2ActiveFileEntry?.path || panel2DisplayName || ''}
+              >
+                {panel2DisplayName}
+                {panel2FileCount > 1 && (
+                  <span className="ag-ref-file-idx">
+                    {' '}({panel2FileIndex + 1}/{panel2FileCount})
+                  </span>
+                )}
+              </span>
+            )}
+            <div className="ag-ref-nav-btns">
+              <button
+                type="button"
+                className="ag-upload-btn"
+                onClick={handlePrevPanel2File}
+                disabled={panel2FileCount <= 1}
+                title="Previous student file"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="ag-upload-btn"
+                onClick={handleNextPanel2File}
+                disabled={panel2FileCount <= 1}
+                title="Next student file"
+              >
+                →
+              </button>
+            </div>
+          </div>
         </div>
         {activeStudent ? (
           <div className="ag-file-tabs">
@@ -712,13 +996,72 @@ export default function Autograder() {
             </label>
           </div>
         )}
-        <textarea className="ag-code-editor" value={code} onChange={e => setCode(e.target.value)} spellCheck={false} />
+        <CodeMirror
+          value={code}
+          onChange={val => setCode(val)}
+          theme={dark ? oneDark : 'light'}
+          basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}
+          style={{ flex: 1, overflow: 'auto', fontSize: 13, borderRadius: 8 }}
+        />
       </div>
 
       {/* ── Panel 3: Reference ───────────────────────── */}
-      <div className="ag-panel ag-ref-panel">
-        <div className="ag-panel-header">Panel 3: Reference</div>
-        <pre className="ag-reference">{reference}</pre>
+      <div
+        className={`ag-panel ag-ref-panel${expandedEditorPanel === 'reference' ? ' ag-panel--fullscreen' : ''}`}
+        onDoubleClick={(e) => handleEditorPanelDoubleClick('reference', e)}
+        title="Double-click header or margins to expand (Esc to exit)"
+      >
+        <div className="ag-panel-header">
+          <span>Panel 3: Reference</span>
+          <div className="ag-ref-header-right">
+            {solutionFiles.length > 0 && (
+              <span
+                className="ag-ref-active-file"
+                title={activeSolutionEntry?.path || activeSolutionDisplayName || ''}
+              >
+                {activeSolutionDisplayName || '—'}
+                {solutionFiles.length > 1 && (
+                  <span className="ag-ref-file-idx">
+                    {' '}({activeSolutionIndex + 1}/{solutionFiles.length})
+                  </span>
+                )}
+              </span>
+            )}
+            <div className="ag-ref-nav-btns">
+              <button
+                type="button"
+                className="ag-upload-btn"
+                onClick={handlePrevSolutionFile}
+                disabled={solutionFiles.length <= 1}
+                title="Previous reference file"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="ag-upload-btn"
+                onClick={handleNextSolutionFile}
+                disabled={solutionFiles.length <= 1}
+                title="Next reference file"
+              >
+                →
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="ag-code-actions">
+          <label className="ag-upload-btn">
+            {referenceFileLoading ? 'Loading…' : 'Upload File'}
+            <input type="file" accept="*/*" onChange={handleReferenceFile} style={{ display: 'none' }} />
+          </label>
+        </div>
+        <CodeMirror
+          value={reference}
+          readOnly
+          theme={dark ? oneDark : 'light'}
+          basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
+          style={{ flex: 1, overflow: 'auto', fontSize: 13, borderRadius: 8 }}
+        />
       </div>
 
       {/* ── Panel 4: Input ───────────────────────────── */}
@@ -733,17 +1076,24 @@ export default function Autograder() {
 
       {/* ── Panel 5: Output ──────────────────────────── */}
       <div className="ag-panel ag-output-panel">
-        <div className="ag-panel-header">Panel 5: Output</div>
-        <div className={`ag-output-box ag-expected ${matched === true ? 'ag-match' : ''}`}>
-          <span className="ag-output-label">Expected:</span>
+        <div className="ag-panel-header">
+          <span>Panel 5: Output</span>
+          {hasRun && gradeMatch !== null && (
+            <span className={`ag-code-compare-badge ${gradeMatch ? "ag-code-compare-badge--ok" : "ag-code-compare-badge--bad"}`}>
+              {gradeMatch ? "✓ Code Match" : "✗ Code Mismatch"}
+            </span>
+          )}
+        </div>
+        <div className={`ag-output-box ag-expected ${hasRun ? (outputMatched ? "ag-match" : "ag-mismatch") : ""}`}>
+          <span className="ag-output-label">Panel 3 Output:</span>
           <textarea className="ag-output-inline-input" value={expected} onChange={e => setExpected(e.target.value)} />
         </div>
-        <div className={`ag-output-box ag-actual ${actual && !matched ? 'ag-mismatch' : ''} ${matched ? 'ag-match' : ''}`}>
-          <span className="ag-output-label">Actual:</span>
+        <div className={`ag-output-box ag-actual ${hasRun ? (outputMatched ? "ag-match" : "ag-mismatch") : ""}`}>
+          <span className="ag-output-label">Panel 2 Output:</span>
           <span className="ag-output-value">{actual || '—'}</span>
         </div>
-        {actual && mismatchLine && !matched && <div className="ag-mismatch-msg">MISMATCH on line {mismatchLine}</div>}
-        {matched && <div className="ag-match-msg">✓ OUTPUT MATCHES</div>}
+        {hasRun && outputMatched && <div className="ag-match-msg">✓ OUTPUT MATCHES</div>}
+        {hasRun && !outputMatched && <div className="ag-mismatch-msg">✗ OUTPUT DOES NOT MATCH</div>}
       </div>
 
       {/* ── Panel 6: Feedback ────────────────────────── */}
