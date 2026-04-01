@@ -1,0 +1,81 @@
+/* CPU panel styles */
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Group of related values (registers, flags, pointers) */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  padding: 0 6px;
+  margin-bottom: 4px;
+}
+
+/* Single register/pointer row: label on left, value on right */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.label {
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.value {
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* Condition code flags displayed in a horizontal row */
+.flagRow {
+  display: flex;
+  gap: 6px;
+  padding: 0 6px;
+}
+
+.flag {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 4px;
+}
+
+.flagLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.flagValue {
+  font-size: 14px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* Highlight for values that changed on the last step */
+.changed {
+  background: rgba(74, 222, 128, 0.25);
+  outline: 1px solid rgba(74, 222, 128, 0.55);
+}

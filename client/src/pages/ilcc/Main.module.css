@@ -1,0 +1,123 @@
+/* Main layout: two-column split (editor+terminal | debugger) */
+
+.layout {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--bg);
+}
+
+/* ── Left column: editor on top, terminal on bottom ── */
+
+.leftColumn {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.editorPane {
+  flex: 7;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.terminalPane {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* ── Right column: debugger panels ── */
+
+.rightColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.debugContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* CPU + Stack sit side by side in the top portion */
+.debugUpper {
+  flex: 2;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  border-bottom: 2px solid var(--bg3);
+}
+
+/* Memory viewer fills the bottom portion */
+.debugLower {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* CPU takes more horizontal space than stack */
+.cpuSection {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 2px solid var(--bg3);
+}
+
+.stackSection {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Shared ── */
+
+/* Pane title bar (Code Editor, Terminal, Debugger) */
+.paneHeader {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Sub-section header inside the debugger (CPU State, Stack, Memory) */
+.sectionHeader {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  border-bottom: 2px solid var(--bg3);
+}

@@ -1,0 +1,75 @@
+/* Header toolbar styles */
+
+.header {
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 8px 0;
+}
+
+.header h1 {
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.meta {
+  color: var(--text2);
+  font-size: 0.85rem;
+}
+
+.btn {
+  display: flex;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  height: 30.5px;
+  width: 30.5px;
+  padding: 0;
+}
+
+.btn:hover {
+  background: var(--bg3);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnGreen {
+  composes: btn;
+  background: rgb(60, 151, 60);
+}
+
+.btnGreen:hover {
+  background: rgb(55, 143, 55);
+}
+
+.btnRed {
+  composes: btn;
+  background: rgb(255, 56, 56);
+}
+
+.btnRed:hover {
+  background: rgb(228, 49, 49);
+}
+
+.right {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
