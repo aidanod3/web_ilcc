@@ -109,7 +109,7 @@
 
 /* ── Shared ── */
 
-/* Pane title bar (Code Editor, Terminal, Debugger) */
+/* Pane title bar (Code Editor, Terminal, Debugger) — lighter gray */
 .paneHeader {
   flex-shrink: 0;
   height: 32px;
@@ -119,10 +119,11 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text2);
+  background: var(--bg2);
   border-bottom: 1px solid var(--border);
 }
 
-/* Sub-section header inside the debugger (CPU State, Stack, Memory) */
+/* Sub-section header inside the debugger (CPU State, Stack, Memory) — lighter gray */
 .sectionHeader {
   flex-shrink: 0;
   height: 28px;
@@ -132,5 +133,6 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--text2);
+  background: var(--bg2);
   border-bottom: 2px solid var(--bg3);
 }

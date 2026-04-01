@@ -7,12 +7,12 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #0e0e0f;
-  --bg1: #131315;
-  --bg2: #18181b;
-  --bg3: #1e1e22;
-  --border: #2a2a2f;
-  --border2: #222226;
+  --bg: #111111;
+  --bg1: #262626;
+  --bg2: #2e2e2e;
+  --bg3: #383838;
+  --border: #404040;
+  --border2: #3a3a3a;
   --text: #e2e2e5;
   --text2: #8a8a96;
   --text3: #4a4a55;
