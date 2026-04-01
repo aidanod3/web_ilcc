@@ -1,11 +1,12 @@
 /* Main layout: two-column split (editor+terminal | debugger) */
 
 .layout {
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: row;
   gap: 8px;
   padding: 8px;
+  min-height: 0;
   background-color: var(--bg);
 }
 
@@ -13,14 +14,12 @@
 
 .leftColumn {
   flex: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   min-height: 0;
 }
 
-.editorPane {
-  flex: 7;
+/* Shared wrapper for editor and terminal inside PanelGroup */
+.pane {
+  height: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -30,15 +29,29 @@
   overflow: hidden;
 }
 
-.terminalPane {
-  flex: 3;
+/* Draggable resize handle between editor and terminal */
+.resizeHandle {
+  height: 8px;
   display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--bg1);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+}
+
+/* Visual indicator pill inside the resize handle */
+.resizeHandle::after {
+  content: "";
+  width: 30px;
+  height: 2px;
+  background: var(--bg3);
+  border-radius: 8px;
+  transition: background 0.15s, width 0.15s;
+}
+
+.resizeHandle:hover::after,
+.resizeHandle[data-resize-handle-active]::after {
+  background: var(--text2);
+  width: 100%;
 }
 
 /* ── Right column: debugger panels ── */

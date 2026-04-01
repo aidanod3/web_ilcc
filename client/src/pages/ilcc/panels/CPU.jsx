@@ -1,12 +1,28 @@
-/* CPU.jsx — CPU state panel.
- * Displays registers (r0-r7), condition codes (C, V, N, Z),
- * and pointers (FP, SP, LR, PC, IR).
- * TODO: wire debug state props once the debugger is connected.
+/*
+ * CPU.jsx — CPU state panel.
+ *
+ * Displays three groups of processor state:
+ *
+ *   1. Registers  — General-purpose registers R0 through R7.
+ *      Each shows a label and a hex value (e.g. "R0  0x0000").
+ *
+ *   2. Condition Codes — The four flags: C (carry), V (overflow),
+ *      N (negative), Z (zero). Displayed as a horizontal row of
+ *      label/value pairs.
+ *
+ *   3. Pointers — Named aliases for special registers and state:
+ *      FP (r5), SP (r6), LR (r7), PC (program counter), IR (instruction register).
+ *
+ * When debug state is wired up, changed values will get the `.changed`
+ * CSS class (green highlight) by comparing old vs new from the diff.
+ *
+ * TODO: Accept debug state props so values update on each step.
+ *       Currently renders static placeholder "0x0000" / "0" values.
  */
 
 import styles from './CPU.module.css';
 
-/* Static placeholder data — will be replaced with live debug state */
+/* Labels for the three sections — these never change */
 const REGISTERS = ['R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7'];
 const FLAGS = ['C', 'V', 'N', 'Z'];
 const POINTERS = ['FP', 'SP', 'LR', 'PC', 'IR'];
@@ -15,7 +31,7 @@ export default function CPU() {
   return (
     <div className={styles.content}>
 
-      {/* General-purpose registers */}
+      {/* ── General-purpose registers ── */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Registers</span>
         {REGISTERS.map((name) => (
@@ -26,7 +42,7 @@ export default function CPU() {
         ))}
       </div>
 
-      {/* Condition code flags */}
+      {/* ── Condition code flags ── */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Condition Codes</span>
         <div className={styles.flagRow}>
@@ -39,7 +55,7 @@ export default function CPU() {
         </div>
       </div>
 
-      {/* Named pointers (aliases for registers + PC/IR) */}
+      {/* ── Named pointers (register aliases + PC/IR) ── */}
       <div className={styles.section}>
         <span className={styles.sectionTitle}>Pointers</span>
         {POINTERS.map((name) => (

@@ -1,7 +1,20 @@
-/* index.jsx — ILCC page root.
- * Owns all state (code, run, debug) and passes it to child components.
- * Header: toolbar with run/debug/step controls.
- * Main: two-column layout with editor, terminal, and debugger panels.
+/*
+ * index.jsx — ILCC page root component.
+ *
+ * This is the top-level component for the /ilcc route. It owns all
+ * application state and orchestrates the two main workflows:
+ *
+ *   1. Run  — assemble + execute the code to completion (useRunProgram).
+ *   2. Debug — step through execution interactively (useDebugSession).
+ *
+ * State flows downward via props:
+ *   - Header receives control callbacks (onRun, onDebug, onStep, etc.)
+ *     and status flags (isRunning, isDebugging, canStepBack, etc.).
+ *   - Main receives nothing yet — panels will be wired up once we
+ *     connect the editor's source code and the debug state diffs.
+ *
+ * The root div uses flex column + height 100% so the Header takes its
+ * natural height and Main fills the remaining viewport space.
  */
 
 import { useState } from 'react';
@@ -11,41 +24,58 @@ import useRunProgram from '../../hooks/useRunProgram';
 import useDebugSession from '../../hooks/useDebugSession';
 
 export default function Ilcc() {
+  /* The assembly source code typed by the user.
+     Will be passed to the Editor panel and sent to the server on run/debug. */
   const [code, setCode] = useState('');
 
+  /* Hook for the "Run" workflow: assemble + execute to completion */
   const runner = useRunProgram();
-  const debugger_ = useDebugSession();
 
+  /* Hook for the "Debug" workflow: interactive stepping with diffs */
+  const debug_session = useDebugSession();
+
+  /* ── Handler: Run button ──
+     Sends the code to POST /api/run and displays the output. */
   const handleRun = () => runner.run(code);
 
+  /* ── Handler: Debug button ──
+     Starts (or restarts) an interactive debug session.
+     Sends the code to POST /api/debug/start. */
   const handleDebug = async () => {
     try {
-      await debugger_.start(code);
+      await debug_session.start(code);
     } catch (err) {
-      // TODO: surface error to user
+      // TODO: surface error to user (e.g. assembly errors)
     }
   };
 
+  /* ── Handler: Stop button ──
+     Ends whichever mode is active (run or debug). */
   const handleStop = () => {
     runner.reset();
-    debugger_.stop();
+    debug_session.stop();
   };
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+      {/* Top toolbar: run/debug/step/stop buttons */}
       <Header
         isRunning={runner.isRunning}
-        isDebugging={debugger_.isDebugging}
+        isDebugging={debug_session.isDebugging}
         onRun={handleRun}
         onDebug={handleDebug}
-        onStep={() => debugger_.step(1)}
-        onStepBack={() => debugger_.step(-1)}
+        onStep={() => debug_session.step(1)}        /* step forward 1 instruction */
+        onStepBack={() => debug_session.step(-1)}    /* step backward 1 instruction */
         onStop={handleStop}
-        canStepBack={debugger_.isDebugging && debugger_.iteration > 0}
-        canStepForward={debugger_.isDebugging && debugger_.programRunning}
-        iteration={debugger_.iteration}
+        canStepBack={debug_session.isDebugging && debug_session.iteration > 0}
+        canStepForward={debug_session.isDebugging && debug_session.programRunning}
+        iteration={debug_session.iteration}
       />
+
+      {/* Main content area: editor, terminal, and debugger panels */}
       <Main />
+
     </div>
   );
 }
