@@ -1,24 +1,34 @@
+/*
+ * routes/debug.js — Debug session endpoints.
+ *
+ * Manages debug sessions in memory. Each session holds an interpreter
+ * instance with full snapshot history for forward/backward stepping.
+ *
+ * Delegates all emulator logic to ilcc/debug.js (DebugSession class).
+ *
+ * Endpoints:
+ *   POST /api/debug/start         — assemble code and create session
+ *   POST /api/debug/step          — step forward or backward
+ *   POST /api/debug/stop          — destroy session
+ *   GET  /api/debug/state/:id     — get full current state (re-sync)
+ */
+
 const express = require('express');
 const crypto = require('crypto');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-
-const Assembler = require('../interactive_lccjs/src/interactive/iassembler');
-const Interpreter = require('../interactive_lccjs/src/interactive/iinterpreter');
+const { DebugSession } = require('../ilcc/debug');
 
 const router = express.Router();
 
-// In-memory store of active debug sessions
-// key: sessionId, value: { interpreter, listing, createdAt }
+/* In-memory store: sessionId → { session: DebugSession, createdAt: number } */
 const sessions = new Map();
 
-// Auto-cleanup sessions older than 30 minutes
+/* Auto-cleanup sessions older than 30 minutes */
 const SESSION_TTL_MS = 30 * 60 * 1000;
 setInterval(() => {
   const now = Date.now();
-  for (const [id, session] of sessions) {
-    if (now - session.createdAt > SESSION_TTL_MS) {
+  for (const [id, entry] of sessions) {
+    if (now - entry.createdAt > SESSION_TTL_MS) {
+      entry.session.cleanup();
       sessions.delete(id);
     }
   }
@@ -27,15 +37,12 @@ setInterval(() => {
 /**
  * POST /api/debug/start
  *
- * Assembles the code and initializes a debug session.
- * Returns the session ID and the initial state (iteration 0).
- *
  * Request body:
- *   code:  string  - the assembly source code
- *   input: string  - (optional) simulated stdin for the program
+ *   code:  string  — assembly source code
+ *   input: string  — (optional) simulated stdin
  *
  * Response:
- *   { sessionId, state, listing }
+ *   { sessionId, state, iteration, programRunning }
  */
 router.post('/start', (req, res) => {
   const { code, input } = req.body;
@@ -44,106 +51,52 @@ router.post('/start', (req, res) => {
     return res.status(400).json({ error: 'Missing or invalid "code" field.' });
   }
 
-  // Write code to a temp file so the assembler can read it
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ilcc-'));
-  const srcPath = path.join(tmpDir, 'program.a');
-
   try {
-    fs.writeFileSync(srcPath, code);
+    const session = new DebugSession();
+    const { state } = session.start(code, { input: input || '' });
 
-    // --- Assemble ---
-    const assembler = new Assembler();
-    assembler.inputFileName = srcPath;
-    assembler.outputFileName = path.join(tmpDir, 'program.e');
-    assembler.main([srcPath]);
-
-    // Read the compiled .e file into a buffer
-    const executableBuffer = fs.readFileSync(assembler.outputFileName);
-
-    // --- Set up interpreter ---
-    const interpreter = new Interpreter();
-    interpreter.options = { interactiveMode: true };
-
-    if (input) {
-      interpreter.inputBuffer = input;
-    }
-
-    // Load executable into memory (bypasses file I/O)
-    interpreter.loadExecutableBuffer(executableBuffer);
-    interpreter.initialMem = interpreter.mem.slice();
-
-    // Initialize the snapshot log (creates snapshot[0])
-    interpreter.initializeLog();
-
-    // Build the listing map (PC -> source line)
-    const listing = interpreter.locationLineMap(assembler.listing);
-
-    // Get the initial state diff (iteration 0 vs 0)
-    const state = interpreter.stateUpdates(0, 0);
-
-    // Create session
     const sessionId = crypto.randomUUID();
-    sessions.set(sessionId, {
-      interpreter,
-      listing,
-      createdAt: Date.now(),
-    });
+    sessions.set(sessionId, { session, createdAt: Date.now() });
 
     res.json({
       sessionId,
       state,
-      listing,
-      iteration: interpreter.currentIteration,
-      running: interpreter.running,
+      iteration: 0,
+      programRunning: session.interpreter.running,
     });
   } catch (err) {
     res.status(422).json({ error: err.message });
-  } finally {
-    // Clean up temp files
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch (_) {
-      // ignore cleanup errors
-    }
   }
 });
 
 /**
  * POST /api/debug/step
  *
- * Steps the interpreter forward or backward.
- *
  * Request body:
- *   sessionId: string  - the debug session ID
- *   count:     number  - steps to take (positive = forward, negative = backward)
+ *   sessionId: string  — the debug session ID
+ *   count:     number  — steps to take (positive = forward, negative = backward)
  *
  * Response:
- *   { state, iteration, running, output }
+ *   { state, diff, iteration, programRunning, output }
  */
 router.post('/step', (req, res) => {
   const { sessionId, count } = req.body;
 
-  if (!sessionId || !sessions.has(sessionId)) {
+  const entry = sessions.get(sessionId);
+  if (!entry) {
     return res.status(404).json({ error: 'Invalid or expired session.' });
   }
 
-  const stepCount = typeof count === 'number' ? count : 1;
-  const session = sessions.get(sessionId);
-  const { interpreter } = session;
-
   try {
-    const prevIteration = interpreter.currentIteration;
-
-    interpreter.handleSteps(stepCount);
-
-    const newIteration = interpreter.currentIteration;
-    const state = interpreter.stateUpdates(prevIteration, newIteration);
+    const stepCount = typeof count === 'number' ? count : 1;
+    const result = entry.session.step(stepCount);
 
     res.json({
-      state,
-      iteration: newIteration,
-      running: interpreter.running,
-      output: interpreter.output,
+      state: result.state,
+      diff: result.diff,
+      iteration: result.state.iteration,
+      programRunning: result.programRunning,
+      output: result.state.output,
     });
   } catch (err) {
     res.status(422).json({ error: err.message });
@@ -153,18 +106,18 @@ router.post('/step', (req, res) => {
 /**
  * POST /api/debug/stop
  *
- * Destroys a debug session and frees its memory.
- *
  * Request body:
  *   sessionId: string
  */
 router.post('/stop', (req, res) => {
   const { sessionId } = req.body;
 
-  if (!sessionId || !sessions.has(sessionId)) {
+  const entry = sessions.get(sessionId);
+  if (!entry) {
     return res.status(404).json({ error: 'Invalid or expired session.' });
   }
 
+  entry.session.cleanup();
   sessions.delete(sessionId);
   res.json({ success: true });
 });
@@ -173,27 +126,25 @@ router.post('/stop', (req, res) => {
  * GET /api/debug/state/:sessionId
  *
  * Returns the full current state without stepping.
- * Useful if the client needs to re-sync (e.g., after a reconnect).
+ * Useful for client re-sync after reconnect.
  */
 router.get('/state/:sessionId', (req, res) => {
   const { sessionId } = req.params;
 
-  if (!sessionId || !sessions.has(sessionId)) {
+  const entry = sessions.get(sessionId);
+  if (!entry) {
     return res.status(404).json({ error: 'Invalid or expired session.' });
   }
 
-  const { interpreter, listing } = sessions.get(sessionId);
-
-  // Full state: diff from iteration 0 to current
-  const state = interpreter.stateUpdates(0, interpreter.currentIteration);
-
-  res.json({
-    state,
-    listing,
-    iteration: interpreter.currentIteration,
-    running: interpreter.running,
-    output: interpreter.output,
-  });
+  try {
+    const result = entry.session.getFullState();
+    res.json({
+      state: result.state,
+      programRunning: result.programRunning,
+    });
+  } catch (err) {
+    res.status(422).json({ error: err.message });
+  }
 });
 
 module.exports = router;

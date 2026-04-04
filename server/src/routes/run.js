@@ -1,25 +1,25 @@
-const express = require('express');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+/*
+ * routes/run.js — POST /api/run
+ *
+ * Assembles and runs an LCC program to completion.
+ * Delegates all emulator logic to ilcc/run.js.
+ */
 
-const LCC = require('../interactive_lccjs/src/core/lcc');
+const express = require('express');
+const { runProgram } = require('../ilcc/run');
 
 const router = express.Router();
 
 /**
  * POST /api/run
  *
- * Assembles and runs an LCC program to completion.
- * Returns the program's output string.
- *
  * Request body:
- *   code:  string  - the assembly source code
- *   input: string  - (optional) simulated stdin for the program
+ *   code:  string  — assembly source code
+ *   input: string  — (optional) simulated stdin for DIN/AIN/SIN/HIN
  *
  * Response:
- *   { output: string } on success
- *   { error: string }  on failure
+ *   { output: string }           on success
+ *   { error: string }            on failure
  */
 router.post('/', (req, res) => {
   const { code, input } = req.body;
@@ -28,37 +28,13 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'Missing or invalid "code" field.' });
   }
 
-  // Write code to a temp file so LCC can read it as a .a file
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lcc-'));
-  const srcPath = path.join(tmpDir, 'program.a');
+  const result = runProgram(code, { input: input || '' });
 
-  try {
-    fs.writeFileSync(srcPath, code);
-
-    const lcc = new LCC();
-    lcc.generateStats = false;
-
-    // Pre-fill input buffer so stdin reads don't block
-    if (input) {
-      lcc.inputBuffer = input;
-    }
-
-    // Assemble and execute
-    lcc.main([srcPath]);
-
-    const output = lcc.interpreter ? lcc.interpreter.output : '';
-
-    res.json({ output });
-  } catch (err) {
-    res.status(422).json({ error: err.message });
-  } finally {
-    // Clean up temp files
-    try {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    } catch (_) {
-      // ignore cleanup errors
-    }
+  if (result.error) {
+    return res.status(422).json({ error: result.error });
   }
+
+  res.json({ output: result.output });
 });
 
 module.exports = router;
