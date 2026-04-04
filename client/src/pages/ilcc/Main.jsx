@@ -26,7 +26,7 @@ import CPU from './panels/CPU';
 import Stack from './panels/Stack';
 import Memory from './panels/Memory';
 
-export default function Main() {
+export default function Main({ editorRef }) {
   return (
     <div className={styles.layout}>
 
@@ -38,7 +38,7 @@ export default function Main() {
           <Panel defaultSize={70} minSize={20}>
             <div className={styles.pane}>
               <div className={styles.paneHeader}>Code Editor</div>
-              <Editor />
+              <Editor ref={editorRef} />
             </div>
           </Panel>
 

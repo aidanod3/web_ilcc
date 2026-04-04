@@ -1,27 +1,28 @@
 /*
  * Editor.jsx — Code editor panel powered by CodeMirror.
  *
- * Creates a CodeMirror 6 EditorView on mount and destroys it on unmount.
- * The editor is styled to match the app's dark theme using CSS variables.
+ * Exposes the EditorView via useImperativeHandle so the parent can
+ * read the document contents on demand (e.g. when Run/Debug is clicked)
+ * without syncing on every keystroke.
  *
- * Refs:
- *   hostRef — DOM node where CodeMirror mounts its root element.
- *   viewRef — the EditorView instance, kept in a ref so we can access
- *             it imperatively (e.g. to read/set the document contents)
- *             without causing re-renders.
- *
- * TODO: Accept source/setSource props from index.jsx so the parent
- *       can read the editor contents for run/debug, and set them
- *       when loading sample programs or files.
+ * Usage from parent:
+ *   const editorRef = useRef();
+ *   <Editor ref={editorRef} />
+ *   const code = editorRef.current.getCode();
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import styles from './Editor.module.css';
 
-export default function Editor() {
+const Editor = forwardRef(function Editor(props, ref) {
   const hostRef = useRef(null);   /* DOM element CodeMirror attaches to */
   const viewRef = useRef(null);   /* EditorView instance */
+
+  /* Expose getCode() to the parent via ref */
+  useImperativeHandle(ref, () => ({
+    getCode: () => viewRef.current?.state.doc.toString() ?? '',
+  }));
 
   useEffect(() => {
     /* Create the CodeMirror editor with dark theme overrides */
@@ -68,4 +69,6 @@ export default function Editor() {
       <div className={styles.editorHost} ref={hostRef} />
     </div>
   );
-}
+});
+
+export default Editor;

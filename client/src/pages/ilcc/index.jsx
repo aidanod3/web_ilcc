@@ -17,16 +17,16 @@
  * natural height and Main fills the remaining viewport space.
  */
 
-import { useState } from 'react';
+import { useRef } from 'react';
 import Header from './Header';
 import Main from './Main';
 import useRunProgram from '../../hooks/useRunProgram';
 import useDebugSession from '../../hooks/useDebugSession';
 
 export default function Ilcc() {
-  /* The assembly source code typed by the user.
-     Will be passed to the Editor panel and sent to the server on run/debug. */
-  const [code, setCode] = useState('');
+  /* Ref to the CodeMirror editor — call editorRef.current.getCode()
+     to read the document contents on demand (run/debug). */
+  const editorRef = useRef(null);
 
   /* Hook for the "Run" workflow: assemble + execute to completion */
   const runner = useRunProgram();
@@ -34,16 +34,18 @@ export default function Ilcc() {
   /* Hook for the "Debug" workflow: interactive stepping with diffs */
   const debug_session = useDebugSession();
 
+  /* Helper to read the editor contents at the moment of action */
+  const getCode = () => editorRef.current?.getCode() ?? '';
+
   /* ── Handler: Run button ──
-     Sends the code to POST /api/run and displays the output. */
-  const handleRun = () => runner.run(code);
+     Reads the editor and sends to POST /api/run. */
+  const handleRun = () => runner.run(getCode());
 
   /* ── Handler: Debug button ──
-     Starts (or restarts) an interactive debug session.
-     Sends the code to POST /api/debug/start. */
+     Reads the editor and starts an interactive debug session. */
   const handleDebug = async () => {
     try {
-      await debug_session.start(code);
+      await debug_session.start(getCode());
     } catch (err) {
       // TODO: surface error to user (e.g. assembly errors)
     }
@@ -74,7 +76,7 @@ export default function Ilcc() {
       />
 
       {/* Main content area: editor, terminal, and debugger panels */}
-      <Main />
+      <Main editorRef={editorRef} />
 
     </div>
   );
