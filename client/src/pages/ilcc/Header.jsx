@@ -44,7 +44,7 @@ export default function Header({
 
       {/* Left: app title */}
       <div>
-        <h1>&lt;lcc&gt;</h1>
+        <h1>&lt;ilcc&gt;</h1>
       </div>
 
       {/* Center: action buttons */}

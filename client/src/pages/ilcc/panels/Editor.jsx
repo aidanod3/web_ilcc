@@ -31,7 +31,7 @@ export default function Editor() {
         basicSetup,
         EditorView.theme({
           /* Make the editor fill its container */
-          '&': { height: '100%', background: 'var(--bg2)' },
+          '&': { height: '100%', background: 'var(--bg1)' },
           '.cm-scroller': { overflow: 'auto' },
           /* Monospace font for code content */
           '.cm-content': {
@@ -40,7 +40,7 @@ export default function Editor() {
           },
           /* Gutter (line numbers) styling */
           '.cm-gutters': {
-            background: 'var(--bg2)',
+            background: 'var(--bg1)',
             borderRight: '2px solid var(--border2)',
             color: 'var(--text3)',
           },

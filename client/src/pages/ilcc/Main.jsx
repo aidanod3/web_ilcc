@@ -10,9 +10,9 @@
  *     The user can drag the separator to resize them.
  *
  *   Right column (flex: 1):
- *     Fixed layout (no resizing) split into:
- *       - Top:    CPU State (registers, flags, pointers) + Stack, side by side
- *       - Bottom: Memory viewer table
+ *     Single card with no top-level header. Interior is split into:
+ *       - Top row:    CPU State + Stack side by side, each with its own header
+ *       - Bottom row: Memory with its own header
  *
  * TODO: Wire props from index.jsx once editor source and debug state
  *       are connected (code, setCode, debugState, output, etc.).
@@ -56,30 +56,31 @@ export default function Main() {
         </Group>
       </div>
 
-      {/* ── Right column: debugger panels ── */}
+      {/* ── Right column: single debugger card with internal sections ── */}
       <div className={styles.rightColumn}>
-        <div className={styles.paneHeader}>Debugger</div>
-        <div className={styles.debugContent}>
+        <div className={styles.debugCard}>
 
-          {/* Top row: CPU state and Stack side by side */}
+          {/* Top row: CPU State + Stack side by side */}
           <div className={styles.debugUpper}>
-
-            {/* CPU section: registers, condition codes, pointers */}
-            <div className={styles.cpuSection}>
+            <div className={styles.debugSection}>
               <div className={styles.sectionHeader}>CPU State</div>
               <CPU />
             </div>
 
-            {/* Stack section: call stack viewer */}
-            <div className={styles.stackSection}>
+            {/* Vertical divider between CPU and Stack */}
+            <div className={styles.debugDividerV} />
+
+            <div className={styles.debugSection}>
               <div className={styles.sectionHeader}>Stack</div>
               <Stack />
             </div>
-
           </div>
 
-          {/* Bottom row: memory viewer */}
-          <div className={styles.debugLower}>
+          {/* Horizontal divider between top row and memory */}
+          <div className={styles.debugDividerH} />
+
+          {/* Bottom row: Memory viewer */}
+          <div className={styles.debugSection}>
             <div className={styles.sectionHeader}>Memory</div>
             <Memory />
           </div>
