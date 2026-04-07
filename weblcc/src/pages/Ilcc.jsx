@@ -7,18 +7,18 @@ const FLAG_NAMES = ['N', 'Z', 'P', 'C', 'V'];
 const THEME = {
   dark: {
     label: 'Dark',
-    bg: '#13151a', panel: '#1a1c23', panel2: '#1e2028', border: '#252830',
-    text: '#e0e0e8', mut: '#9a9ab0',
+    bg: '#0e0e0f', panel: '#18181b', panel2: '#1e1e22', border: '#2a2a2f',
+    text: '#e2e2e5', mut: '#8a8a96',
     accent: '#f7a800', red: '#ff5f5f', green: '#3ddc84', orange: '#ffb457',
     yellow: '#ffd866', cyan: '#4fd8ff',
-    activeLine: 'rgba(247,168,0,0.10)',
-    activeLineFlashFwd: 'rgba(247,168,0,0.22)',
-    activeLineFlashBack: 'rgba(79,216,255,0.18)',
-    editorBg: '#13151a', gutter: '#161820', terminal: '#0f1116',
-    terminalInput: '#1e2028',
-    shadow: '0 8px 24px rgba(0,0,0,.45)',
-    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
-    focusGrad: 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(19,21,26,.92))',
+    activeLine: 'rgba(79,124,255,0.18)',
+    activeLineFlashFwd: 'rgba(79,124,255,0.4)',
+    activeLineFlashBack: 'rgba(255,180,87,0.35)',
+    editorBg: '#151518', gutter: '#141418', terminal: '#111217',
+    terminalInput: '#2f3036',
+    shadow: '0 8px 20px rgba(0,0,0,.35)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.03)',
+    focusGrad: 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(24,24,27,.88))',
   },
   light: {
     label: 'Light',
@@ -2507,60 +2507,6 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
         }} />
         <button className="asm-btn" onClick={() => fileRef.current && fileRef.current.click()}>Import</button>
         <button className="asm-btn" onClick={onExport}>Export</button>
-        <button className="asm-btn" onClick={handleShare} title="Copy shareable link to clipboard">
-          Share
-        </button>
-        {shareCopied && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(4px)',
-            animation: 'fadeUp 150ms ease-out',
-          }} onClick={() => setShareCopied(false)}>
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                background: THEME[state.theme].panel,
-                border: `1px solid ${THEME[state.theme].green}`,
-                borderRadius: 14,
-                padding: '28px 36px',
-                minWidth: 320,
-                textAlign: 'center',
-                boxShadow: `0 20px 60px rgba(0,0,0,.5), 0 0 0 1px ${THEME[state.theme].green}33`,
-                position: 'relative',
-              }}
-            >
-              <button
-                onClick={() => setShareCopied(false)}
-                style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: THEME[state.theme].mut, fontSize: 18, lineHeight: 1,
-                  padding: 4, borderRadius: 4,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.color = THEME[state.theme].text; }}
-                onMouseLeave={e => { e.currentTarget.style.color = THEME[state.theme].mut; }}
-              >×</button>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%',
-                background: `${THEME[state.theme].green}18`,
-                border: `2px solid ${THEME[state.theme].green}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px',
-              }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={THEME[state.theme].green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </div>
-              <div style={{ color: THEME[state.theme].text, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
-                Code ready to share!
-              </div>
-              <div style={{ color: THEME[state.theme].mut, fontSize: 13, lineHeight: 1.5 }}>
-                Link copied to clipboard.<br />Anyone with the link can open your code.
-              </div>
-            </div>
-          </div>
-        )}
         <select
           value={state.theme}
           onChange={(e) => dispatch({ type: 'SET_THEME', theme: e.target.value })}
