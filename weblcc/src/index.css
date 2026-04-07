@@ -7,15 +7,15 @@
 }
 
 :root {
-  --bg: #0e0e0f;
-  --bg1: #131315;
-  --bg2: #18181b;
-  --bg3: #1e1e22;
-  --border: #2a2a2f;
-  --border2: #222226;
-  --text: #e2e2e5;
-  --text2: #8a8a96;
-  --text3: #4a4a55;
+  --bg: #13151a;
+  --bg1: #161820;
+  --bg2: #1a1c23;
+  --bg3: #1e2028;
+  --border: #252830;
+  --border2: #1e2028;
+  --text: #e0e0e8;
+  --text2: #9a9ab0;
+  --text3: #4a4f60;
   --gold: #f7a800;
   --gold-dim: rgba(247, 168, 0, 0.1);
   --gold-glow: rgba(247, 168, 0, 0.05);

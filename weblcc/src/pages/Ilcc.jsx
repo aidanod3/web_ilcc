@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const REG_NAMES = ['R0', 'R1', 'R2', 'R3', 'R4', 'R5 (FP)', 'R6 (SP)', 'R7 (LR)', 'PC', 'IR'];
 const FLAG_NAMES = ['N', 'Z', 'P', 'C', 'V'];
@@ -6,18 +7,18 @@ const FLAG_NAMES = ['N', 'Z', 'P', 'C', 'V'];
 const THEME = {
   dark: {
     label: 'Dark',
-    bg: '#0e0e0f', panel: '#18181b', panel2: '#1e1e22', border: '#2a2a2f',
-    text: '#e2e2e5', mut: '#8a8a96',
+    bg: '#13151a', panel: '#1a1c23', panel2: '#1e2028', border: '#252830',
+    text: '#e0e0e8', mut: '#9a9ab0',
     accent: '#f7a800', red: '#ff5f5f', green: '#3ddc84', orange: '#ffb457',
     yellow: '#ffd866', cyan: '#4fd8ff',
-    activeLine: 'rgba(79,124,255,0.18)',
-    activeLineFlashFwd: 'rgba(79,124,255,0.4)',
-    activeLineFlashBack: 'rgba(255,180,87,0.35)',
-    editorBg: '#151518', gutter: '#141418', terminal: '#111217',
-    terminalInput: '#2f3036',
-    shadow: '0 8px 20px rgba(0,0,0,.35)',
-    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.03)',
-    focusGrad: 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(24,24,27,.88))',
+    activeLine: 'rgba(247,168,0,0.10)',
+    activeLineFlashFwd: 'rgba(247,168,0,0.22)',
+    activeLineFlashBack: 'rgba(79,216,255,0.18)',
+    editorBg: '#13151a', gutter: '#161820', terminal: '#0f1116',
+    terminalInput: '#1e2028',
+    shadow: '0 8px 24px rgba(0,0,0,.45)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(19,21,26,.92))',
   },
   light: {
     label: 'Light',
@@ -84,9 +85,31 @@ const THEME = {
 const SAMPLE_CODE = `; Add two input numbers (LCC)\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, promptA\n            sout r0\n            din r1\n\n            lea r0, promptB\n            sout r0\n            din r2\n\n            add r3, r1, r2\n            lea r0, sumMsg\n            sout r0\n            dout r3\n            nl\n\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\npromptA:    .string \"Enter first number: \"\npromptB:    .string \"Enter second number: \"\nsumMsg:     .string \"Sum: \"\n`;
 const SAMPLE_CODE_LOOP = `; Count from 1 to 5 (LCC)\nstartup:    bl main\n            halt\n\nmain:       mov r0, 1\nloopTop:    dout r0\n            nl\n            add r0, r0, 1\n            cmp r0, 6\n            brn loopTop\n            brz loopTop\n            ret\n`;
 
+// ── Code Templates ─────────────────────────────────────────────────────────
+const TEMPLATE_CONDITIONAL = `; If / Else — compare two inputs\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, msgA\n            sout r0\n            din r1\n            lea r0, msgB\n            sout r0\n            din r2\n\n            cmp r1, r2\n            brp aGreater     ; A > B if positive\n            brz aEqual\n\n            ; A < B\n            lea r0, msgLess\n            sout r0\n            br done\n\naGreater:   lea r0, msgGreater\n            sout r0\n            br done\n\naEqual:     lea r0, msgEqual\n            sout r0\n\ndone:       nl\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nmsgA:       .string \"Enter A: \"\nmsgB:       .string \"Enter B: \"\nmsgGreater: .string \"A is greater\"\nmsgLess:    .string \"A is less\"\nmsgEqual:   .string \"A equals B\"\n`;
+
+const TEMPLATE_STACK_FUNC = `; Function call with stack frame\nstartup:    bl main\n            halt\n\n; square(n) -> r0 = n*n\nsquare:     push lr\n            push fp\n            mov fp, sp\n            mul r0, r0, r0   ; r0 = r0 * r0\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, prompt\n            sout r0\n            din r0           ; r0 = input n\n            bl square        ; r0 = n^2\n\n            lea r1, result\n            sout r1\n            dout r0\n            nl\n\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"Enter a number: \"\nresult:     .string \"Square: \"\n`;
+
+const TEMPLATE_WHILE_LOOP = `; While loop — sum 1..N\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, prompt\n            sout r0\n            din r1           ; r1 = N\n            mov r2, 0        ; r2 = sum\n            mov r3, 1        ; r3 = i\n\nwhileTop:   cmp r3, r1\n            brp done         ; if i > N, exit\n            add r2, r2, r3   ; sum += i\n            add r3, r3, 1    ; i++\n            br whileTop\n\ndone:       lea r0, result\n            sout r0\n            dout r2\n            nl\n\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"Enter N: \"\nresult:     .string \"Sum 1..N = \"\n`;
+
+const TEMPLATE_STRING_IO = `; String output & character loop\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, greeting\n            sout r0\n            nl\n\n            lea r0, greeting  ; print char by char\nnextChar:   ld  r1, r0        ; load char at address\n            brz done          ; null terminator\n            aout r1           ; output as ASCII\n            add r0, r0, 1     ; advance pointer\n            br nextChar\n\ndone:       nl\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\ngreeting:   .string \"Hello, LCC!\"\n`;
+
+const TEMPLATE_FIBONACCI = `; Fibonacci — first N terms\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, prompt\n            sout r0\n            din r4           ; r4 = N\n            mov r0, 0        ; a\n            mov r1, 1        ; b\n            mov r3, 0        ; count\n\nfibLoop:    cmp r3, r4\n            brp fibDone\n            brz fibDone\n            dout r0\n            nl\n            add r2, r0, r1   ; temp = a + b\n            mov r0, r1       ; a = b\n            mov r1, r2       ; b = temp\n            add r3, r3, 1\n            br fibLoop\n\nfibDone:    mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"How many Fibonacci terms? \"\n`;
+
+const TEMPLATE_ARRAY = `; Array — store and print 5 values\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            ; fill array\n            lea r4, arr\n            mov r3, 0\nfill:       cmp r3, 5\n            brp printStart\n            brz printStart\n            lea r0, inpMsg\n            sout r0\n            din r1\n            st  r1, r4        ; arr[r3] = input\n            add r4, r4, 1\n            add r3, r3, 1\n            br fill\n\n            ; print array\nprintStart: lea r4, arr\n            mov r3, 0\nprintLoop:  cmp r3, 5\n            brp printDone\n            brz printDone\n            ld  r0, r4\n            dout r0\n            nl\n            add r4, r4, 1\n            add r3, r3, 1\n            br printLoop\n\nprintDone:  mov sp, fp\n            pop fp\n            pop lr\n            ret\n\ninpMsg:     .string \"Value: \"\narr:        .blkw 5\n`;
+
+const TEMPLATE_RECURSION = `; Recursive factorial\nstartup:    bl main\n            halt\n\n; fact(r0) -> r0\nfact:       push lr\n            push fp\n            mov fp, sp\n            cmp r0, 1\n            brn base\n            brz base\n            push r0          ; save n\n            sub r0, r0, 1\n            bl fact          ; fact(n-1) -> r0\n            pop r1           ; restore n\n            mul r0, r0, r1   ; n * fact(n-1)\n            br factDone\nbase:       mov r0, 1\nfactDone:   mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nmain:       push lr\n            push fp\n            mov fp, sp\n            lea r0, prompt\n            sout r0\n            din r0\n            bl fact\n            lea r1, result\n            sout r1\n            dout r0\n            nl\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"Enter n: \"\nresult:     .string \"n! = \"\n`;
+
 const SAMPLE_PROGRAMS = [
-  { id: 'sample-main', name: 'Sample: Sum', source: SAMPLE_CODE },
-  { id: 'sample-loop', name: 'Sample: Loop', source: SAMPLE_CODE_LOOP }
+  { id: 'tpl-sum',       name: 'Add Two Numbers',      source: SAMPLE_CODE },
+  { id: 'tpl-loop',      name: 'Count Loop (1–5)',      source: SAMPLE_CODE_LOOP },
+  { id: 'tpl-while',     name: 'While Loop (sum 1..N)', source: TEMPLATE_WHILE_LOOP },
+  { id: 'tpl-if',        name: 'If / Else Conditional', source: TEMPLATE_CONDITIONAL },
+  { id: 'tpl-stack',     name: 'Stack & Function Call', source: TEMPLATE_STACK_FUNC },
+  { id: 'tpl-string',    name: 'String I/O',            source: TEMPLATE_STRING_IO },
+  { id: 'tpl-array',     name: 'Array (Store & Print)', source: TEMPLATE_ARRAY },
+  { id: 'tpl-fib',       name: 'Fibonacci Sequence',    source: TEMPLATE_FIBONACCI },
+  { id: 'tpl-recursion', name: 'Recursive Factorial',   source: TEMPLATE_RECURSION },
 ];
 
 function toHex(value, width = 8) {
@@ -863,7 +886,8 @@ function buildInitialState() {
     watchList: ['R0', 'R1', 'R2', 'R3', 'PC'],
     traceSessionId: runtime.traceSessionId,
     traceStatus: runtime.traceStatus,
-    backendOutput: runtime.backendOutput
+    backendOutput: runtime.backendOutput,
+    customKeywords: [],
   };
 }
 
@@ -1573,6 +1597,14 @@ function reducer(state, action) {
     case 'SET_EDITING_BREAKPOINT':
       return { ...state, editingBreakpoint: action.line ?? null };
 
+    case 'ADD_CUSTOM_KEYWORD': {
+      const kw = (action.keyword || '').trim().toLowerCase();
+      if (!kw || state.customKeywords.includes(kw)) return state;
+      return { ...state, customKeywords: [...state.customKeywords, kw] };
+    }
+    case 'REMOVE_CUSTOM_KEYWORD':
+      return { ...state, customKeywords: state.customKeywords.filter(k => k !== action.keyword) };
+
     default:
       return state;
   }
@@ -1647,8 +1679,135 @@ const MNEMONIC_SET = new Set([
   'ld', 'st', 'ldr', 'str', 'jmp', 'jsr', 'jsrr'
 ]);
 
-function getTokenColor(token, theme) {
+// ── Static Linter ──────────────────────────────────────────────────────────
+// Returns array of { line (1-based), level: 'error'|'warning', msg }
+function lintAssembly(source, customKeywords = []) {
+  const allMnemonics = new Set([...MNEMONIC_SET, ...customKeywords.map(k => k.toLowerCase())]);
+  const lines = source.split('\n');
+  const issues = [];
+
+  // First pass: collect all label definitions
+  const definedLabels = new Set();
+  lines.forEach(raw => {
+    const trimmed = raw.replace(/;.*$/, '').trim();
+    const lm = trimmed.match(/^([A-Za-z_$.][A-Za-z0-9_$.]*):/);
+    if (lm) definedLabels.add(lm[1].toLowerCase());
+  });
+
+  // Track register initialization (simple: written-to set)
+  const writtenRegs = new Set(['r6', 'r7', 'sp', 'fp', 'lr', 'pc']); // always initialized
+  let stackDepth = 0;         // track push/pop balance
+  let haltSeen = false;
+  // For infinite-loop detection: track backward branch targets
+  const backwardBranchTargets = new Set();
+  const labelLineMap = {};
+  lines.forEach((raw, idx) => {
+    const trimmed = raw.replace(/;.*$/, '').trim();
+    const lm = trimmed.match(/^([A-Za-z_$.][A-Za-z0-9_$.]*):/)
+    if (lm) labelLineMap[lm[1].toLowerCase()] = idx;
+  });
+
+  lines.forEach((raw, idx) => {
+    const lineNo = idx + 1;
+    const commentIdx = raw.indexOf(';');
+    const code = commentIdx >= 0 ? raw.slice(0, commentIdx) : raw;
+    const trimmed = code.trim();
+    if (!trimmed) return;
+
+    // Strip optional label prefix
+    let instrPart = trimmed;
+    const lm = trimmed.match(/^[A-Za-z_$.][A-Za-z0-9_$.]*:\s*(.*)/);
+    if (lm) instrPart = lm[1].trim();
+    if (!instrPart) return;
+
+    // Directives (.string, .blkw, etc.) are always valid
+    if (instrPart.startsWith('.')) return;
+
+    const tokens = instrPart.split(/\s+|,\s*/);
+    const mnem = tokens[0].toLowerCase();
+
+    // Unknown instruction
+    if (!allMnemonics.has(mnem)) {
+      issues.push({ line: lineNo, level: 'error', msg: `Unknown instruction: "${tokens[0]}"` });
+      return;
+    }
+
+    // Push/pop balance
+    if (mnem === 'push') stackDepth++;
+    if (mnem === 'pop') {
+      stackDepth--;
+      if (stackDepth < 0) {
+        issues.push({ line: lineNo, level: 'warning', msg: 'Pop without matching push — possible stack underflow' });
+        stackDepth = 0;
+      }
+    }
+
+    // Halt seen
+    if (mnem === 'halt') haltSeen = true;
+
+    // Register destination write tracking (mov, lea, add, sub, mul, div, ld, din, ain, sin, hin)
+    const writingInstrs = new Set(['mov', 'lea', 'add', 'sub', 'mul', 'div', 'and', 'or', 'xor', 'not', 'ld', 'ldr', 'din', 'ain', 'sin', 'hin']);
+    if (writingInstrs.has(mnem) && tokens[1]) {
+      writtenRegs.add(tokens[1].replace(/,/, '').toLowerCase());
+    }
+
+    // Uninitialized register read check (only for arithmetic/store/output)
+    const readingInstrs = new Set(['add', 'sub', 'mul', 'div', 'and', 'or', 'xor', 'cmp', 'st', 'str', 'push', 'dout', 'aout', 'hout', 'sout']);
+    if (readingInstrs.has(mnem)) {
+      tokens.slice(1).forEach(tok => {
+        const t = tok.replace(/,/, '').toLowerCase();
+        if (/^r[0-5]$/.test(t) && !writtenRegs.has(t)) {
+          issues.push({ line: lineNo, level: 'warning', msg: `Register ${t.toUpperCase()} may be uninitialized` });
+        }
+      });
+    }
+
+    // Branch to undefined label
+    const branchInstrs = new Set(['br', 'brz', 'brn', 'brp', 'brnz', 'brne', 'bl', 'jmp', 'jsr']);
+    if (branchInstrs.has(mnem) && tokens[1]) {
+      const target = tokens[1].replace(/,/, '').toLowerCase();
+      if (!definedLabels.has(target) && !/^r[0-7]$/i.test(target)) {
+        issues.push({ line: lineNo, level: 'error', msg: `Branch to undefined label: "${tokens[1]}"` });
+      }
+      // Infinite loop: backward branch (target line < current line)
+      if (definedLabels.has(target)) {
+        const targetLine = labelLineMap[target] ?? -1;
+        if (targetLine < idx) {
+          backwardBranchTargets.add(target);
+        }
+      }
+    }
+  });
+
+  // Infinite loop: if a label is only ever branched to backward and there's no
+  // forward exit branch in the same region, flag it as a warning.
+  backwardBranchTargets.forEach(label => {
+    const startLine = labelLineMap[label] ?? -1;
+    let hasForwardExit = false;
+    for (let i = startLine; i < lines.length; i++) {
+      const code = lines[i].replace(/;.*$/, '').trim();
+      const instr = code.replace(/^[A-Za-z_$.][A-Za-z0-9_$.]*:\s*/, '');
+      const tok = instr.split(/\s+/);
+      const m = tok[0].toLowerCase();
+      if (m === 'ret' || m === 'halt') { hasForwardExit = true; break; }
+      if (['br', 'brz', 'brn', 'brp', 'brnz', 'brne', 'bl'].includes(m) && tok[1]) {
+        const t = tok[1].replace(/,/, '').toLowerCase();
+        const tLine = labelLineMap[t] ?? -1;
+        if (tLine > startLine) { hasForwardExit = true; break; }
+      }
+    }
+    if (!hasForwardExit) {
+      issues.push({ line: (startLine + 1), level: 'warning', msg: `Possible infinite loop: no exit from loop at "${label}"` });
+    }
+  });
+
+  return issues;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
+function getTokenColor(token, theme, customKeywords = []) {
   const lower = token.toLowerCase();
+  if (customKeywords.includes(lower)) return theme.yellow;
   if (MNEMONIC_SET.has(lower)) return theme.orange;
   if (/^r[0-7]$/i.test(token) || /^(sp|fp|lr|pc|ir)$/i.test(token)) return theme.green;
   if (/^[A-Za-z_]\w*:$/i.test(token)) return theme.accent;
@@ -1658,7 +1817,7 @@ function getTokenColor(token, theme) {
   return null;
 }
 
-function renderHighlightedLine(line, theme, keyPrefix) {
+function renderHighlightedLine(line, theme, keyPrefix, customKeywords = []) {
   const commentIndex = line.indexOf(';');
   const codePart = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
   const commentPart = commentIndex >= 0 ? line.slice(commentIndex) : '';
@@ -1671,7 +1830,7 @@ function renderHighlightedLine(line, theme, keyPrefix) {
     if (pos > cursor) {
       parts.push(<span key={`${keyPrefix}-ws-${idx}`}>{codePart.slice(cursor, pos)}</span>);
     }
-    const color = getTokenColor(token, theme);
+    const color = getTokenColor(token, theme, customKeywords);
     parts.push(
       <span key={`${keyPrefix}-tk-${idx}`} style={color ? { color, fontWeight: /^[A-Za-z_]\w*:$/i.test(token) ? 600 : 500 } : undefined}>
         {token}
@@ -1690,6 +1849,7 @@ function renderHighlightedLine(line, theme, keyPrefix) {
 }
 
 function Ilcc() {
+  const navigate = useNavigate();
   const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
   const [isBackendBusy, setIsBackendBusy] = useState(false);
   const [editorTerminalSplit, setEditorTerminalSplit] = useState(62);
@@ -1707,6 +1867,20 @@ function Ilcc() {
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Load shared code from URL ?code= param (runs once on mount)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('code');
+      if (encoded) {
+        const source = decodeURIComponent(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')));
+        dispatch({ type: 'UPDATE_SOURCE', source });
+        // Clean the URL without reloading
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (_) { /* ignore malformed codes */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = THEME[state.theme];
   const current = state.snapshots[state.currentStep];
@@ -2047,15 +2221,7 @@ function Ilcc() {
     <div
       style={{
         height: '100vh',
-        backgroundColor: t.bg,
-        backgroundImage: `
-          linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-          linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-          linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.04) 75%),
-          linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.04) 75%)
-        `,
-        backgroundSize: '24px 24px',
-        backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0',
+        background: t.bg,
         color: t.text,
         display: 'flex',
         flexDirection: 'column'
@@ -2091,6 +2257,7 @@ function Ilcc() {
         backendBusy={isBackendBusy}
         canForward={canForward}
         debuggerActive={debuggerActive}
+        onNavigateHome={() => navigate('/')}
       />
 
       {!debuggerActive ? (
@@ -2180,15 +2347,88 @@ function Ilcc() {
   );
 }
 
-function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTraceForward, backendBusy, canForward, debuggerActive }) {
+function KeywordsModal({ state, dispatch, onClose }) {
+  const [draft, setDraft] = useState('');
+  const t = THEME[state.theme];
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.55)' }} onClick={onClose}>
+      <div style={{ background: t.panel, border: `1px solid ${t.border}`, borderRadius: 12, padding: 24, minWidth: 340, boxShadow: t.shadow }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <strong style={{ color: t.text, fontSize: 15 }}>Custom Keywords</strong>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.mut, cursor: 'pointer', fontSize: 18 }}>×</button>
+        </div>
+        <p style={{ color: t.mut, fontSize: 12, marginBottom: 12 }}>Add custom mnemonics/labels to highlight in yellow.</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <input
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && draft.trim()) { dispatch({ type: 'ADD_CUSTOM_KEYWORD', keyword: draft }); setDraft(''); } }}
+            placeholder="e.g. myMacro"
+            spellCheck={false}
+            style={{ flex: 1, height: 32, borderRadius: 6, border: `1px solid ${t.border}`, background: t.panel2, color: t.text, padding: '0 10px', fontSize: 13 }}
+          />
+          <button className="asm-btn" onClick={() => { if (draft.trim()) { dispatch({ type: 'ADD_CUSTOM_KEYWORD', keyword: draft }); setDraft(''); } }}>Add</button>
+        </div>
+        {state.customKeywords.length === 0 ? (
+          <p style={{ color: t.mut, fontSize: 12 }}>No custom keywords yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {state.customKeywords.map(kw => (
+              <span key={kw} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: t.panel2, border: `1px solid ${t.border}`, borderRadius: 6, padding: '4px 8px', fontSize: 12, color: t.yellow }}>
+                {kw}
+                <button onClick={() => dispatch({ type: 'REMOVE_CUSTOM_KEYWORD', keyword: kw })} style={{ background: 'none', border: 'none', color: t.mut, cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTraceForward, backendBusy, canForward, debuggerActive, onNavigateHome }) {
   const fileRef = useRef(null);
   const [sampleChoice, setSampleChoice] = useState('');
   const [jumpCount, setJumpCount] = useState(5);
+  const [showKeywords, setShowKeywords] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShare = () => {
+    try {
+      const encoded = btoa(encodeURIComponent(state.source))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const url = `${window.location.origin}/ilcc?code=${encoded}`;
+      navigator.clipboard.writeText(url).then(() => {
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      });
+    } catch (_) { /* fallback: nothing */ }
+  };
 
   return (
+    <>
+    {showKeywords && <KeywordsModal state={state} dispatch={dispatch} onClose={() => setShowKeywords(false)} />}
     <div style={{ height: 48, borderBottom: `1px solid ${THEME[state.theme].border}`, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '0 10px', columnGap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <strong style={{ letterSpacing: '.04em' }}>CPS340 | LCC</strong>
+        <button
+          onClick={onNavigateHome}
+          title="Back to home"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: THEME[state.theme].mut, display: 'flex', alignItems: 'center',
+            gap: 5, padding: '4px 6px', borderRadius: 6, fontSize: 13,
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = THEME[state.theme].text; e.currentTarget.style.background = THEME[state.theme].panel2; }}
+          onMouseLeave={e => { e.currentTarget.style.color = THEME[state.theme].mut; e.currentTarget.style.background = 'none'; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          WebLCC
+        </button>
+        <span style={{ color: THEME[state.theme].border, fontSize: 16 }}>|</span>
+        <strong style={{ letterSpacing: '.04em' }}>CPS340</strong>
         <select
           value={sampleChoice}
           onChange={(e) => {
@@ -2201,11 +2441,14 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
           }}
           style={{ height: 30, borderRadius: 6, border: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].panel2, color: THEME[state.theme].text, padding: '0 8px' }}
         >
-          <option value="">Program Samples</option>
+          <option value="">Code Templates</option>
           {SAMPLE_PROGRAMS.map((sample) => (
             <option key={sample.id} value={sample.id}>{sample.name}</option>
           ))}
         </select>
+        <button className="asm-btn" title="Custom keywords / tokens" onClick={() => setShowKeywords(true)}>
+          Keywords {state.customKeywords.length > 0 ? `(${state.customKeywords.length})` : ''}
+        </button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -2264,6 +2507,60 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
         }} />
         <button className="asm-btn" onClick={() => fileRef.current && fileRef.current.click()}>Import</button>
         <button className="asm-btn" onClick={onExport}>Export</button>
+        <button className="asm-btn" onClick={handleShare} title="Copy shareable link to clipboard">
+          Share
+        </button>
+        {shareCopied && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(4px)',
+            animation: 'fadeUp 150ms ease-out',
+          }} onClick={() => setShareCopied(false)}>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: THEME[state.theme].panel,
+                border: `1px solid ${THEME[state.theme].green}`,
+                borderRadius: 14,
+                padding: '28px 36px',
+                minWidth: 320,
+                textAlign: 'center',
+                boxShadow: `0 20px 60px rgba(0,0,0,.5), 0 0 0 1px ${THEME[state.theme].green}33`,
+                position: 'relative',
+              }}
+            >
+              <button
+                onClick={() => setShareCopied(false)}
+                style={{
+                  position: 'absolute', top: 12, right: 12,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: THEME[state.theme].mut, fontSize: 18, lineHeight: 1,
+                  padding: 4, borderRadius: 4,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = THEME[state.theme].text; }}
+                onMouseLeave={e => { e.currentTarget.style.color = THEME[state.theme].mut; }}
+              >×</button>
+              <div style={{
+                width: 48, height: 48, borderRadius: '50%',
+                background: `${THEME[state.theme].green}18`,
+                border: `2px solid ${THEME[state.theme].green}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={THEME[state.theme].green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <div style={{ color: THEME[state.theme].text, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                Code ready to share!
+              </div>
+              <div style={{ color: THEME[state.theme].mut, fontSize: 13, lineHeight: 1.5 }}>
+                Link copied to clipboard.<br />Anyone with the link can open your code.
+              </div>
+            </div>
+          </div>
+        )}
         <select
           value={state.theme}
           onChange={(e) => dispatch({ type: 'SET_THEME', theme: e.target.value })}
@@ -2288,6 +2585,7 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
         />
       </div>
     </div>
+    </>
   );
 }
 
@@ -2349,6 +2647,18 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
   const focusedLineExplanation = explainInstructionLine(focusedLineText);
   const transition = state.transition;
   const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
+
+  // Smart error detection
+  const [showLintPanel, setShowLintPanel] = useState(true);
+  const lintIssues = useMemo(() => lintAssembly(state.source, state.customKeywords), [state.source, state.customKeywords]);
+  const lintByLine = useMemo(() => {
+    const map = {};
+    lintIssues.forEach(issue => {
+      if (!map[issue.line]) map[issue.line] = [];
+      map[issue.line].push(issue);
+    });
+    return map;
+  }, [lintIssues]);
 
   useEffect(() => {
     setShowFileMenu(false);
@@ -2526,16 +2836,20 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                 const lineNo = idx + 1;
                 const bp = state.breakpoints.get(lineNo);
                 const isActive = activeLine === idx;
+                const lineIssues = lintByLine[lineNo] || [];
+                const hasError = lineIssues.some(i => i.level === 'error');
+                const hasWarn = lineIssues.some(i => i.level === 'warning');
                 const flashClass = isActive && transition && Date.now() - transition.ts < 450
                   ? transition.direction === 'backward' ? 'line-flash-backward' : 'line-flash-forward'
                   : '';
+                const lintTitle = lineIssues.map(i => `${i.level === 'error' ? '⛔' : '⚠'} ${i.msg}`).join('\n');
                 return (
                   <button
                     key={`gutter-${lineNo}-${line}`}
                     ref={(el) => { lineRefs.current[idx] = el; }}
                     type="button"
                     className={flashClass}
-                    title={bp?.description ? `● Line ${lineNo}: ${bp.description}` : undefined}
+                    title={lintTitle || (bp?.description ? `● Line ${lineNo}: ${bp.description}` : undefined)}
                     onClick={() => setLineBreakpoint(idx)}
                     style={{
                       width: '100%',
@@ -2550,12 +2864,12 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                       gap: 4,
                       padding: '0 8px',
                       textAlign: 'left',
-                      background: isActive ? THEME[state.theme].activeLine : 'transparent',
+                      background: hasError ? 'rgba(239,68,68,.12)' : hasWarn ? 'rgba(251,191,36,.08)' : isActive ? THEME[state.theme].activeLine : 'transparent',
                       border: 'none',
-                      borderLeft: isActive ? `3px solid ${THEME[state.theme].accent}` : '3px solid transparent'
+                      borderLeft: hasError ? '3px solid #ef4444' : hasWarn ? '3px solid #fbbf24' : isActive ? `3px solid ${THEME[state.theme].accent}` : '3px solid transparent'
                     }}
                   >
-                    <span style={{ color: isActive ? THEME[state.theme].accent : 'transparent' }}>▶</span>
+                    {hasError ? <span style={{ fontSize: 10 }}>⛔</span> : hasWarn ? <span style={{ fontSize: 10 }}>⚠</span> : <span style={{ color: isActive ? THEME[state.theme].accent : 'transparent' }}>▶</span>}
                     <span style={{
                       width: 8,
                       height: 8,
@@ -2586,7 +2900,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                 }}
               >
                 {lines.map((line, idx) => (
-                  <div key={`hl-${idx}`}>{renderHighlightedLine(line, THEME[state.theme], `hl-${idx}`)}</div>
+                  <div key={`hl-${idx}`}>{renderHighlightedLine(line, THEME[state.theme], `hl-${idx}`, state.customKeywords)}</div>
                 ))}
               </pre>
               <textarea
@@ -2619,6 +2933,28 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
               />
             </div>
           </div>
+
+          {lintIssues.length > 0 && showLintPanel ? (
+            <div style={{ borderTop: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].panel, maxHeight: 120, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px', borderBottom: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].panel2 }}>
+                <span style={{ fontSize: 11, color: THEME[state.theme].text, fontWeight: 600 }}>
+                  {lintIssues.filter(i => i.level === 'error').length > 0 && <span style={{ color: '#ef4444' }}>⛔ {lintIssues.filter(i => i.level === 'error').length} error{lintIssues.filter(i => i.level === 'error').length !== 1 ? 's' : ''} </span>}
+                  {lintIssues.filter(i => i.level === 'warning').length > 0 && <span style={{ color: '#fbbf24' }}>⚠ {lintIssues.filter(i => i.level === 'warning').length} warning{lintIssues.filter(i => i.level === 'warning').length !== 1 ? 's' : ''}</span>}
+                </span>
+                <button onClick={() => setShowLintPanel(false)} style={{ background: 'none', border: 'none', color: THEME[state.theme].mut, cursor: 'pointer', fontSize: 13 }}>×</button>
+              </div>
+              {lintIssues.map((issue, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, padding: '3px 10px', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', borderBottom: `1px solid ${THEME[state.theme].border}`, color: issue.level === 'error' ? '#ef4444' : '#fbbf24' }}>
+                  <span style={{ minWidth: 48, color: THEME[state.theme].mut }}>Line {issue.line}</span>
+                  <span>{issue.level === 'error' ? '⛔' : '⚠'} {issue.msg}</span>
+                </div>
+              ))}
+            </div>
+          ) : lintIssues.length > 0 ? (
+            <button onClick={() => setShowLintPanel(true)} style={{ fontSize: 11, padding: '3px 10px', background: THEME[state.theme].panel2, border: 'none', borderTop: `1px solid ${THEME[state.theme].border}`, cursor: 'pointer', color: lintIssues.some(i => i.level === 'error') ? '#ef4444' : '#fbbf24', width: '100%', textAlign: 'left' }}>
+              {lintIssues.some(i => i.level === 'error') ? '⛔' : '⚠'} {lintIssues.length} issue{lintIssues.length !== 1 ? 's' : ''} — click to expand
+            </button>
+          ) : null}
 
           {showFocusZoom ? (
             <div
