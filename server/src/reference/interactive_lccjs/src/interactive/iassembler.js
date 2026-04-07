@@ -11,8 +11,8 @@
 
 const fs = require("fs");
 const path = require("path");
-const generateBSTLSTContent = () => '';
-const nameHandler = { createNameFile: () => '' };
+const { generateBSTLSTContent } = require("../utils/genStats.js");
+const nameHandler = require("../utils/name.js");
 
 const isTestMode = typeof global.it === "function"; // crude check for Jest
 
