@@ -6,7 +6,7 @@
  */
 
 const express = require('express');
-const { runProgram } = require('../ilcc/run');
+const { runProgram } = require('../web_ilcc/run');
 
 const router = express.Router();
 
