@@ -20,6 +20,16 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+
+/*
+ * Trick the assembler/interpreter into "test mode" so fatalExit()
+ * throws an error instead of calling process.exit(), which would
+ * kill the entire server process.
+ */
+if (typeof global.it !== 'function') {
+  global.it = function () {};
+}
+
 const Assembler = require('../reference/interactive_lccjs/src/interactive/iassembler');
 const Interpreter = require('../reference/interactive_lccjs/src/interactive/iinterpreter');
 

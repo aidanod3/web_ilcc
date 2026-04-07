@@ -24,6 +24,9 @@ const router = express.Router();
 router.post('/', (req, res) => {
   const { code, input } = req.body;
 
+  console.log('[/api/run] Received code, length:', code?.length);
+  console.log('[/api/run] First 200 chars:', JSON.stringify(code?.slice(0, 200)));
+
   if (!code || typeof code !== 'string') {
     return res.status(400).json({ error: 'Missing or invalid "code" field.' });
   }

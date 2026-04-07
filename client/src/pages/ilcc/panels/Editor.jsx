@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
+import { keymap } from '@codemirror/view';
 import styles from './Editor.module.css';
 
 const Editor = forwardRef(function Editor(props, ref) {
@@ -30,6 +31,13 @@ const Editor = forwardRef(function Editor(props, ref) {
       doc: '',
       extensions: [
         basicSetup,
+        keymap.of([{
+          key: 'Tab',
+          run: (view) => {
+            view.dispatch(view.state.replaceSelection('\t'));
+            return true;
+          },
+        }]),
         EditorView.theme({
           /* Make the editor fill its container */
           '&': { height: '100%', background: 'var(--bg1)' },

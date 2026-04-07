@@ -95,9 +95,9 @@ export default function useDebugSession() {
       /* Store the session ID and hydrate state from the response */
       sessionIdRef.current = data.sessionId;
       setIsDebugging(true);
-      setIteration(data.iteration);       /* 0 on a fresh session */
-      setProgramRunning(data.running);     /* true until HALT trap */
-      setState(data.state);               /* initial diff (iteration 0 vs 0) */
+      setIteration(data.iteration);              /* 0 on a fresh session */
+      setProgramRunning(data.programRunning);   /* true until HALT trap */
+      setState(data.state);                     /* initial state object */
       setOutput('');
     } catch (err) {
       /* Re-throw so the caller (index.jsx) can handle it */
@@ -125,8 +125,8 @@ export default function useDebugSession() {
       }
 
       setIteration(data.iteration);
-      setProgramRunning(data.running);
-      setState(data.state);          /* diff between old and new iteration */
+      setProgramRunning(data.programRunning);
+      setState(data.state);          /* state object from this step */
       setOutput(data.output);        /* accumulated program stdout */
     } catch (err) {
       setOutput(`Error: ${err.message}`);

@@ -76,7 +76,12 @@ export default function Ilcc() {
       />
 
       {/* Main content area: editor, terminal, and debugger panels */}
-      <Main editorRef={editorRef} />
+      <Main
+        editorRef={editorRef}
+        output={debug_session.isDebugging ? debug_session.output : runner.output}
+        debugState={debug_session.state}
+        isDebugging={debug_session.isDebugging}
+      />
 
     </div>
   );

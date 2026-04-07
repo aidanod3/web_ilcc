@@ -26,7 +26,7 @@ import CPU from './panels/CPU';
 import Stack from './panels/Stack';
 import Memory from './panels/Memory';
 
-export default function Main({ editorRef }) {
+export default function Main({ editorRef, output, debugState, isDebugging }) {
   return (
     <div className={styles.layout}>
 
@@ -35,7 +35,7 @@ export default function Main({ editorRef }) {
         <Group orientation="vertical">
 
           {/* Code editor panel — 70% of the left column by default */}
-          <Panel defaultSize={70} minSize={20}>
+          <Panel defaultSize={88.5} minSize={20}>
             <div className={styles.pane}>
               <div className={styles.paneHeader}>Code Editor</div>
               <Editor ref={editorRef} />
@@ -49,7 +49,7 @@ export default function Main({ editorRef }) {
           <Panel defaultSize={30} minSize={15}>
             <div className={styles.pane}>
               <div className={styles.paneHeader}>Terminal</div>
-              <Terminal />
+              <Terminal output={output} />
             </div>
           </Panel>
 
@@ -64,7 +64,7 @@ export default function Main({ editorRef }) {
           <div className={styles.debugUpper}>
             <div className={styles.debugSection}>
               <div className={styles.sectionHeader}>CPU State</div>
-              <CPU />
+              <CPU debugState={debugState} />
             </div>
 
             {/* Vertical divider between CPU and Stack */}
@@ -72,7 +72,7 @@ export default function Main({ editorRef }) {
 
             <div className={styles.debugSection}>
               <div className={styles.sectionHeader}>Stack</div>
-              <Stack />
+              <Stack debugState={debugState} />
             </div>
           </div>
 
@@ -82,7 +82,7 @@ export default function Main({ editorRef }) {
           {/* Bottom row: Memory viewer */}
           <div className={styles.debugSection}>
             <div className={styles.sectionHeader}>Memory</div>
-            <Memory />
+            <Memory debugState={debugState} />
           </div>
 
         </div>
