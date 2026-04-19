@@ -373,7 +373,21 @@
 .ag-students {
   grid-column: 1;
   grid-row: 1 / 3;
+  min-height: 0;
 }
+
+/* scrollable region below Panel 1 header (zip entries / future lists) */
+.ag-students-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #c5cedd transparent;
+}
+.ag-students-body::-webkit-scrollbar { width: 4px; }
+.ag-students-body::-webkit-scrollbar-thumb { background: #c5cedd; border-radius: 4px; }
 
 .ag-search {
   width: 100%;
@@ -467,11 +481,19 @@
   transition: border-color 0.13s, box-shadow 0.13s, background 0.13s;
   flex-shrink: 0;
 }
+button.ag-student-item {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
 .ag-student-item:hover { border-color: var(--ag-border); }
 .ag-student-selected,
 .ag-student-item--active {
   background: var(--ag-item-active) !important;
   border-color: var(--ag-item-active-border) !important;
+  box-shadow: 0 0 0 2px rgba(79, 128, 208, 0.13);
 }
 
 .ag-dot { font-size: 11px; flex-shrink: 0; line-height: 1; }
@@ -653,7 +675,17 @@
 .ag-code-panel .cm-scroller,
 .ag-ref-panel .cm-scroller { overflow: auto; }
 
-/* Fullscreen panels */
+.ag-file-not-found-badge {
+  margin-left: 8px;
+  font-family: 'Bitter', serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b45309;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+/* Panel 2 / 3 — double-click (outside editor) to expand */
 .ag-panel.ag-panel--fullscreen {
   position: fixed;
   z-index: 2000;

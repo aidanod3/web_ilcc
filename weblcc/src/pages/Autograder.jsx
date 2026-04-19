@@ -356,6 +356,40 @@ const IconExport  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="
 const IconPlus    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 const IconTrash   = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
 
+/** LMS zips: same file may appear under …/Submissions/… and parent; strip for one logical folder. */
+const SKIP_LMS_SUBFOLDERS = new Set([
+  "submissions",
+  "submission",
+  "homework",
+  "files",
+  "assignments",
+  "documents",
+  "drop box",
+  "dropbox",
+  "upload",
+  "uploads",
+]);
+
+function zipPathPosix(s) {
+  return String(s || "").replace(/\\/g, "/").trim();
+}
+
+function folderSegmentsFiltered(folderPath) {
+  const raw = zipPathPosix(folderPath)
+    .split("/")
+    .filter(Boolean);
+  if (!raw.length) return [];
+  const filtered = raw.filter((p) => !SKIP_LMS_SUBFOLDERS.has(p.toLowerCase()));
+  return filtered.length ? filtered : raw;
+}
+
+/** Mirrors backend _folder_identity_key_for_dedupe. */
+function folderIdentityKeyForDedupe(folderPath) {
+  const parts = folderSegmentsFiltered(folderPath);
+  if (!parts.length) return "";
+  return parts.map((p) => p.toLowerCase()).join("/");
+}
+
 function filterParsedZipEntries(files) {
   if (!Array.isArray(files)) return [];
   return files.filter((f) => {
@@ -363,10 +397,164 @@ function filterParsedZipEntries(files) {
     const name = String(f?.name || "").toLowerCase();
     const code = String(f?.code || "");
     if (path.includes("__macosx/")) return false;
+    if (path.includes(".appledouble/")) return false;
     if (name.startsWith("._") || path.includes("/._")) return false;
     if (code.includes("\u0000")) return false;
+    // AppleDouble magic (00 05 16 07) after JSON/text round-trip
+    if (
+      code.length >= 4 &&
+      code.charCodeAt(0) === 0 &&
+      code.charCodeAt(1) === 5 &&
+      code.charCodeAt(2) === 22 &&
+      code.charCodeAt(3) === 7
+    ) {
+      return false;
+    }
+    // AppleDouble / quarantine xattr blobs (often mis-labeled or duplicated as .a)
+    if (
+      code.includes("com.apple.quarantine") &&
+      (code.includes("ATTR") || code.includes("Mac OS X"))
+    ) {
+      return false;
+    }
     return true;
   });
+}
+
+function entryBasename(f) {
+  const n = f?.name;
+  if (n != null && String(n).trim()) return String(n).trim();
+  const p = String(f?.path || "");
+  const seg = p.split("/").filter(Boolean).pop();
+  return seg ? seg.trim() : "";
+}
+
+/** Same logical key as backend: folder + normalized .a / .a.txt basename. */
+function dedupeParsedAsmFiles(files) {
+  if (!Array.isArray(files) || files.length === 0) return [];
+  const normKey = (base) => {
+    const n = String(base || "").trim().toLowerCase();
+    if (n.endsWith(".a.txt")) return n.slice(0, -4);
+    return n;
+  };
+  const priority = (f) => {
+    const name = String(f?.name || "").toLowerCase();
+    const path = String(f?.path || "").toLowerCase();
+    let s = 0;
+    if (name.endsWith(".a") && !name.endsWith(".a.txt")) s += 4;
+    else if (name.endsWith(".a.txt")) s += 2;
+    if (path.includes("__macosx")) s -= 10;
+    const seg = path.split("/").filter(Boolean).pop() || "";
+    if (seg.startsWith("._")) s -= 10;
+    return s;
+  };
+  const best = new Map();
+  const order = [];
+  for (const f of files) {
+    const folderRaw = String(f?.folder ?? "").trim();
+    let folderKey = folderIdentityKeyForDedupe(folderRaw);
+    if (!folderKey) folderKey = folderRaw.toLowerCase();
+    const base = entryBasename(f);
+    const k = `${folderKey}\0${normKey(base)}`;
+    if (!best.has(k)) {
+      best.set(k, f);
+      order.push(k);
+    } else if (priority(f) > priority(best.get(k))) {
+      best.set(k, f);
+    }
+  }
+  return order.map((k) => best.get(k));
+}
+
+function safeStudentDisplayName(raw) {
+  const s = extractStudentListName(raw);
+  if (s == null || s === "" || s === "null" || s === "undefined") return "Unnamed";
+  return s;
+}
+
+function safeFileTabLabel(f) {
+  const n = f?.name;
+  if (n != null && String(n).trim() && String(n).trim() !== "null") return String(n).trim();
+  const b = entryBasename(f);
+  return b || "file";
+}
+
+/** Stable label for comparisons / activeFileName (never the string "null"). */
+function resolvedFileLabel(file) {
+  return safeFileTabLabel(file);
+}
+
+/**
+ * Canvas-style folder: "000001-3459477 - Alpha Bravo - Mar 5, 2025 …" → "Alpha Bravo".
+ * Plain names (e.g. "Michael") unchanged. Mirrors backend short_student_display_name.
+ */
+function extractStudentListName(raw) {
+  const key = String(raw ?? "").trim();
+  if (!key || key === "(no folder)") return key;
+  const parts = key.split(" - ").map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 3) return parts[1];
+  if (parts.length === 2) {
+    if (/^\d+-\d+/.test(parts[0])) return parts[1];
+    return parts[0];
+  }
+  return parts[0];
+}
+
+/** Group flat /parse-submissions `files` by `student` / folder (mirrors backend build_student_objects). */
+function groupSubmissionFilesIntoStudents(files) {
+  if (!Array.isArray(files) || files.length === 0) return [];
+  const byCanon = new Map();
+  const displayFor = new Map();
+  for (const f of files) {
+    const folder = String(f?.folder || "").trim();
+    let canon = folderIdentityKeyForDedupe(folder);
+    const parts = folderSegmentsFiltered(folder);
+    let dispRaw;
+    if (parts.length) {
+      dispRaw = parts[parts.length - 1];
+    } else {
+      dispRaw = String(f?.student || "").trim();
+      if (!dispRaw && folder) dispRaw = folder.split("/").filter(Boolean).pop() || "";
+      if (!dispRaw) dispRaw = "(no folder)";
+    }
+    if (!canon) {
+      canon = dispRaw.toLowerCase();
+    }
+    if (!byCanon.has(canon)) {
+      byCanon.set(canon, []);
+      displayFor.set(canon, dispRaw);
+    }
+    byCanon.get(canon).push(f);
+  }
+  const sorted = [...byCanon.keys()].sort((a, b) => a.localeCompare(b));
+  return sorted.map((canon, i) => {
+    const list = [...byCanon.get(canon)].sort((a, b) => String(a.path).localeCompare(String(b.path)));
+    const deduped = dedupeParsedAsmFiles(list);
+    return {
+      id: i + 1,
+      name: extractStudentListName(displayFor.get(canon) || canon),
+      files: deduped,
+    };
+  });
+}
+
+/** Basename from a parsed zip entry (name or last path segment). */
+function asmBasename(entry) {
+  const n = entry?.name;
+  if (n && String(n).trim()) return String(n).trim();
+  const p = entry?.path;
+  if (p && typeof p === "string") {
+    const seg = p.split("/").filter(Boolean).pop();
+    if (seg) return seg.trim();
+  }
+  return "";
+}
+
+/** Lowercase key for matching `.a` and `.a.txt`. */
+function normalizeAsmFileKey(name) {
+  const n = String(name || "").trim().toLowerCase();
+  if (n.endsWith(".a.txt")) return n.slice(0, -4);
+  return n;
 }
 
 export default function Autograder() {
@@ -400,7 +588,6 @@ export default function Autograder() {
   const [submissionsZipFile, setSubmissionsZipFile] = useState(null);
   const [solutionFiles, setSolutionFiles] = useState([]); // hidden Panel 3 file list
   const [activeSolutionIndex, setActiveSolutionIndex] = useState(0);
-  const [submissionFiles, setSubmissionFiles] = useState([]); // parsed .a files from submissions zip
   const [activeSubmissionIndex, setActiveSubmissionIndex] = useState(0);
   const [submittedStudents, setSubmittedStudents] = useState([]);
   const [activeStudentId, setActiveStudentId] = useState(null);
@@ -413,7 +600,13 @@ export default function Autograder() {
 
   // ── Toolbar drag ──────────────────────────────────────
   const handleToolbarMouseDown = (e) => {
-    if (e.target.closest('button') || e.target.closest('label')) return;
+    if (
+      e.target.closest('button') ||
+      e.target.closest('label') ||
+      e.target.closest('select')
+    ) {
+      return;
+    }
     e.preventDefault();
     const startX = e.clientX, startY = e.clientY;
     const startRight = toolbarPos.right, startBottom = toolbarPos.bottom;
@@ -482,17 +675,33 @@ export default function Autograder() {
       }
       const data = await resp.json().catch(() => null);
       console.log('Parsed submissions response:', data);
-      // Expecting shape: { files: [ { folder, name, path, code }, ... ] }
-      const filteredFiles = filterParsedZipEntries(data?.files);
+      let filteredFiles = filterParsedZipEntries(data?.files);
+      filteredFiles = dedupeParsedAsmFiles(filteredFiles);
       if (filteredFiles.length > 0) {
-        setSubmissionFiles(filteredFiles);
+        const grouped =
+          Array.isArray(data?.students) && data.students.length > 0
+            ? data.students.map((stu) => ({
+                ...stu,
+                files: dedupeParsedAsmFiles(stu.files || []),
+              }))
+            : groupSubmissionFilesIntoStudents(filteredFiles);
+        const students = grouped.map((s, i) => ({
+          id: s.id ?? i + 1,
+          name: safeStudentDisplayName(s.name),
+          sid: '',
+          status: 'Ungraded',
+          files: s.files || [],
+        }));
+        setSubmittedStudents(students);
+        const first = students[0];
+        setActiveStudentId(first.id);
         setActiveSubmissionIndex(0);
-        setActiveFileName(filteredFiles[0].name || null);
-        if (typeof filteredFiles[0].code === 'string') {
-          setCode(filteredFiles[0].code);
-        }
+        const ff = first.files[0];
+        setActiveFileName(ff ? resolvedFileLabel(ff) : null);
+        setCode(typeof ff?.code === 'string' ? ff.code : '');
       } else {
-        setSubmissionFiles([]);
+        setSubmittedStudents([]);
+        setActiveStudentId(null);
         setActiveSubmissionIndex(0);
         console.warn('No valid submission files found; raw data:', data);
         alert('No valid .a source files found in this zip.');
@@ -523,14 +732,12 @@ export default function Autograder() {
       const data = await resp.json().catch(() => null);
       console.log('Parsed solutions response:', data);
       // Ignore macOS metadata/resource-fork entries (e.g. __MACOSX, ._* files)
-      const filteredFiles = filterParsedZipEntries(data?.files);
+      let filteredFiles = filterParsedZipEntries(data?.files);
+      filteredFiles = dedupeParsedAsmFiles(filteredFiles);
 
       if (filteredFiles.length > 0) {
         setSolutionFiles(filteredFiles);
-        setActiveSolutionIndex(0);
-        if (typeof filteredFiles[0].code === 'string') {
-          setReference(filteredFiles[0].code);
-        }
+        // Panel 3 syncs to the current student file (basename match) via useEffect
       } else {
         setSolutionFiles([]);
         setActiveSolutionIndex(0);
@@ -561,9 +768,19 @@ export default function Autograder() {
     reader.onload = (ev) => {
       const text = String(ev.target.result || "");
       setCode(text);
-      setSubmissionFiles([{ name: f.name, path: f.name, code: text }]);
+      const base = f.name.replace(/\.[^/.]+$/, '') || f.name;
+      setSubmittedStudents([
+        {
+          id: 1,
+          name: base,
+          sid: '',
+          status: 'Ungraded',
+          files: [{ name: f.name, path: f.name, folder: '', code: text }],
+        },
+      ]);
+      setActiveStudentId(1);
       setActiveSubmissionIndex(0);
-      setActiveFileName(f.name);
+      setActiveFileName(resolvedFileLabel({ name: f.name, path: f.name, folder: '' }));
       setFileLoading(false);
     };
     reader.onerror = () => setFileLoading(false);
@@ -706,23 +923,28 @@ export default function Autograder() {
     setSubmittedStudents(DEMO_STUDENTS);
     const first = DEMO_STUDENTS[0];
     setActiveStudentId(first.id);
-    setActiveFileName(first.files[0].name);
+    setActiveFileName(resolvedFileLabel(first.files[0]));
     setCode(first.files[0].code);
+    setActiveSubmissionIndex(0);
     setSelectedStudent(0);
   };
 
   const handleSelectStudent = (student) => {
     setActiveStudentId(student.id);
     const firstFile = student.files[0];
-    setActiveFileName(firstFile.name);
+    if (!firstFile) return;
+    setActiveFileName(resolvedFileLabel(firstFile));
     setCode(firstFile.code);
+    setActiveSubmissionIndex(0);
   };
 
   const handleSelectFile = (file) => {
-    setActiveFileName(file.name);
+    setActiveFileName(resolvedFileLabel(file));
     setCode(file.code);
     if (activeStudent) {
-      const i = activeStudent.files.findIndex((x) => x.name === file.name);
+      const i = activeStudent.files.findIndex(
+        (x) => resolvedFileLabel(x) === resolvedFileLabel(file)
+      );
       if (i >= 0) setActiveSubmissionIndex(i);
     }
   };
@@ -742,61 +964,69 @@ export default function Autograder() {
   };
 
   const handlePrevPanel2File = () => {
-    if (activeStudent) {
-      const files = activeStudent.files;
-      if (files.length <= 1) return;
-      const idx = files.findIndex((x) => x.name === activeFileName);
-      const cur = idx >= 0 ? idx : 0;
-      const next = (cur - 1 + files.length) % files.length;
-      handleSelectFile(files[next]);
-      return;
-    }
-    if (submissionFiles.length <= 1) return;
-    const next = (activeSubmissionIndex - 1 + submissionFiles.length) % submissionFiles.length;
-    setActiveSubmissionIndex(next);
-    const sf = submissionFiles[next];
-    setActiveFileName(sf.name || null);
-    setCode(typeof sf.code === 'string' ? sf.code : '');
+    if (!activeStudent) return;
+    const files = activeStudent.files;
+    if (files.length <= 1) return;
+    const idx = files.findIndex((x) => resolvedFileLabel(x) === activeFileName);
+    const cur = idx >= 0 ? idx : 0;
+    const next = (cur - 1 + files.length) % files.length;
+    handleSelectFile(files[next]);
   };
 
   const handleNextPanel2File = () => {
-    if (activeStudent) {
-      const files = activeStudent.files;
-      if (files.length <= 1) return;
-      const idx = files.findIndex((x) => x.name === activeFileName);
-      const cur = idx >= 0 ? idx : 0;
-      const next = (cur + 1) % files.length;
-      handleSelectFile(files[next]);
-      return;
-    }
-    if (submissionFiles.length <= 1) return;
-    const next = (activeSubmissionIndex + 1) % submissionFiles.length;
-    setActiveSubmissionIndex(next);
-    const sf = submissionFiles[next];
-    setActiveFileName(sf.name || null);
-    setCode(typeof sf.code === 'string' ? sf.code : '');
+    if (!activeStudent) return;
+    const files = activeStudent.files;
+    if (files.length <= 1) return;
+    const idx = files.findIndex((x) => resolvedFileLabel(x) === activeFileName);
+    const cur = idx >= 0 ? idx : 0;
+    const next = (cur + 1) % files.length;
+    handleSelectFile(files[next]);
   };
 
   const handlePrevSolutionFile = () => {
     if (!solutionFiles.length) return;
     const nextIndex = (activeSolutionIndex - 1 + solutionFiles.length) % solutionFiles.length;
+    const sol = solutionFiles[nextIndex];
     setActiveSolutionIndex(nextIndex);
-    setReference(solutionFiles[nextIndex]?.code || "");
+    setReference(sol?.code || "");
+    const student = submittedStudents.find((s) => s.id === activeStudentId);
+    if (!student?.files?.length || !sol) return;
+    const key = normalizeAsmFileKey(asmBasename(sol));
+    const fi = student.files.findIndex(
+      (f) => normalizeAsmFileKey(asmBasename(f)) === key
+    );
+    if (fi < 0) return;
+    const f = student.files[fi];
+    setActiveFileName(resolvedFileLabel(f));
+    setCode(typeof f.code === "string" ? f.code : "");
+    setActiveSubmissionIndex(fi);
   };
 
   const handleNextSolutionFile = () => {
     if (!solutionFiles.length) return;
     const nextIndex = (activeSolutionIndex + 1) % solutionFiles.length;
+    const sol = solutionFiles[nextIndex];
     setActiveSolutionIndex(nextIndex);
-    setReference(solutionFiles[nextIndex]?.code || "");
+    setReference(sol?.code || "");
+    const student = submittedStudents.find((s) => s.id === activeStudentId);
+    if (!student?.files?.length || !sol) return;
+    const key = normalizeAsmFileKey(asmBasename(sol));
+    const fi = student.files.findIndex(
+      (f) => normalizeAsmFileKey(asmBasename(f)) === key
+    );
+    if (fi < 0) return;
+    const f = student.files[fi];
+    setActiveFileName(resolvedFileLabel(f));
+    setCode(typeof f.code === "string" ? f.code : "");
+    setActiveSubmissionIndex(fi);
   };
 
   // ── Save & next ───────────────────────────────────────
   const handleSaveNext = () => {
     setAutoSaved("just now");
     setTimeout(() => setAutoSaved("2s ago"), 2000);
-    if (STUDENTS.length > 0) {
-      setSelectedStudent(prev => (prev + 1) % STUDENTS.length);
+    if (submittedStudents.length > 0) {
+      setSelectedStudent((prev) => (prev + 1) % submittedStudents.length);
     }
   };
 
@@ -823,11 +1053,40 @@ export default function Autograder() {
   }, [expandedEditorPanel]);
 
   const activeStudent = submittedStudents.find(s => s.id === activeStudentId) || null;
-  const filtered = submittedStudents.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.sid.toLowerCase().includes(search.toLowerCase())
+  const filtered = submittedStudents.filter((s) =>
+    String(s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    String(s.sid || '').toLowerCase().includes(search.toLowerCase())
   );
-  const gradedCount = submittedStudents.filter(s => s.status === "Graded").length;
+
+  /** Panel 2 file → Panel 3: show the solution whose basename matches the active student file. */
+  useEffect(() => {
+    if (!solutionFiles.length) return;
+    const student = activeStudentId
+      ? submittedStudents.find((s) => s.id === activeStudentId)
+      : null;
+    const fileEntry =
+      student && activeFileName
+        ? student.files.find((f) => resolvedFileLabel(f) === activeFileName)
+        : null;
+    const resolved = fileEntry ?? student?.files?.[0] ?? null;
+
+    if (resolved) {
+      const key = normalizeAsmFileKey(asmBasename(resolved));
+      const idx = solutionFiles.findIndex(
+        (sf) => normalizeAsmFileKey(asmBasename(sf)) === key
+      );
+      if (idx >= 0) {
+        setActiveSolutionIndex(idx);
+        const c = solutionFiles[idx]?.code;
+        if (typeof c === "string") setReference(c);
+        return;
+      }
+    }
+
+    setActiveSolutionIndex(0);
+    const c0 = solutionFiles[0]?.code;
+    if (typeof c0 === "string") setReference(c0);
+  }, [solutionFiles, submittedStudents, activeStudentId, activeFileName]);
 
   const activeSolutionEntry = solutionFiles[activeSolutionIndex] ?? null;
   const activeSolutionDisplayName = activeSolutionEntry
@@ -840,17 +1099,23 @@ export default function Autograder() {
   if (activeStudent) {
     const files = activeStudent.files;
     panel2FileCount = files.length;
-    const idx = files.findIndex((x) => x.name === activeFileName);
+    const idx = files.findIndex((x) => resolvedFileLabel(x) === activeFileName);
     panel2FileIndex = idx >= 0 ? idx : 0;
     panel2ActiveFileEntry = files[panel2FileIndex] || null;
-  } else if (submissionFiles.length > 0) {
-    panel2FileCount = submissionFiles.length;
-    panel2FileIndex = Math.min(activeSubmissionIndex, submissionFiles.length - 1);
-    panel2ActiveFileEntry = submissionFiles[panel2FileIndex] || null;
   }
   const panel2DisplayName = panel2ActiveFileEntry
     ? (panel2ActiveFileEntry.name || panel2ActiveFileEntry.path?.split('/').filter(Boolean).pop() || 'file')
     : null;
+
+  const noMatchingSolutionFile =
+    solutionFiles.length > 0 &&
+    !!activeStudent &&
+    !!panel2ActiveFileEntry &&
+    solutionFiles.findIndex(
+      (sf) =>
+        normalizeAsmFileKey(asmBasename(sf)) ===
+        normalizeAsmFileKey(asmBasename(panel2ActiveFileEntry))
+    ) < 0;
 
   return (
     <div className="ag-root" data-theme={theme}>
@@ -905,27 +1170,51 @@ export default function Autograder() {
       {/* ── Panel 1: Students (Submission) ─────────────── */}
       <div className="ag-panel ag-students">
         <div className="ag-panel-header">Panel 1: Students</div>
-        <div style={{ padding: '12px 10px' }}>
-          {submissionFiles.length > 0 && (
-            <ul className="ag-zip-file-list">
-              {submissionFiles.map((f, idx) => (
-                <li key={f.path || idx} className="ag-zip-file-item">
-                  <button
-                    className="ag-zip-file-btn"
-                    onClick={() => {
-                      setActiveSubmissionIndex(idx);
-                      setActiveFileName(f.name || null);
-                      if (typeof f.code === 'string') setCode(f.code);
-                    }}
-                  >
-                    <span className="ag-zip-file-label">
-                      {f.folder ? `${f.folder}/` : ''}
-                      {f.name}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+        <div className="ag-students-body">
+          {submittedStudents.length > 0 ? (
+            <>
+              <input
+                className="ag-search"
+                type="search"
+                placeholder="Search students…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Search students"
+              />
+              <ul className="ag-student-list">
+                {filtered.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      className={`ag-student-item${
+                        activeStudentId === s.id ? ' ag-student-selected ag-student-item--active' : ''
+                      }`}
+                      onClick={() => handleSelectStudent(s)}
+                    >
+                      <span className="ag-student-name" title={safeStudentDisplayName(s.name)}>
+                        {safeStudentDisplayName(s.name)}
+                      </span>
+                      <span
+                        className="ag-status-badge"
+                        style={{
+                          background: '#e8eef8',
+                          color: '#475569',
+                          border: '1px solid #c5cedd',
+                        }}
+                      >
+                        {(s.files?.length ?? 0)} .a
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="ag-student-empty">
+              Upload a submissions <code>.zip</code> from Panel 2. Each top-level folder becomes one student; use the
+              arrows in Panel 2 to browse their <code>.a</code> files. With solutions in Panel 3, the reference file
+              follows the same <code>.a</code> name as the student file.
+            </p>
           )}
         </div>
       </div>
@@ -937,14 +1226,7 @@ export default function Autograder() {
         title="Double-click header or margins to expand (Esc to exit)"
       >
         <div className="ag-panel-header">
-          <span>
-            Panel 2: Student Code
-            {activeStudent && (
-              <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 8, opacity: 0.7 }}>
-                — {activeStudent.name}
-              </span>
-            )}
-          </span>
+          <span>Panel 2</span>
           <div className="ag-ref-header-right ag-code-panel-file-header">
             {panel2FileCount > 0 && panel2DisplayName && (
               <span
@@ -957,6 +1239,11 @@ export default function Autograder() {
                     {' '}({panel2FileIndex + 1}/{panel2FileCount})
                   </span>
                 )}
+                {noMatchingSolutionFile && (
+                  <span className="ag-file-not-found-badge" role="status">
+                    File not found
+                  </span>
+                )}
               </span>
             )}
             <div className="ag-ref-nav-btns">
@@ -965,7 +1252,7 @@ export default function Autograder() {
                 className="ag-upload-btn"
                 onClick={handlePrevPanel2File}
                 disabled={panel2FileCount <= 1}
-                title="Previous student file"
+                title="Previous student file (Panel 3 uses solution with the same .a name)"
               >
                 ←
               </button>
@@ -974,7 +1261,7 @@ export default function Autograder() {
                 className="ag-upload-btn"
                 onClick={handleNextPanel2File}
                 disabled={panel2FileCount <= 1}
-                title="Next student file"
+                title="Next student file (Panel 3 uses solution with the same .a name)"
               >
                 →
               </button>
@@ -983,13 +1270,13 @@ export default function Autograder() {
         </div>
         {activeStudent ? (
           <div className="ag-file-tabs">
-            {activeStudent.files.map(f => (
+            {activeStudent.files.map((f, idx) => (
               <button
-                key={f.name}
-                className={`ag-file-tab${activeFileName === f.name ? ' ag-file-tab--active' : ''}`}
+                key={f.path || `${safeFileTabLabel(f)}-${idx}`}
+                className={`ag-file-tab${resolvedFileLabel(f) === activeFileName ? ' ag-file-tab--active' : ''}`}
                 onClick={() => handleSelectFile(f)}
               >
-                {f.name}
+                {safeFileTabLabel(f)}
               </button>
             ))}
           </div>
@@ -1022,13 +1309,23 @@ export default function Autograder() {
             {solutionFiles.length > 0 && (
               <span
                 className="ag-ref-active-file"
-                title={activeSolutionEntry?.path || activeSolutionDisplayName || ''}
+                title={
+                  noMatchingSolutionFile
+                    ? 'No solution file matches this student file name'
+                    : activeSolutionEntry?.path || activeSolutionDisplayName || ''
+                }
               >
-                {activeSolutionDisplayName || '—'}
-                {solutionFiles.length > 1 && (
-                  <span className="ag-ref-file-idx">
-                    {' '}({activeSolutionIndex + 1}/{solutionFiles.length})
-                  </span>
+                {noMatchingSolutionFile ? (
+                  <span className="ag-file-not-found-badge">File not found</span>
+                ) : (
+                  <>
+                    {activeSolutionDisplayName || '—'}
+                    {solutionFiles.length > 1 && (
+                      <span className="ag-ref-file-idx">
+                        {' '}({activeSolutionIndex + 1}/{solutionFiles.length})
+                      </span>
+                    )}
+                  </>
                 )}
               </span>
             )}
@@ -1038,7 +1335,7 @@ export default function Autograder() {
                 className="ag-upload-btn"
                 onClick={handlePrevSolutionFile}
                 disabled={solutionFiles.length <= 1}
-                title="Previous reference file"
+                title="Previous solution file (Panel 2 jumps to student file with the same .a name)"
               >
                 ←
               </button>
@@ -1047,7 +1344,7 @@ export default function Autograder() {
                 className="ag-upload-btn"
                 onClick={handleNextSolutionFile}
                 disabled={solutionFiles.length <= 1}
-                title="Next reference file"
+                title="Next solution file (Panel 2 jumps to student file with the same .a name)"
               >
                 →
               </button>

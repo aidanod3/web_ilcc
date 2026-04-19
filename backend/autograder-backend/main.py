@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import subprocess
 import json
 import os
+import re
 import zipfile
 import io
 
@@ -140,28 +141,200 @@ def short_student_display_name(raw: str) -> str:
     return parts[0]
 
 
+def _zip_path_posix(filename: str) -> str:
+    return (filename or "").replace("\\", "/").strip()
+
+
+def _should_skip_zip_member(path_posix: str) -> bool:
+    """Skip macOS metadata (__MACOSX, AppleDouble ._ files) that still end in .a."""
+    lower = path_posix.lower()
+    if "__macosx/" in lower or lower.startswith("__macosx/"):
+        return True
+    if ".appledouble/" in lower or "/.appledouble/" in lower:
+        return True
+    base = path_posix.rsplit("/", 1)[-1] if path_posix else ""
+    if base.startswith("._"):
+        return True
+    return False
+
+
+# AppleDouble (resource fork) container magic — not text assembly.
+_APPLE_DOUBLE_MAGIC = bytes((0x00, 0x05, 0x16, 0x07))
+
+
+def _is_macos_junk_bytes(content_bytes: bytes) -> bool:
+    """
+    True for AppleDouble headers, quarantine xattr dumps, and similar blobs that
+    are not LCC source but may appear in zips from Safari/macOS with a .a name.
+    """
+    if not content_bytes:
+        return True
+    if len(content_bytes) >= 4 and content_bytes[:4] == _APPLE_DOUBLE_MAGIC:
+        return True
+    head = content_bytes[:4096]
+    # Safari download quarantine / extended-attribute text blobs
+    if b"com.apple.quarantine" in head:
+        if b"ATTR" in head or b"Mac OS X" in head[:800]:
+            return True
+    if b"Mac OS X" in head[:256] and b"ATTR" in head[:2048]:
+        return True
+    return False
+
+
+def _normalized_asm_basename_key(basename: str) -> str:
+    """
+    Map foo.a and foo.a.txt to the same key (lowercase) so we keep one entry per assignment.
+    """
+    n = basename.strip().lower()
+    if n.endswith(".a.txt"):
+        return n[: -len(".txt")]  # foo.a.txt -> foo.a
+    return n
+
+
+def _asm_entry_priority(entry: dict) -> int:
+    """Higher = preferred when deduplicating (prefer real .a over .a.txt)."""
+    name = (entry.get("name") or "").lower()
+    path = (entry.get("path") or "").lower()
+    score = 0
+    if name.endswith(".a") and not name.endswith(".a.txt"):
+        score += 4
+    elif name.endswith(".a.txt"):
+        score += 2
+    if "__macosx" in path:
+        score -= 10
+    seg = path.rsplit("/", 1)[-1] if path else ""
+    if seg.startswith("._"):
+        score -= 10
+    return score
+
+
+def _entry_basename(e: dict) -> str:
+    base = (e.get("name") or "").strip()
+    if base:
+        return base
+    return _zip_path_posix(e.get("path") or "").rsplit("/", 1)[-1]
+
+
+# LMS zips often duplicate the same file under …/Submissions/… vs parent folder; strip for identity.
+_SKIP_LMS_SUBFOLDERS = frozenset(
+    {
+        "submissions",
+        "submission",
+        "homework",
+        "files",
+        "assignments",
+        "documents",
+        "drop box",
+        "dropbox",
+        "upload",
+        "uploads",
+    }
+)
+
+
+def _folder_segments_filtered(folder_path: str) -> list[str]:
+    raw = [p for p in _zip_path_posix(folder_path).split("/") if p.strip()]
+    if not raw:
+        return []
+    filtered = [p for p in raw if p.casefold() not in _SKIP_LMS_SUBFOLDERS]
+    return filtered if filtered else raw
+
+
+def _folder_identity_key_for_dedupe(folder_path: str) -> str:
+    """Stable key per student folder: ignores Submissions/ and similar middle segments."""
+    parts = _folder_segments_filtered(folder_path)
+    if not parts:
+        return ""
+    return "/".join(p.casefold() for p in parts)
+
+
+def dedupe_asm_entries(entries: list) -> list:
+    """
+    One entry per (student folder, logical .a name). Drops duplicate zip members and
+    prefers lab.a over lab.a.txt when both exist.
+    """
+    best: dict[tuple[str, str], dict] = {}
+    order: list[tuple[str, str]] = []
+    for e in entries:
+        folder_raw = (e.get("folder") or "").strip()
+        folder_key = _folder_identity_key_for_dedupe(folder_raw)
+        if not folder_key:
+            folder_key = folder_raw.lower()
+        base = _entry_basename(e)
+        key = (folder_key, _normalized_asm_basename_key(base))
+        if key not in best:
+            best[key] = e
+            order.append(key)
+        else:
+            cur = best[key]
+            if _asm_entry_priority(e) > _asm_entry_priority(cur):
+                best[key] = e
+    return [best[k] for k in order]
+
+
+def _dedupe_file_list_for_student(files: list) -> list:
+    """Final pass: one file per logical .a name inside a student's folder."""
+    best: dict[str, dict] = {}
+    order: list[str] = []
+    for e in files:
+        base = _entry_basename(e)
+        bk = _normalized_asm_basename_key(base)
+        if not bk.endswith(".a"):
+            continue
+        if bk not in best:
+            best[bk] = e
+            order.append(bk)
+        elif _asm_entry_priority(e) > _asm_entry_priority(best[bk]):
+            best[bk] = e
+    return [best[k] for k in order]
+
+
+def _student_folder_key_and_display(e: dict) -> tuple[str, str]:
+    """
+    Group by normalized folder path (not raw last segment, so …/Submissions/… merges with parent).
+    Display uses the deepest meaningful folder (student), not a parent like "Lab 6 Download".
+    """
+    folder = (e.get("folder") or "").strip()
+    key = _folder_identity_key_for_dedupe(folder)
+    parts = _folder_segments_filtered(folder)
+    if key:
+        disp = parts[-1] if parts else "(no folder)"
+        return (key, disp)
+
+    name = (e.get("student") or "").strip()
+    if not name and folder:
+        name = folder.split("/")[-1].strip()
+    if not name:
+        name = "(no folder)"
+    return (name.casefold(), name)
+
+
 def build_student_objects(entries: list) -> list:
     """
     Group flat .a file entries by student folder name.
 
     Each returned student has: id, name, files (same dict shape as entries, sorted by path).
     """
-    groups: defaultdict[str, list] = defaultdict(list)
+    groups: dict[str, list] = {}
+    display_for: dict[str, str] = {}
     for e in entries:
-        name = (e.get("student") or "").strip()
-        if not name:
-            folder = (e.get("folder") or "").strip()
-            if folder:
-                name = folder.split("/")[-1].strip()
-        if not name:
-            name = "(no folder)"
-        groups[name].append(e)
+        fk, disp = _student_folder_key_and_display(e)
+        if fk not in groups:
+            groups[fk] = []
+            display_for[fk] = disp
+        groups[fk].append(e)
 
     students_out: list[dict] = []
-    for idx, folder_key in enumerate(sorted(groups.keys()), start=1):
-        files = sorted(groups[folder_key], key=lambda x: x.get("path") or "")
+    for idx, fk in enumerate(sorted(groups.keys()), start=1):
+        files = sorted(groups[fk], key=lambda x: x.get("path") or "")
+        files = _dedupe_file_list_for_student(files)
+        folder_display = display_for[fk]
         students_out.append(
-            {"id": idx, "name": short_student_display_name(folder_key), "files": files}
+            {
+                "id": idx,
+                "name": short_student_display_name(folder_display),
+                "files": files,
+            }
         )
     return students_out
 
@@ -190,19 +363,24 @@ async def parse_submissions(file: UploadFile = File(...)):
             for info in zf.infolist():
                 if info.is_dir():
                     continue
-                lower_name = info.filename.lower()
+                path_posix = _zip_path_posix(info.filename)
+                if _should_skip_zip_member(path_posix):
+                    continue
+                lower_name = path_posix.lower()
                 # Accept canonical `.a` files and common exported variant `.a.txt`.
                 if not (lower_name.endswith(".a") or lower_name.endswith(".a.txt")):
                     continue
 
                 with zf.open(info, "r") as f:
                     content_bytes = f.read()
-                    try:
-                        content_text = content_bytes.decode("utf-8")
-                    except UnicodeDecodeError:
-                        content_text = content_bytes.decode("latin-1", errors="replace")
+                if _is_macos_junk_bytes(content_bytes):
+                    continue
+                try:
+                    content_text = content_bytes.decode("utf-8")
+                except UnicodeDecodeError:
+                    content_text = content_bytes.decode("latin-1", errors="replace")
 
-                parts = info.filename.split("/")
+                parts = path_posix.split("/")
                 name = parts[-1]
                 folder_parts = parts[:-1]
 
@@ -221,15 +399,18 @@ async def parse_submissions(file: UploadFile = File(...)):
                         "folder": folder_path,
                         "student": student,
                         "name": name,
-                        "path": info.filename,
+                        "path": path_posix,
                         "code": content_text,
                     }
                 )
 
+            entries = dedupe_asm_entries(entries)
+
         if not entries:
             raise HTTPException(status_code=400, detail="No .a files found inside zip.")
 
-        return {"files": entries}
+        students = build_student_objects(entries)
+        return {"files": entries, "students": students}
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="Invalid or corrupted zip file.")
     except Exception as e:
