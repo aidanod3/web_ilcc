@@ -117,6 +117,55 @@ async def grade_code(submission: GradeSubmission):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_ID_LIKE_PREFIX = re.compile(r"^\d+-\d+")
+
+
+def short_student_display_name(raw: str) -> str:
+    """
+    Canvas-style export folder: '000001-3459477 - Alpha Bravo - Mar 5, 2025 …' -> 'Alpha Bravo'.
+    Simple folder names (e.g. 'Michael') are returned unchanged.
+    """
+    key = (raw or "").strip()
+    if not key or key == "(no folder)":
+        return key
+    parts = [p.strip() for p in key.split(" - ") if p.strip()]
+    if not parts:
+        return key
+    if len(parts) >= 3:
+        return parts[1]
+    if len(parts) == 2:
+        if _ID_LIKE_PREFIX.match(parts[0]):
+            return parts[1]
+        return parts[0]
+    return parts[0]
+
+
+def build_student_objects(entries: list) -> list:
+    """
+    Group flat .a file entries by student folder name.
+
+    Each returned student has: id, name, files (same dict shape as entries, sorted by path).
+    """
+    groups: defaultdict[str, list] = defaultdict(list)
+    for e in entries:
+        name = (e.get("student") or "").strip()
+        if not name:
+            folder = (e.get("folder") or "").strip()
+            if folder:
+                name = folder.split("/")[-1].strip()
+        if not name:
+            name = "(no folder)"
+        groups[name].append(e)
+
+    students_out: list[dict] = []
+    for idx, folder_key in enumerate(sorted(groups.keys()), start=1):
+        files = sorted(groups[folder_key], key=lambda x: x.get("path") or "")
+        students_out.append(
+            {"id": idx, "name": short_student_display_name(folder_key), "files": files}
+        )
+    return students_out
+
+
 @app.post("/parse-submissions")
 async def parse_submissions(file: UploadFile = File(...)):
     """
