@@ -2,7 +2,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const REG_NAMES = ['R0', 'R1', 'R2', 'R3', 'R4', 'R5 (FP)', 'R6 (SP)', 'R7 (LR)', 'PC', 'IR'];
-const FLAG_NAMES = ['N', 'Z', 'P', 'C', 'V'];
+const FLAG_NAMES = ['N', 'Z', 'C', 'V'];
 
 const THEME = {
   dark: {
@@ -2333,12 +2333,9 @@ function Ilcc() {
           <div className="asm-vsplitter" onMouseDown={beginRightPanelDrag}>
             <div className="asm-vsplitter-line" />
           </div>
-          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(180px, .8fr) minmax(170px, .9fr) minmax(260px, 1.8fr)', gap: 10 }}>
+          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(170px, .9fr) minmax(180px, .8fr) minmax(260px, 1.8fr)', gap: 10 }}>
+           <RegistersPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.registers} onToggle={() => setCollapsed((c) => ({ ...c, registers: !c.registers }))} />
             <StackPanel state={state} current={current} theme={t} collapsed={collapsed.stack} onToggle={() => setCollapsed((c) => ({ ...c, stack: !c.stack }))} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, minHeight: 0 }}>
-              <RegistersPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.registers} onToggle={() => setCollapsed((c) => ({ ...c, registers: !c.registers }))} />
-              <FlagsPanel current={current} theme={t} collapsed={collapsed.flags} onToggle={() => setCollapsed((c) => ({ ...c, flags: !c.flags }))} />
-            </div>
             <MemoryPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.memory} onToggle={() => setCollapsed((c) => ({ ...c, memory: !c.memory }))} />
           </div>
         </div>
@@ -3001,55 +2998,65 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
 }
 
 function RegistersPanel({ state, current, prev, next, activeDiff, preview, theme, collapsed, onToggle }) {
-  const showBanner = preview && preview.offset !== 0;
+    const showBanner = preview && preview.offset !== 0;
+    const oldSnapshot = activeDiff.backward ? next : prev;
+    const FLAG_NAMES = ['N', 'Z', 'C', 'V'];
 
-  const oldSnapshot = activeDiff.backward ? next : prev;
+    return (
+        <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <PanelHeader title="Registers & Flags" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
+            {collapsed ? null : (
+                <>
+                    {showBanner ? (
+                        <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
+                            Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
+                        </div>
+                    ) : null}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                        {REG_NAMES.map((reg) => {
+                            const currentVal = current.registers[reg];
+                            const oldVal = oldSnapshot?.registers?.[reg] ?? currentVal;
+                            const changed = activeDiff.regs.has(reg);
+                            const backward = activeDiff.backward;
 
-  return (
-    <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PanelHeader title="Registers" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
-      {collapsed ? null : (
-        <>
-      {showBanner ? (
-        <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
-          Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
+                            return (
+                                <div key={reg} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: 8, padding: '5px 8px', borderBottom: `1px solid ${theme.border}` }}>
+                                    <div style={{ color: theme.mut }}>{reg}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                        {changed ? (
+                                            <>
+                                                <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
+                                                <span style={{ color: theme.mut }}>→</span>
+                                                <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{currentVal}</span>
+                                            </>
+                                        ) : (
+                                            <span>{currentVal}</span>
+                                        )}
+
+                                        {preview?.regs?.[reg] ? (
+                                            <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
+                                                {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.regs[reg]}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* NEW FLAG FOOTER */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '8px', borderTop: `1px solid ${theme.border}`, background: theme.panel2 }}>
+                        {FLAG_NAMES.map((f) => (
+                            <div key={f} style={{ textAlign: 'center' }}>
+                                <div style={{ color: theme.mut, fontSize: 11 }}>{f}</div>
+                                <div style={{ fontWeight: 700 }}>{current.flags[f] ?? 0}</div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
-      ) : null}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-        {REG_NAMES.map((reg) => {
-          const currentVal = current.registers[reg];
-          const oldVal = oldSnapshot?.registers?.[reg] ?? currentVal;
-          const changed = activeDiff.regs.has(reg);
-          const backward = activeDiff.backward;
-
-          return (
-            <div key={reg} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: 8, padding: '5px 8px', borderBottom: `1px solid ${theme.border}` }}>
-              <div style={{ color: theme.mut }}>{reg}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                {changed ? (
-                  <>
-                    <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
-                    <span style={{ color: theme.mut }}>→</span>
-                    <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{currentVal}</span>
-                  </>
-                ) : (
-                  <span>{currentVal}</span>
-                )}
-
-                {preview?.regs?.[reg] ? (
-                  <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
-                    {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.regs[reg]}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-        </>
-      )}
-    </div>
-  );
+    );
 }
 
 function FlagsPanel({ current, theme, collapsed, onToggle }) {
@@ -3057,7 +3064,7 @@ function FlagsPanel({ current, theme, collapsed, onToggle }) {
     <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <PanelHeader title="Flags" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
       {collapsed ? null : (
-        <div style={{ padding: 10, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+         <div style={{ padding: 10, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           {FLAG_NAMES.map((f) => (
             <div key={f} style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, textAlign: 'center' }}>
               <div style={{ color: theme.mut, fontSize: 11 }}>{f}</div>
@@ -3071,96 +3078,149 @@ function FlagsPanel({ current, theme, collapsed, onToggle }) {
 }
 
 function MemoryPanel({ state, current, prev, next, activeDiff, preview, theme, collapsed, onToggle }) {
-  const oldSnapshot = activeDiff.backward ? next : prev;
-  const oldMap = new Map((oldSnapshot?.memory || []).map((m) => [m.addrHex, m.valHex]));
+    const [jumpAddr, setJumpAddr] = useState('');
+    const oldSnapshot = activeDiff.backward ? next : prev;
+    const oldMap = new Map((oldSnapshot?.memory || []).map((m) => [m.addrHex, m.valHex]));
 
-  return (
-    <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PanelHeader title="Memory" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
-      {collapsed ? null : (
-        <>
-          {preview ? (
-            <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
-              Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
-            </div>
-          ) : null}
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            {current.memory.map((m) => {
-              const changed = activeDiff.mem.has(m.addrHex);
-              const backward = activeDiff.backward;
-              const oldVal = oldMap.get(m.addrHex) || '0x00000000';
+    const handleJump = (e) => {
+        if (e.key === 'Enter') {
+            const search = jumpAddr.trim().toLowerCase().replace(/^0x/, '');
+            if (!search) return;
+            const el = Array.from(document.querySelectorAll('[id^="mem-0x"]'))
+                .find(node => node.id.replace('mem-0x', '').endsWith(search));
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.backgroundColor = 'rgba(247,168,0,0.25)'; // Highlight pulse
+                setTimeout(() => el.style.backgroundColor = 'transparent', 1500);
+            }
+        }
+    };
 
-              return (
-                <div key={m.addrHex} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '95px 1fr', padding: '4px 8px', borderBottom: `1px solid ${theme.border}`, gap: 8 }}>
-                  <div style={{ color: theme.mut }}>{m.addrHex}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {changed ? (
-                      <>
-                        <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
-                        <span style={{ color: theme.mut }}>→</span>
-                        <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{m.valHex}</span>
-                      </>
-                    ) : (
-                      <span>{m.valHex}</span>
-                    )}
-
-                    {m.label ? <span style={{ color: theme.mut, fontStyle: 'italic' }}>{m.label}</span> : null}
-
-                    {preview?.mem?.[m.addrHex] ? (
-                      <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
-                        {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.mem[m.addrHex]}
-                      </span>
+    return (
+        <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <PanelHeader title="Memory" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
+            {collapsed ? null : (
+                <>
+                    <div style={{ padding: '6px', borderBottom: `1px solid ${theme.border}` }}>
+                        <input
+                            value={jumpAddr}
+                            onChange={e => setJumpAddr(e.target.value)}
+                            onKeyDown={handleJump}
+                            placeholder="Jump to address (e.g. 4801) & hit Enter"
+                            spellCheck={false}
+                            style={{
+                                width: '100%', height: 26, borderRadius: 4, padding: '0 8px',
+                                background: theme.terminal, color: theme.text, border: `1px solid ${theme.border}`, fontSize: 12, fontFamily: 'monospace'
+                            }}
+                        />
+                    </div>
+                    {preview ? (
+                        <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
+                            Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
+                        </div>
                     ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', transition: 'background-color 0.3s' }}>
+                        {current.memory.map((m) => {
+                            const changed = activeDiff.mem.has(m.addrHex);
+                            const backward = activeDiff.backward;
+                            const oldVal = oldMap.get(m.addrHex) || '0x00000000';
+
+                            return (
+                                <div id={`mem-${m.addrHex.toLowerCase()}`} key={m.addrHex} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '95px 1fr', padding: '4px 8px', borderBottom: `1px solid ${theme.border}`, gap: 8, transition: 'background-color 0.4s ease' }}>
+                                    <div style={{ color: theme.mut }}>{m.addrHex}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                        {changed ? (
+                                            <>
+                                                <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
+                                                <span style={{ color: theme.mut }}>→</span>
+                                                <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{m.valHex}</span>
+                                            </>
+                                        ) : (
+                                            <span>{m.valHex}</span>
+                                        )}
+                                        {m.label ? <span style={{ color: theme.mut, fontStyle: 'italic' }}>{m.label}</span> : null}
+                                        {preview?.mem?.[m.addrHex] ? (
+                                            <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
+                                                {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.mem[m.addrHex]}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
+    );
 }
 
 function StackPanel({ state, current, theme, collapsed, onToggle }) {
-  const sp = current.registers['R6 (SP)'];
-  const fp = current.registers['R5 (FP)'];
+    const [jumpAddr, setJumpAddr] = useState('');
+    const sp = current.registers['R6 (SP)'];
+    const fp = current.registers['R5 (FP)'];
 
-  return (
-    <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PanelHeader title="Stack" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
-      {collapsed ? null : (
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '6px 8px', color: theme.mut, borderBottom: `1px solid ${theme.border}` }}>
-            <div>Arrow</div><div>Address</div><div>Value</div><div>Label</div>
-          </div>
-          {current.stack.map((r) => {
-            const arrowItems = [];
-            if (r.addrHex === sp) arrowItems.push({ text: '▶ SP', color: theme.green });
-            if (r.addrHex === fp) arrowItems.push({ text: '▶ FP', color: theme.orange });
+    const handleJump = (e) => {
+        if (e.key === 'Enter') {
+            const search = jumpAddr.trim().toLowerCase().replace(/^0x/, '');
+            if (!search) return;
+            const el = Array.from(document.querySelectorAll('[id^="stack-0x"]'))
+                .find(node => node.id.replace('stack-0x', '').endsWith(search));
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.backgroundColor = 'rgba(247,168,0,0.25)';
+                setTimeout(() => el.style.backgroundColor = 'transparent', 1500);
+            }
+        }
+    };
 
-            return (
-              <div key={`${r.addrHex}-${r.label}`} className={r.faded ? 'stack-faded' : ''} style={{
-                display: 'grid',
-                gridTemplateColumns: '66px 110px 110px 1fr',
-                gap: 8,
-                padding: '4px 8px',
-                borderBottom: `1px solid ${theme.border}`,
-                borderLeft: r.addrHex === sp ? `3px solid ${theme.green}` : (r.addrHex === fp ? `3px solid ${theme.orange}` : '3px solid transparent')
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, transition: 'transform 300ms ease' }}>
-                  {arrowItems.length === 0 ? <span style={{ color: theme.mut }}>·</span> : arrowItems.map((a) => <span key={a.text} style={{ color: a.color }}>{a.text}</span>)}
-                </div>
-                <div>{r.addrHex}</div>
-                <div>{r.valHex}</div>
-                <div style={{ color: theme.mut }}>{r.label}</div>
-              </div>
-            );
-          })}
+    return (
+        <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <PanelHeader title="Stack" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
+            {collapsed ? null : (
+                <>
+                    <div style={{ padding: '6px', borderBottom: `1px solid ${theme.border}` }}>
+                        <input
+                            value={jumpAddr}
+                            onChange={e => setJumpAddr(e.target.value)}
+                            onKeyDown={handleJump}
+                            placeholder="Jump to address (e.g. fffe) & hit Enter"
+                            spellCheck={false}
+                            style={{
+                                width: '100%', height: 26, borderRadius: 4, padding: '0 8px',
+                                background: theme.terminal, color: theme.text, border: `1px solid ${theme.border}`, fontSize: 12, fontFamily: 'monospace'
+                            }}
+                        />
+                    </div>
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '6px 8px', color: theme.mut, borderBottom: `1px solid ${theme.border}` }}>
+                            <div>Arrow</div><div>Address</div><div>Value</div><div>Label</div>
+                        </div>
+                        {current.stack.map((r) => {
+                            const arrowItems = [];
+                            if (r.addrHex === sp) arrowItems.push({ text: '▶ SP', color: theme.green });
+                            if (r.addrHex === fp) arrowItems.push({ text: '▶ FP', color: theme.orange });
+
+                            return (
+                                <div id={`stack-${r.addrHex.toLowerCase()}`} key={`${r.addrHex}-${r.label}`} className={r.faded ? 'stack-faded' : ''} style={{
+                                    display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '4px 8px', borderBottom: `1px solid ${theme.border}`,
+                                    borderLeft: r.addrHex === sp ? `3px solid ${theme.green}` : (r.addrHex === fp ? `3px solid ${theme.orange}` : '3px solid transparent'),
+                                    transition: 'background-color 0.4s ease'
+                                }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, transition: 'transform 300ms ease' }}>
+                                        {arrowItems.length === 0 ? <span style={{ color: theme.mut }}>·</span> : arrowItems.map((a) => <span key={a.text} style={{ color: a.color }}>{a.text}</span>)}
+                                    </div>
+                                    <div>{r.addrHex}</div>
+                                    <div>{r.valHex}</div>
+                                    <div style={{ color: theme.mut }}>{r.label}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 function BreakpointsPanel({ state, dispatch, bpDraft, setBpDraft, collapsed, onToggle }) {

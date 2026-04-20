@@ -3,9 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "dev": "concurrently \"PORT=3002 npm --prefix backend/weblcc-backend run dev\" \"npm --prefix weblcc run dev\""
+    "dev": "concurrently \"cross-env PORT=3002 npm --prefix backend/weblcc-backend run dev\" \"npm --prefix weblcc run dev\""
   },
   "devDependencies": {
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "cross-env": "^10.1.0"
   }
 }
