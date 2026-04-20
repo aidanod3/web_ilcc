@@ -5,8 +5,8 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
-const Assembler = require('../emulator/src/core/assembler');
-const Interpreter = require('../emulator/src/core/interpreter');
+const Assembler = require('./core/assembler');
+const Interpreter = require('./core/interpreter');
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -15,14 +15,7 @@ process.env.LCCJS_THROW_ON_ERROR = '1';
 app.use(cors());
 app.use(express.json({ limit: '256kb' }));
 
-const emulatorPath = path.join(
-  __dirname,
-  '..',
-  'emulator',
-  'src',
-  'core',
-  'lcc.js'
-);
+const emulatorPath = path.join(__dirname, 'core', 'lcc.js');
 
 const MAX_MEMORY = 0x10000;
 const STACK_PREVIEW_SIZE = 16;

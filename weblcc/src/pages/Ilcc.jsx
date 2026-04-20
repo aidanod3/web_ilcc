@@ -1,51 +1,115 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const REG_NAMES = ['R0', 'R1', 'R2', 'R3', 'R4', 'R5 (FP)', 'R6 (SP)', 'R7 (LR)', 'PC', 'IR'];
-const FLAG_NAMES = ['N', 'Z', 'P', 'C', 'V'];
+const FLAG_NAMES = ['N', 'Z', 'C', 'V'];
 
 const THEME = {
   dark: {
-    bg: '#0e0e0f',
-    panel: '#18181b',
-    panel2: '#1e1e22',
-    border: '#2a2a2f',
-    text: '#e2e2e5',
-    mut: '#8a8a96',
-    accent: '#f7a800',
-    red: '#ff5f5f',
-    green: '#3ddc84',
-    orange: '#ffb457',
-    yellow: '#ffd866',
-    cyan: '#4fd8ff',
-    activeLine: 'rgba(79,124,255,0.18)',
-    activeLineFlashFwd: 'rgba(79,124,255,0.4)',
-    activeLineFlashBack: 'rgba(255,180,87,0.35)'
+    label: 'Dark',
+    bg: '#13151a', panel: '#1a1c23', panel2: '#1e2028', border: '#252830',
+    text: '#e0e0e8', mut: '#9a9ab0',
+    accent: '#f7a800', red: '#ff5f5f', green: '#3ddc84', orange: '#ffb457',
+    yellow: '#ffd866', cyan: '#4fd8ff',
+    activeLine: 'rgba(247,168,0,0.10)',
+    activeLineFlashFwd: 'rgba(247,168,0,0.22)',
+    activeLineFlashBack: 'rgba(79,216,255,0.18)',
+    editorBg: '#13151a', gutter: '#161820', terminal: '#0f1116',
+    terminalInput: '#1e2028',
+    shadow: '0 8px 24px rgba(0,0,0,.45)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(19,21,26,.92))',
   },
   light: {
-    bg: '#f7f7f8',
-    panel: '#ffffff',
-    panel2: '#f2f2f5',
-    border: '#dadbe2',
-    text: '#1d1e23',
-    mut: '#5b5f6a',
-    accent: '#c98700',
-    red: '#e03434',
-    green: '#1a9e5c',
-    orange: '#c9781d',
-    yellow: '#9f7a00',
-    cyan: '#0f7fa3',
+    label: 'Light',
+    bg: '#f7f7f8', panel: '#ffffff', panel2: '#f2f2f5', border: '#dadbe2',
+    text: '#1d1e23', mut: '#5b5f6a',
+    accent: '#c98700', red: '#e03434', green: '#1a9e5c', orange: '#c9781d',
+    yellow: '#9f7a00', cyan: '#0f7fa3',
     activeLine: 'rgba(58,99,232,0.12)',
     activeLineFlashFwd: 'rgba(58,99,232,0.3)',
-    activeLineFlashBack: 'rgba(201,120,29,0.28)'
-  }
+    activeLineFlashBack: 'rgba(201,120,29,0.28)',
+    editorBg: '#f9f9fb', gutter: '#f5f5f9', terminal: '#eef0f6',
+    terminalInput: '#d5d7e1',
+    shadow: '0 8px 20px rgba(0,0,0,.12)',
+    insetShadow: 'inset 0 0 0 1px rgba(0,0,0,.03)',
+    focusGrad: 'linear-gradient(180deg, rgba(201,135,0,.10), rgba(255,255,255,.92))',
+  },
+  midnight: {
+    label: 'Midnight',
+    bg: '#011627', panel: '#022140', panel2: '#01283a', border: '#0a3b5c',
+    text: '#d6deeb', mut: '#5f7e97',
+    accent: '#ffcb6b', red: '#ef5350', green: '#addb67', orange: '#f78c6c',
+    yellow: '#ffcb6b', cyan: '#80cbc4',
+    activeLine: 'rgba(0,119,186,0.25)',
+    activeLineFlashFwd: 'rgba(0,119,186,0.45)',
+    activeLineFlashBack: 'rgba(247,140,108,0.35)',
+    editorBg: '#01283a', gutter: '#01283a', terminal: '#011627',
+    terminalInput: '#023a5a',
+    shadow: '0 8px 20px rgba(0,0,0,.5)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(255,203,107,.10), rgba(2,33,64,.88))',
+  },
+  dracula: {
+    label: 'Dracula',
+    bg: '#282a36', panel: '#21222c', panel2: '#1e1f29', border: '#44475a',
+    text: '#f8f8f2', mut: '#6272a4',
+    accent: '#bd93f9', red: '#ff5555', green: '#50fa7b', orange: '#ffb86c',
+    yellow: '#f1fa8c', cyan: '#8be9fd',
+    activeLine: 'rgba(189,147,249,0.15)',
+    activeLineFlashFwd: 'rgba(189,147,249,0.35)',
+    activeLineFlashBack: 'rgba(255,184,108,0.3)',
+    editorBg: '#1e1f29', gutter: '#1e1f29', terminal: '#191a26',
+    terminalInput: '#383b4d',
+    shadow: '0 8px 20px rgba(0,0,0,.4)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(189,147,249,.12), rgba(30,31,41,.88))',
+  },
+  monokai: {
+    label: 'Monokai',
+    bg: '#272822', panel: '#1e1f1a', panel2: '#191a16', border: '#3d3d32',
+    text: '#f8f8f2', mut: '#75715e',
+    accent: '#a6e22e', red: '#f92672', green: '#a6e22e', orange: '#fd971f',
+    yellow: '#e6db74', cyan: '#66d9e8',
+    activeLine: 'rgba(166,226,46,0.12)',
+    activeLineFlashFwd: 'rgba(166,226,46,0.3)',
+    activeLineFlashBack: 'rgba(249,38,114,0.25)',
+    editorBg: '#191a16', gutter: '#191a16', terminal: '#1a1b16',
+    terminalInput: '#35362e',
+    shadow: '0 8px 20px rgba(0,0,0,.4)',
+    insetShadow: 'inset 0 0 0 1px rgba(255,255,255,.04)',
+    focusGrad: 'linear-gradient(180deg, rgba(166,226,46,.10), rgba(30,31,26,.88))',
+  },
 };
 
 const SAMPLE_CODE = `; Add two input numbers (LCC)\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, promptA\n            sout r0\n            din r1\n\n            lea r0, promptB\n            sout r0\n            din r2\n\n            add r3, r1, r2\n            lea r0, sumMsg\n            sout r0\n            dout r3\n            nl\n\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\npromptA:    .string \"Enter first number: \"\npromptB:    .string \"Enter second number: \"\nsumMsg:     .string \"Sum: \"\n`;
 const SAMPLE_CODE_LOOP = `; Count from 1 to 5 (LCC)\nstartup:    bl main\n            halt\n\nmain:       mov r0, 1\nloopTop:    dout r0\n            nl\n            add r0, r0, 1\n            cmp r0, 6\n            brn loopTop\n            brz loopTop\n            ret\n`;
 
+// ── Code Templates ─────────────────────────────────────────────────────────
+const TEMPLATE_CONDITIONAL = `; If / Else — compare two inputs\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, msgA\n            sout r0\n            din r1\n            lea r0, msgB\n            sout r0\n            din r2\n\n            cmp r1, r2\n            brp aGreater     ; A > B if positive\n            brz aEqual\n\n            ; A < B\n            lea r0, msgLess\n            sout r0\n            br done\n\naGreater:   lea r0, msgGreater\n            sout r0\n            br done\n\naEqual:     lea r0, msgEqual\n            sout r0\n\ndone:       nl\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nmsgA:       .string \"Enter A: \"\nmsgB:       .string \"Enter B: \"\nmsgGreater: .string \"A is greater\"\nmsgLess:    .string \"A is less\"\nmsgEqual:   .string \"A equals B\"\n`;
+
+const TEMPLATE_STACK_FUNC = `; Function call with stack frame\nstartup:    bl main\n            halt\n\n; square(n) -> r0 = n*n\nsquare:     push lr\n            push fp\n            mov fp, sp\n            mul r0, r0, r0   ; r0 = r0 * r0\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, prompt\n            sout r0\n            din r0           ; r0 = input n\n            bl square        ; r0 = n^2\n\n            lea r1, result\n            sout r1\n            dout r0\n            nl\n\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"Enter a number: \"\nresult:     .string \"Square: \"\n`;
+
+const TEMPLATE_WHILE_LOOP = `; While loop — sum 1..N\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, prompt\n            sout r0\n            din r1           ; r1 = N\n            mov r2, 0        ; r2 = sum\n            mov r3, 1        ; r3 = i\n\nwhileTop:   cmp r3, r1\n            brp done         ; if i > N, exit\n            add r2, r2, r3   ; sum += i\n            add r3, r3, 1    ; i++\n            br whileTop\n\ndone:       lea r0, result\n            sout r0\n            dout r2\n            nl\n\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"Enter N: \"\nresult:     .string \"Sum 1..N = \"\n`;
+
+const TEMPLATE_STRING_IO = `; String output & character loop\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, greeting\n            sout r0\n            nl\n\n            lea r0, greeting  ; print char by char\nnextChar:   ld  r1, r0        ; load char at address\n            brz done          ; null terminator\n            aout r1           ; output as ASCII\n            add r0, r0, 1     ; advance pointer\n            br nextChar\n\ndone:       nl\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\ngreeting:   .string \"Hello, LCC!\"\n`;
+
+const TEMPLATE_FIBONACCI = `; Fibonacci — first N terms\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            lea r0, prompt\n            sout r0\n            din r4           ; r4 = N\n            mov r0, 0        ; a\n            mov r1, 1        ; b\n            mov r3, 0        ; count\n\nfibLoop:    cmp r3, r4\n            brp fibDone\n            brz fibDone\n            dout r0\n            nl\n            add r2, r0, r1   ; temp = a + b\n            mov r0, r1       ; a = b\n            mov r1, r2       ; b = temp\n            add r3, r3, 1\n            br fibLoop\n\nfibDone:    mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"How many Fibonacci terms? \"\n`;
+
+const TEMPLATE_ARRAY = `; Array — store and print 5 values\nstartup:    bl main\n            halt\n\nmain:       push lr\n            push fp\n            mov fp, sp\n\n            ; fill array\n            lea r4, arr\n            mov r3, 0\nfill:       cmp r3, 5\n            brp printStart\n            brz printStart\n            lea r0, inpMsg\n            sout r0\n            din r1\n            st  r1, r4        ; arr[r3] = input\n            add r4, r4, 1\n            add r3, r3, 1\n            br fill\n\n            ; print array\nprintStart: lea r4, arr\n            mov r3, 0\nprintLoop:  cmp r3, 5\n            brp printDone\n            brz printDone\n            ld  r0, r4\n            dout r0\n            nl\n            add r4, r4, 1\n            add r3, r3, 1\n            br printLoop\n\nprintDone:  mov sp, fp\n            pop fp\n            pop lr\n            ret\n\ninpMsg:     .string \"Value: \"\narr:        .blkw 5\n`;
+
+const TEMPLATE_RECURSION = `; Recursive factorial\nstartup:    bl main\n            halt\n\n; fact(r0) -> r0\nfact:       push lr\n            push fp\n            mov fp, sp\n            cmp r0, 1\n            brn base\n            brz base\n            push r0          ; save n\n            sub r0, r0, 1\n            bl fact          ; fact(n-1) -> r0\n            pop r1           ; restore n\n            mul r0, r0, r1   ; n * fact(n-1)\n            br factDone\nbase:       mov r0, 1\nfactDone:   mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nmain:       push lr\n            push fp\n            mov fp, sp\n            lea r0, prompt\n            sout r0\n            din r0\n            bl fact\n            lea r1, result\n            sout r1\n            dout r0\n            nl\n            mov sp, fp\n            pop fp\n            pop lr\n            ret\n\nprompt:     .string \"Enter n: \"\nresult:     .string \"n! = \"\n`;
+
 const SAMPLE_PROGRAMS = [
-  { id: 'sample-main', name: 'Sample: Sum', source: SAMPLE_CODE },
-  { id: 'sample-loop', name: 'Sample: Loop', source: SAMPLE_CODE_LOOP }
+  { id: 'tpl-sum',       name: 'Add Two Numbers',      source: SAMPLE_CODE },
+  { id: 'tpl-loop',      name: 'Count Loop (1–5)',      source: SAMPLE_CODE_LOOP },
+  { id: 'tpl-while',     name: 'While Loop (sum 1..N)', source: TEMPLATE_WHILE_LOOP },
+  { id: 'tpl-if',        name: 'If / Else Conditional', source: TEMPLATE_CONDITIONAL },
+  { id: 'tpl-stack',     name: 'Stack & Function Call', source: TEMPLATE_STACK_FUNC },
+  { id: 'tpl-string',    name: 'String I/O',            source: TEMPLATE_STRING_IO },
+  { id: 'tpl-array',     name: 'Array (Store & Print)', source: TEMPLATE_ARRAY },
+  { id: 'tpl-fib',       name: 'Fibonacci Sequence',    source: TEMPLATE_FIBONACCI },
+  { id: 'tpl-recursion', name: 'Recursive Factorial',   source: TEMPLATE_RECURSION },
 ];
 
 function toHex(value, width = 8) {
@@ -822,7 +886,8 @@ function buildInitialState() {
     watchList: ['R0', 'R1', 'R2', 'R3', 'PC'],
     traceSessionId: runtime.traceSessionId,
     traceStatus: runtime.traceStatus,
-    backendOutput: runtime.backendOutput
+    backendOutput: runtime.backendOutput,
+    customKeywords: [],
   };
 }
 
@@ -849,6 +914,185 @@ function stepForwardInternal(state, sourceTag = 'manual') {
       mode: targetSnapshot?.waitingForInput ? 'awaiting_input' : 'command',
       command: '',
       inputHistory: nextHistory
+    }
+  };
+}
+
+function toWordHex(value) {
+  return `0x${(((value % 0x10000) + 0x10000) % 0x10000).toString(16).padStart(4, '0')}`;
+}
+
+function fromWordHex(value) {
+  if (typeof value !== 'string') return 0;
+  const n = Number.parseInt(value, 16);
+  return Number.isFinite(n) ? (n & 0xffff) : 0;
+}
+
+function stripAsmLine(raw) {
+  const noComment = String(raw || '').split(';')[0].trim();
+  const m = noComment.match(/^[A-Za-z_][\w]*:\s*(.*)$/);
+  return (m ? m[1] : noComment).trim();
+}
+
+function normalizeRegToken(token) {
+  const t = String(token || '').trim().toLowerCase();
+  if (/^r[0-7]$/.test(t)) return t.toUpperCase().replace('R5', 'R5 (FP)').replace('R6', 'R6 (SP)').replace('R7', 'R7 (LR)');
+  if (t === 'fp') return 'R5 (FP)';
+  if (t === 'sp') return 'R6 (SP)';
+  if (t === 'lr') return 'R7 (LR)';
+  if (t === 'pc') return 'PC';
+  if (t === 'ir') return 'IR';
+  return null;
+}
+
+function parseAsmValue(token, registers) {
+  const regKey = normalizeRegToken(token);
+  if (regKey) return fromWordHex(registers[regKey] || '0x0000');
+  const t = String(token || '').trim();
+  if (/^0x[0-9a-f]+$/i.test(t)) return Number.parseInt(t, 16) & 0xffff;
+  if (/^-?\d+$/.test(t)) return Number.parseInt(t, 10) & 0xffff;
+  return null;
+}
+
+function pseudoLabelAddress(label) {
+  let h = 0;
+  const s = String(label || '');
+  for (let i = 0; i < s.length; i += 1) h = ((h * 31) + s.charCodeAt(i)) & 0xffff;
+  return h & 0xffff;
+}
+
+function buildStackFromMemory(registers, memoryMap, existingStack = []) {
+  const sp = fromWordHex(registers['R6 (SP)'] || '0x0000');
+  const fp = fromWordHex(registers['R5 (FP)'] || '0x0000');
+  const rows = [];
+  const max = Math.max(12, existingStack.length || 0);
+  for (let i = 0; i < max; i += 1) {
+    const addr = (sp + i) & 0xffff;
+    const tags = [];
+    if (addr === sp) tags.push('SP');
+    if (addr === fp) tags.push('FP');
+    rows.push({
+      addrHex: toWordHex(addr),
+      valHex: memoryMap.get(toWordHex(addr)) || '0x0000',
+      faded: false,
+      label: tags.join(' ')
+    });
+  }
+  return rows;
+}
+
+function simulateForceTraceSnapshot(current, sourceLines, nextLine) {
+  const registers = { ...(current.registers || {}) };
+  const memoryMap = new Map((current.memory || []).map((m) => [m.addrHex, m.valHex]));
+  const raw = sourceLines[nextLine] || '';
+  const line = stripAsmLine(raw);
+
+  if (line) {
+    const [opRaw, argRaw = ''] = line.split(/\s+/, 2);
+    const op = String(opRaw || '').toLowerCase();
+    const args = argRaw ? argRaw.split(',').map((x) => x.trim()) : [];
+    const setReg = (token, value) => {
+      const key = normalizeRegToken(token);
+      if (!key) return;
+      registers[key] = toWordHex(value);
+    };
+    const getReg = (token) => {
+      const key = normalizeRegToken(token);
+      return key ? fromWordHex(registers[key] || '0x0000') : 0;
+    };
+    const value = (token) => {
+      const v = parseAsmValue(token, registers);
+      return v == null ? 0 : v;
+    };
+
+    switch (op) {
+      case 'mov':
+        setReg(args[0], value(args[1]));
+        break;
+      case 'add':
+        setReg(args[0], (value(args[1]) + value(args[2])) & 0xffff);
+        break;
+      case 'sub':
+        setReg(args[0], (value(args[1]) - value(args[2])) & 0xffff);
+        break;
+      case 'lea':
+        setReg(args[0], pseudoLabelAddress(args[1]));
+        break;
+      case 'push': {
+        const sp = (getReg('sp') - 1) & 0xffff;
+        setReg('sp', sp);
+        memoryMap.set(toWordHex(sp), toWordHex(value(args[0])));
+        break;
+      }
+      case 'pop': {
+        const sp = getReg('sp');
+        const popped = fromWordHex(memoryMap.get(toWordHex(sp)) || '0x0000');
+        setReg(args[0], popped);
+        setReg('sp', (sp + 1) & 0xffff);
+        break;
+      }
+      case 'din': {
+        // Force mode should not pause; keep deterministic placeholder value.
+        const prev = value(args[0]);
+        setReg(args[0], (prev + 1) & 0xffff);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  const memory = (current.memory || []).map((m) => ({ ...m, valHex: memoryMap.get(m.addrHex) || m.valHex }));
+  const stack = buildStackFromMemory(registers, memoryMap, current.stack || []);
+  return { registers, memory, stack };
+}
+
+function forceTraceForwardInternal(state) {
+  const current = state.snapshots[state.currentStep];
+  if (!current) return state;
+
+  const totalLines = state.ctx?.lines?.length || 1;
+  const lastLine = Math.max(0, totalLines - 1);
+  const nextLine = clamp((current.lineIndex ?? 0) + 1, 0, lastLine);
+  if (nextLine === (current.lineIndex ?? 0)) return state;
+
+  const nextIndex = state.currentStep + 1;
+  const baseHistory = Array.isArray(current.terminalHistory) ? current.terminalHistory : state.terminalState.inputHistory;
+  const simulated = simulateForceTraceSnapshot(current, state.ctx?.lines || [], nextLine);
+  const nextSnapshot = {
+    ...current,
+    stepIndex: nextIndex,
+    pc: nextIndex,
+    lineIndex: nextLine,
+    registers: simulated.registers,
+    memory: simulated.memory,
+    stack: simulated.stack,
+    changedRegisters: Object.keys(simulated.registers || {}).filter((k) => (simulated.registers?.[k] || '') !== (current.registers?.[k] || '')),
+    changedMemory: (simulated.memory || []).filter((m) => ((current.memory || []).find((p) => p.addrHex === m.addrHex)?.valHex || '') !== m.valHex).map((m) => m.addrHex),
+    waitingForInput: false,
+    terminalHistory: baseHistory,
+    ts: Date.now()
+  };
+
+  const trimmed = state.snapshots.slice(0, state.currentStep + 1);
+  const nextSnapshots = [...trimmed, nextSnapshot];
+  return {
+    ...state,
+    snapshots: nextSnapshots,
+    currentStep: nextIndex,
+    transition: {
+      from: state.currentStep,
+      to: nextIndex,
+      direction: 'forward',
+      ts: Date.now()
+    },
+    lastDirection: 'forward',
+    previewOffset: 0,
+    terminalState: {
+      ...state.terminalState,
+      mode: 'command',
+      command: '',
+      inputHistory: baseHistory
     }
   };
 }
@@ -1018,6 +1262,9 @@ function reducer(state, action) {
 
     case 'STEP_FORWARD':
       return stepForwardInternal(state, action.sourceTag || 'manual');
+
+    case 'FORCE_TRACE_FORWARD':
+      return forceTraceForwardInternal(state);
 
     case 'RUN_TO_PAUSE': {
       return state;
@@ -1339,11 +1586,24 @@ function reducer(state, action) {
         }
       };
 
-    case 'TOGGLE_THEME':
-      return { ...state, theme: state.theme === 'dark' ? 'light' : 'dark' };
+    case 'SET_THEME':
+      return { ...state, theme: action.theme };
+    case 'TOGGLE_THEME': {
+      const themeKeys = Object.keys(THEME);
+      const nextIdx = (themeKeys.indexOf(state.theme) + 1) % themeKeys.length;
+      return { ...state, theme: themeKeys[nextIdx] };
+    }
 
     case 'SET_EDITING_BREAKPOINT':
       return { ...state, editingBreakpoint: action.line ?? null };
+
+    case 'ADD_CUSTOM_KEYWORD': {
+      const kw = (action.keyword || '').trim().toLowerCase();
+      if (!kw || state.customKeywords.includes(kw)) return state;
+      return { ...state, customKeywords: [...state.customKeywords, kw] };
+    }
+    case 'REMOVE_CUSTOM_KEYWORD':
+      return { ...state, customKeywords: state.customKeywords.filter(k => k !== action.keyword) };
 
     default:
       return state;
@@ -1419,8 +1679,135 @@ const MNEMONIC_SET = new Set([
   'ld', 'st', 'ldr', 'str', 'jmp', 'jsr', 'jsrr'
 ]);
 
-function getTokenColor(token, theme) {
+// ── Static Linter ──────────────────────────────────────────────────────────
+// Returns array of { line (1-based), level: 'error'|'warning', msg }
+function lintAssembly(source, customKeywords = []) {
+  const allMnemonics = new Set([...MNEMONIC_SET, ...customKeywords.map(k => k.toLowerCase())]);
+  const lines = source.split('\n');
+  const issues = [];
+
+  // First pass: collect all label definitions
+  const definedLabels = new Set();
+  lines.forEach(raw => {
+    const trimmed = raw.replace(/;.*$/, '').trim();
+    const lm = trimmed.match(/^([A-Za-z_$.][A-Za-z0-9_$.]*):/);
+    if (lm) definedLabels.add(lm[1].toLowerCase());
+  });
+
+  // Track register initialization (simple: written-to set)
+  const writtenRegs = new Set(['r6', 'r7', 'sp', 'fp', 'lr', 'pc']); // always initialized
+  let stackDepth = 0;         // track push/pop balance
+  let haltSeen = false;
+  // For infinite-loop detection: track backward branch targets
+  const backwardBranchTargets = new Set();
+  const labelLineMap = {};
+  lines.forEach((raw, idx) => {
+    const trimmed = raw.replace(/;.*$/, '').trim();
+    const lm = trimmed.match(/^([A-Za-z_$.][A-Za-z0-9_$.]*):/)
+    if (lm) labelLineMap[lm[1].toLowerCase()] = idx;
+  });
+
+  lines.forEach((raw, idx) => {
+    const lineNo = idx + 1;
+    const commentIdx = raw.indexOf(';');
+    const code = commentIdx >= 0 ? raw.slice(0, commentIdx) : raw;
+    const trimmed = code.trim();
+    if (!trimmed) return;
+
+    // Strip optional label prefix
+    let instrPart = trimmed;
+    const lm = trimmed.match(/^[A-Za-z_$.][A-Za-z0-9_$.]*:\s*(.*)/);
+    if (lm) instrPart = lm[1].trim();
+    if (!instrPart) return;
+
+    // Directives (.string, .blkw, etc.) are always valid
+    if (instrPart.startsWith('.')) return;
+
+    const tokens = instrPart.split(/\s+|,\s*/);
+    const mnem = tokens[0].toLowerCase();
+
+    // Unknown instruction
+    if (!allMnemonics.has(mnem)) {
+      issues.push({ line: lineNo, level: 'error', msg: `Unknown instruction: "${tokens[0]}"` });
+      return;
+    }
+
+    // Push/pop balance
+    if (mnem === 'push') stackDepth++;
+    if (mnem === 'pop') {
+      stackDepth--;
+      if (stackDepth < 0) {
+        issues.push({ line: lineNo, level: 'warning', msg: 'Pop without matching push — possible stack underflow' });
+        stackDepth = 0;
+      }
+    }
+
+    // Halt seen
+    if (mnem === 'halt') haltSeen = true;
+
+    // Register destination write tracking (mov, lea, add, sub, mul, div, ld, din, ain, sin, hin)
+    const writingInstrs = new Set(['mov', 'lea', 'add', 'sub', 'mul', 'div', 'and', 'or', 'xor', 'not', 'ld', 'ldr', 'din', 'ain', 'sin', 'hin']);
+    if (writingInstrs.has(mnem) && tokens[1]) {
+      writtenRegs.add(tokens[1].replace(/,/, '').toLowerCase());
+    }
+
+    // Uninitialized register read check (only for arithmetic/store/output)
+    const readingInstrs = new Set(['add', 'sub', 'mul', 'div', 'and', 'or', 'xor', 'cmp', 'st', 'str', 'push', 'dout', 'aout', 'hout', 'sout']);
+    if (readingInstrs.has(mnem)) {
+      tokens.slice(1).forEach(tok => {
+        const t = tok.replace(/,/, '').toLowerCase();
+        if (/^r[0-5]$/.test(t) && !writtenRegs.has(t)) {
+          issues.push({ line: lineNo, level: 'warning', msg: `Register ${t.toUpperCase()} may be uninitialized` });
+        }
+      });
+    }
+
+    // Branch to undefined label
+    const branchInstrs = new Set(['br', 'brz', 'brn', 'brp', 'brnz', 'brne', 'bl', 'jmp', 'jsr']);
+    if (branchInstrs.has(mnem) && tokens[1]) {
+      const target = tokens[1].replace(/,/, '').toLowerCase();
+      if (!definedLabels.has(target) && !/^r[0-7]$/i.test(target)) {
+        issues.push({ line: lineNo, level: 'error', msg: `Branch to undefined label: "${tokens[1]}"` });
+      }
+      // Infinite loop: backward branch (target line < current line)
+      if (definedLabels.has(target)) {
+        const targetLine = labelLineMap[target] ?? -1;
+        if (targetLine < idx) {
+          backwardBranchTargets.add(target);
+        }
+      }
+    }
+  });
+
+  // Infinite loop: if a label is only ever branched to backward and there's no
+  // forward exit branch in the same region, flag it as a warning.
+  backwardBranchTargets.forEach(label => {
+    const startLine = labelLineMap[label] ?? -1;
+    let hasForwardExit = false;
+    for (let i = startLine; i < lines.length; i++) {
+      const code = lines[i].replace(/;.*$/, '').trim();
+      const instr = code.replace(/^[A-Za-z_$.][A-Za-z0-9_$.]*:\s*/, '');
+      const tok = instr.split(/\s+/);
+      const m = tok[0].toLowerCase();
+      if (m === 'ret' || m === 'halt') { hasForwardExit = true; break; }
+      if (['br', 'brz', 'brn', 'brp', 'brnz', 'brne', 'bl'].includes(m) && tok[1]) {
+        const t = tok[1].replace(/,/, '').toLowerCase();
+        const tLine = labelLineMap[t] ?? -1;
+        if (tLine > startLine) { hasForwardExit = true; break; }
+      }
+    }
+    if (!hasForwardExit) {
+      issues.push({ line: (startLine + 1), level: 'warning', msg: `Possible infinite loop: no exit from loop at "${label}"` });
+    }
+  });
+
+  return issues;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
+function getTokenColor(token, theme, customKeywords = []) {
   const lower = token.toLowerCase();
+  if (customKeywords.includes(lower)) return theme.yellow;
   if (MNEMONIC_SET.has(lower)) return theme.orange;
   if (/^r[0-7]$/i.test(token) || /^(sp|fp|lr|pc|ir)$/i.test(token)) return theme.green;
   if (/^[A-Za-z_]\w*:$/i.test(token)) return theme.accent;
@@ -1430,7 +1817,7 @@ function getTokenColor(token, theme) {
   return null;
 }
 
-function renderHighlightedLine(line, theme, keyPrefix) {
+function renderHighlightedLine(line, theme, keyPrefix, customKeywords = []) {
   const commentIndex = line.indexOf(';');
   const codePart = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
   const commentPart = commentIndex >= 0 ? line.slice(commentIndex) : '';
@@ -1443,7 +1830,7 @@ function renderHighlightedLine(line, theme, keyPrefix) {
     if (pos > cursor) {
       parts.push(<span key={`${keyPrefix}-ws-${idx}`}>{codePart.slice(cursor, pos)}</span>);
     }
-    const color = getTokenColor(token, theme);
+    const color = getTokenColor(token, theme, customKeywords);
     parts.push(
       <span key={`${keyPrefix}-tk-${idx}`} style={color ? { color, fontWeight: /^[A-Za-z_]\w*:$/i.test(token) ? 600 : 500 } : undefined}>
         {token}
@@ -1462,10 +1849,10 @@ function renderHighlightedLine(line, theme, keyPrefix) {
 }
 
 function Ilcc() {
+  const navigate = useNavigate();
   const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
   const [isBackendBusy, setIsBackendBusy] = useState(false);
   const [editorTerminalSplit, setEditorTerminalSplit] = useState(62);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(300);
   const [rightPanelWidth, setRightPanelWidth] = useState(420);
   const [collapsed, setCollapsed] = useState({
     stack: false,
@@ -1480,6 +1867,20 @@ function Ilcc() {
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Load shared code from URL ?code= param (runs once on mount)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('code');
+      if (encoded) {
+        const source = decodeURIComponent(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')));
+        dispatch({ type: 'UPDATE_SOURCE', source });
+        // Clean the URL without reloading
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (_) { /* ignore malformed codes */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = THEME[state.theme];
   const current = state.snapshots[state.currentStep];
@@ -1504,29 +1905,13 @@ function Ilcc() {
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   };
-  const beginLeftPanelDrag = (e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startLeft = leftPanelWidth;
-    const onMove = (evt) => {
-      const dx = evt.clientX - startX;
-      const maxLeft = Math.max(260, window.innerWidth - rightPanelWidth - 520);
-      setLeftPanelWidth(clamp(startLeft + dx, 220, maxLeft));
-    };
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  };
   const beginRightPanelDrag = (e) => {
     e.preventDefault();
     const startX = e.clientX;
     const startRight = rightPanelWidth;
     const onMove = (evt) => {
       const dx = evt.clientX - startX;
-      const maxRight = Math.max(320, window.innerWidth - leftPanelWidth - 520);
+      const maxRight = Math.max(320, window.innerWidth - 520);
       setRightPanelWidth(clamp(startRight - dx, 300, maxRight));
     };
     const onUp = () => {
@@ -1554,23 +1939,19 @@ function Ilcc() {
         e.preventDefault();
         if (state.timelineState.playing) dispatch({ type: 'TIMELINE_PAUSE' });
       } else if (e.key === 'Escape') {
-        dispatch({ type: 'TIMELINE_STOP' });
+        dispatch({ type: 'STOP_DEBUGGER_VIEW' });
         dispatch({ type: 'CLEAR_PREVIEW' });
-      } else if (e.key === 'ArrowLeft' && e.shiftKey) {
-        for (let i = 0; i < 5; i += 1) dispatch({ type: 'STEP_BACKWARD' });
       } else if (e.key === 'ArrowRight' && e.shiftKey) {
-        for (let i = 0; i < 5; i += 1) void handleStepForward('manual');
-      } else if (e.key === 'ArrowLeft') {
-        dispatch({ type: 'STEP_BACKWARD' });
+        for (let i = 0; i < 5; i += 1) dispatch({ type: 'FORCE_TRACE_FORWARD' });
       } else if (e.key === 'ArrowRight') {
-        void handleStepForward('manual');
+        dispatch({ type: 'FORCE_TRACE_FORWARD' });
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [state.timelineState.playing, isBackendBusy]);
 
-  const canForward = state.terminalState.mode !== 'awaiting_input' && !isBackendBusy;
+  const canForward = !isBackendBusy;
 
   const addOutputEntries = (previousOutput, nextOutput) => {
     if (!nextOutput || nextOutput === previousOutput) return [];
@@ -1840,15 +2221,7 @@ function Ilcc() {
     <div
       style={{
         height: '100vh',
-        backgroundColor: t.bg,
-        backgroundImage: `
-          linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-          linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-          linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.04) 75%),
-          linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.04) 75%)
-        `,
-        backgroundSize: '24px 24px',
-        backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0',
+        background: t.bg,
         color: t.text,
         display: 'flex',
         flexDirection: 'column'
@@ -1880,10 +2253,11 @@ function Ilcc() {
         onImport={onImport}
         onExport={onExport}
         onSelectSample={onSelectSample}
-        onStepForward={() => handleStepForward('manual')}
+        onForceTraceForward={() => dispatch({ type: 'FORCE_TRACE_FORWARD' })}
         backendBusy={isBackendBusy}
         canForward={canForward}
         debuggerActive={debuggerActive}
+        onNavigateHome={() => navigate('/')}
       />
 
       {!debuggerActive ? (
@@ -1922,12 +2296,7 @@ function Ilcc() {
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `${leftPanelWidth}px 8px minmax(420px, 1fr) 8px ${rightPanelWidth}px`, gap: 8, padding: 10 }}>
-          <StackPanel state={state} current={current} theme={t} collapsed={collapsed.stack} onToggle={() => setCollapsed((c) => ({ ...c, stack: !c.stack }))} />
-          <div className="asm-vsplitter" onMouseDown={beginLeftPanelDrag}>
-            <div className="asm-vsplitter-line" />
-          </div>
-
+        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `minmax(520px, 1fr) 8px ${rightPanelWidth}px`, gap: 8, padding: 10 }}>
           <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: `${collapsed.editor ? '42px' : `minmax(220px, ${editorTerminalSplit}fr)`} ${collapsed.editor || collapsed.terminal ? '0px' : '8px'} ${collapsed.terminal ? '42px' : `minmax(140px, ${100 - editorTerminalSplit}fr)`}`, gap: 10 }}>
             <EditorPane
               state={state}
@@ -1964,13 +2333,9 @@ function Ilcc() {
           <div className="asm-vsplitter" onMouseDown={beginRightPanelDrag}>
             <div className="asm-vsplitter-line" />
           </div>
-
-          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(170px, .9fr) minmax(260px, 1.8fr) minmax(180px, 1fr)', gap: 10 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, minHeight: 0 }}>
-              <RegistersPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.registers} onToggle={() => setCollapsed((c) => ({ ...c, registers: !c.registers }))} />
-              <FlagsPanel current={current} theme={t} collapsed={collapsed.flags} onToggle={() => setCollapsed((c) => ({ ...c, flags: !c.flags }))} />
-            </div>
-
+          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(170px, .9fr) minmax(180px, .8fr) minmax(260px, 1.8fr)', gap: 10 }}>
+           <RegistersPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.registers} onToggle={() => setCollapsed((c) => ({ ...c, registers: !c.registers }))} />
+            <StackPanel state={state} current={current} theme={t} collapsed={collapsed.stack} onToggle={() => setCollapsed((c) => ({ ...c, stack: !c.stack }))} />
             <MemoryPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.memory} onToggle={() => setCollapsed((c) => ({ ...c, memory: !c.memory }))} />
           </div>
         </div>
@@ -1979,15 +2344,88 @@ function Ilcc() {
   );
 }
 
-function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepForward, backendBusy, canForward, debuggerActive }) {
+function KeywordsModal({ state, dispatch, onClose }) {
+  const [draft, setDraft] = useState('');
+  const t = THEME[state.theme];
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.55)' }} onClick={onClose}>
+      <div style={{ background: t.panel, border: `1px solid ${t.border}`, borderRadius: 12, padding: 24, minWidth: 340, boxShadow: t.shadow }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <strong style={{ color: t.text, fontSize: 15 }}>Custom Keywords</strong>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: t.mut, cursor: 'pointer', fontSize: 18 }}>×</button>
+        </div>
+        <p style={{ color: t.mut, fontSize: 12, marginBottom: 12 }}>Add custom mnemonics/labels to highlight in yellow.</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <input
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && draft.trim()) { dispatch({ type: 'ADD_CUSTOM_KEYWORD', keyword: draft }); setDraft(''); } }}
+            placeholder="e.g. myMacro"
+            spellCheck={false}
+            style={{ flex: 1, height: 32, borderRadius: 6, border: `1px solid ${t.border}`, background: t.panel2, color: t.text, padding: '0 10px', fontSize: 13 }}
+          />
+          <button className="asm-btn" onClick={() => { if (draft.trim()) { dispatch({ type: 'ADD_CUSTOM_KEYWORD', keyword: draft }); setDraft(''); } }}>Add</button>
+        </div>
+        {state.customKeywords.length === 0 ? (
+          <p style={{ color: t.mut, fontSize: 12 }}>No custom keywords yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {state.customKeywords.map(kw => (
+              <span key={kw} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: t.panel2, border: `1px solid ${t.border}`, borderRadius: 6, padding: '4px 8px', fontSize: 12, color: t.yellow }}>
+                {kw}
+                <button onClick={() => dispatch({ type: 'REMOVE_CUSTOM_KEYWORD', keyword: kw })} style={{ background: 'none', border: 'none', color: t.mut, cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTraceForward, backendBusy, canForward, debuggerActive, onNavigateHome }) {
   const fileRef = useRef(null);
   const [sampleChoice, setSampleChoice] = useState('');
   const [jumpCount, setJumpCount] = useState(5);
+  const [showKeywords, setShowKeywords] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShare = () => {
+    try {
+      const encoded = btoa(encodeURIComponent(state.source))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const url = `${window.location.origin}/ilcc?code=${encoded}`;
+      navigator.clipboard.writeText(url).then(() => {
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      });
+    } catch (_) { /* fallback: nothing */ }
+  };
 
   return (
+    <>
+    {showKeywords && <KeywordsModal state={state} dispatch={dispatch} onClose={() => setShowKeywords(false)} />}
     <div style={{ height: 48, borderBottom: `1px solid ${THEME[state.theme].border}`, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '0 10px', columnGap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <strong style={{ letterSpacing: '.04em' }}>CPS340 | LCC</strong>
+        <button
+          onClick={onNavigateHome}
+          title="Back to home"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: THEME[state.theme].mut, display: 'flex', alignItems: 'center',
+            gap: 5, padding: '4px 6px', borderRadius: 6, fontSize: 13,
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = THEME[state.theme].text; e.currentTarget.style.background = THEME[state.theme].panel2; }}
+          onMouseLeave={e => { e.currentTarget.style.color = THEME[state.theme].mut; e.currentTarget.style.background = 'none'; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          WebLCC
+        </button>
+        <span style={{ color: THEME[state.theme].border, fontSize: 16 }}>|</span>
+        <strong style={{ letterSpacing: '.04em' }}>CPS340</strong>
         <select
           value={sampleChoice}
           onChange={(e) => {
@@ -2000,11 +2438,14 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
           }}
           style={{ height: 30, borderRadius: 6, border: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].panel2, color: THEME[state.theme].text, padding: '0 8px' }}
         >
-          <option value="">Program Samples</option>
+          <option value="">Code Templates</option>
           {SAMPLE_PROGRAMS.map((sample) => (
             <option key={sample.id} value={sample.id}>{sample.name}</option>
           ))}
         </select>
+        <button className="asm-btn" title="Custom keywords / tokens" onClick={() => setShowKeywords(true)}>
+          Keywords {state.customKeywords.length > 0 ? `(${state.customKeywords.length})` : ''}
+        </button>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -2018,23 +2459,12 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
               padding: '0 8px',
               borderRadius: 999,
               border: `1px solid ${THEME[state.theme].border}`,
-              background: state.theme === 'dark' ? '#111217' : '#eef0f6',
-              boxShadow: state.theme === 'dark' ? 'inset 0 0 0 1px rgba(255,255,255,.03)' : 'inset 0 0 0 1px rgba(0,0,0,.03)'
+              background: THEME[state.theme].terminal,
+              boxShadow: THEME[state.theme].insetShadow
             }}
           >
-            <button className="asm-btn" title="Step Back 1" onClick={() => dispatch({ type: 'STEP_BACKWARD' })}>-1</button>
-            <button className="asm-btn" title="Step Forward 1" onClick={() => { if (canForward) void onStepForward(); }} disabled={!canForward}>+1</button>
-            <button className="asm-btn" title="Stop / Reset" onClick={() => dispatch({ type: 'TIMELINE_STOP' })}>Stop</button>
-            <button
-              className="asm-btn"
-              title="Step Back N"
-              onClick={() => {
-                const n = Math.max(1, Number(jumpCount) || 1);
-                for (let i = 0; i < n; i += 1) dispatch({ type: 'STEP_BACKWARD' });
-              }}
-            >
-              -N
-            </button>
+            <button className="asm-btn" title="Step Forward 1" onClick={() => { if (canForward) onForceTraceForward(); }} disabled={!canForward}>+1</button>
+            <button className="asm-btn" title="Stop / Reset" onClick={() => dispatch({ type: 'STOP_DEBUGGER_VIEW' })}>Stop</button>
             <input
               type="number"
               min={1}
@@ -2046,11 +2476,10 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
             <button
               className="asm-btn"
               title="Step Forward N"
-              onClick={async () => {
+              onClick={() => {
                 const n = Math.max(1, Number(jumpCount) || 1);
                 for (let i = 0; i < n; i += 1) {
-                  const ok = await onStepForward();
-                  if (!ok) break;
+                  onForceTraceForward();
                 }
               }}
               disabled={!canForward}
@@ -2075,7 +2504,71 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
         }} />
         <button className="asm-btn" onClick={() => fileRef.current && fileRef.current.click()}>Import</button>
         <button className="asm-btn" onClick={onExport}>Export</button>
-        <button className="asm-btn" onClick={() => dispatch({ type: 'TOGGLE_THEME' })}>{state.theme === 'dark' ? 'Light' : 'Dark'}</button>
+        <button className="asm-btn" onClick={handleShare} title="Copy shareable link to clipboard">
+          Share
+        </button>
+        {shareCopied && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(4px)',
+            animation: 'fadeUp 150ms ease-out',
+          }} onClick={() => setShareCopied(false)}>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: THEME[state.theme].panel,
+                border: `1px solid ${THEME[state.theme].green}`,
+                borderRadius: 14,
+                padding: '28px 36px',
+                minWidth: 320,
+                textAlign: 'center',
+                boxShadow: `0 20px 60px rgba(0,0,0,.5), 0 0 0 1px ${THEME[state.theme].green}33`,
+                position: 'relative',
+              }}
+            >
+              <button
+                onClick={() => setShareCopied(false)}
+                style={{
+                  position: 'absolute', top: 12, right: 12,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: THEME[state.theme].mut, fontSize: 18, lineHeight: 1,
+                  padding: 4, borderRadius: 4,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = THEME[state.theme].text; }}
+                onMouseLeave={e => { e.currentTarget.style.color = THEME[state.theme].mut; }}
+              >×</button>
+              <div style={{
+                width: 48, height: 48, borderRadius: '50%',
+                background: `${THEME[state.theme].green}18`,
+                border: `2px solid ${THEME[state.theme].green}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={THEME[state.theme].green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <div style={{ color: THEME[state.theme].text, fontWeight: 700, fontSize: 16, marginBottom: 6 }}>
+                Code ready to share!
+              </div>
+              <div style={{ color: THEME[state.theme].mut, fontSize: 13, lineHeight: 1.5 }}>
+                Link copied to clipboard.<br />Anyone with the link can open your code.
+              </div>
+            </div>
+          </div>
+        )}
+        <select
+          value={state.theme}
+          onChange={(e) => dispatch({ type: 'SET_THEME', theme: e.target.value })}
+          className="asm-btn"
+          style={{ paddingRight: 6, cursor: 'pointer' }}
+          title="Editor theme"
+        >
+          {Object.entries(THEME).map(([key, t]) => (
+            <option key={key} value={key}>{t.label}</option>
+          ))}
+        </select>
         <img
           src="/newpaltz_logo_dark.webp"
           alt="New Paltz State University of New York"
@@ -2089,8 +2582,46 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onStepFor
         />
       </div>
     </div>
+    </>
   );
 }
+
+// ── LCC Assembly Auto-Formatter ───────────────────────────────────────────────
+function fmtSplitComment(line) {
+  let inStr = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') inStr = !inStr;
+    if (!inStr && line[i] === ';') return { code: line.slice(0, i), comment: line.slice(i).trim() };
+  }
+  return { code: line, comment: '' };
+}
+function fmtInstrPart(instr) {
+  const parts = instr.trim().split(/\s+/);
+  const mnemonic = parts[0];
+  if (parts.length === 1) return mnemonic;
+  return mnemonic.padEnd(6) + parts.slice(1).join(' ').replace(/\s*,\s*/g, ', ');
+}
+function formatLCCAssembly(source) {
+  const INDENT = ' '.repeat(12);
+  return source.split('\n').map(rawLine => {
+    const trimmed = rawLine.trimEnd().trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith(';')) return trimmed;
+    const { code, comment } = fmtSplitComment(trimmed);
+    const c = code.trim();
+    if (!c) return comment ? '; ' + comment.replace(/^;+\s*/, '') : '';
+    const suffix = comment ? '  ' + comment : '';
+    const lm = c.match(/^([A-Za-z_$.][A-Za-z0-9_$.]*):\s*(.*)/);
+    if (lm) {
+      const label = lm[1] + ':';
+      const rest = lm[2].trim();
+      if (!rest) return label + suffix;
+      return label + ' '.repeat(Math.max(1, 12 - label.length)) + fmtInstrPart(rest) + suffix;
+    }
+    return INDENT + fmtInstrPart(c) + suffix;
+  }).join('\n');
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLineBreakpoint, onRunProgram, onStopDebug, backendBusy, showFocusZoom, collapsed, onToggle }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -2113,6 +2644,18 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
   const focusedLineExplanation = explainInstructionLine(focusedLineText);
   const transition = state.transition;
   const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
+
+  // Smart error detection
+  const [showLintPanel, setShowLintPanel] = useState(true);
+  const lintIssues = useMemo(() => lintAssembly(state.source, state.customKeywords), [state.source, state.customKeywords]);
+  const lintByLine = useMemo(() => {
+    const map = {};
+    lintIssues.forEach(issue => {
+      if (!map[issue.line]) map[issue.line] = [];
+      map[issue.line].push(issue);
+    });
+    return map;
+  }, [lintIssues]);
 
   useEffect(() => {
     setShowFileMenu(false);
@@ -2140,6 +2683,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="asm-btn asm-btn-gold" onClick={onRunProgram} disabled={backendBusy}>Run</button>
             <button className="asm-btn" onClick={onStopDebug} disabled={backendBusy}>Stop</button>
+            <button className="asm-btn" onClick={() => dispatch({ type: 'UPDATE_SOURCE', source: formatLCCAssembly(state.source) })} title="Auto-format LCC assembly">Format</button>
             <button className="asm-btn" onClick={() => dispatch({ type: 'ADD_TAB' })}>+</button>
             <button className="asm-btn" onClick={async () => {
               if (!wrapperRef.current) return;
@@ -2166,7 +2710,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                     border: `1px solid ${THEME[state.theme].border}`,
                     borderRadius: 8,
                     background: THEME[state.theme].panel,
-                    boxShadow: state.theme === 'dark' ? '0 8px 20px rgba(0,0,0,.35)' : '0 8px 20px rgba(0,0,0,.12)',
+                    boxShadow: THEME[state.theme].shadow,
                     overflow: 'hidden'
                   }}
                 >
@@ -2200,7 +2744,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
       {!collapsed ? (
         <>
           {isEditingFileName ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderBottom: `1px solid ${THEME[state.theme].border}`, background: state.theme === 'dark' ? '#141418' : '#f5f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderBottom: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].gutter }}>
               <span style={{ fontSize: 12, color: THEME[state.theme].mut }}>Edit file name</span>
               <input
                 value={fileNameDraft}
@@ -2226,7 +2770,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
             </div>
           ) : null}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', borderBottom: `1px solid ${THEME[state.theme].border}`, padding: '6px 8px', background: state.theme === 'dark' ? '#141418' : '#f5f5f9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', borderBottom: `1px solid ${THEME[state.theme].border}`, padding: '6px 8px', background: THEME[state.theme].gutter }}>
             {state.tabs.map((tab) => (
               <div
                 key={tab.id}
@@ -2282,23 +2826,27 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
               style={{
                 overflow: 'hidden',
                 borderRight: `1px solid ${THEME[state.theme].border}`,
-                background: state.theme === 'dark' ? '#141418' : '#f5f5f9'
+                background: THEME[state.theme].gutter
               }}
             >
               {lines.map((line, idx) => {
                 const lineNo = idx + 1;
                 const bp = state.breakpoints.get(lineNo);
                 const isActive = activeLine === idx;
+                const lineIssues = lintByLine[lineNo] || [];
+                const hasError = lineIssues.some(i => i.level === 'error');
+                const hasWarn = lineIssues.some(i => i.level === 'warning');
                 const flashClass = isActive && transition && Date.now() - transition.ts < 450
                   ? transition.direction === 'backward' ? 'line-flash-backward' : 'line-flash-forward'
                   : '';
+                const lintTitle = lineIssues.map(i => `${i.level === 'error' ? '⛔' : '⚠'} ${i.msg}`).join('\n');
                 return (
                   <button
                     key={`gutter-${lineNo}-${line}`}
                     ref={(el) => { lineRefs.current[idx] = el; }}
                     type="button"
                     className={flashClass}
-                    title={bp?.description ? `● Line ${lineNo}: ${bp.description}` : undefined}
+                    title={lintTitle || (bp?.description ? `● Line ${lineNo}: ${bp.description}` : undefined)}
                     onClick={() => setLineBreakpoint(idx)}
                     style={{
                       width: '100%',
@@ -2313,12 +2861,12 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                       gap: 4,
                       padding: '0 8px',
                       textAlign: 'left',
-                      background: isActive ? THEME[state.theme].activeLine : 'transparent',
+                      background: hasError ? 'rgba(239,68,68,.12)' : hasWarn ? 'rgba(251,191,36,.08)' : isActive ? THEME[state.theme].activeLine : 'transparent',
                       border: 'none',
-                      borderLeft: isActive ? `3px solid ${THEME[state.theme].accent}` : '3px solid transparent'
+                      borderLeft: hasError ? '3px solid #ef4444' : hasWarn ? '3px solid #fbbf24' : isActive ? `3px solid ${THEME[state.theme].accent}` : '3px solid transparent'
                     }}
                   >
-                    <span style={{ color: isActive ? THEME[state.theme].accent : 'transparent' }}>▶</span>
+                    {hasError ? <span style={{ fontSize: 10 }}>⛔</span> : hasWarn ? <span style={{ fontSize: 10 }}>⚠</span> : <span style={{ color: isActive ? THEME[state.theme].accent : 'transparent' }}>▶</span>}
                     <span style={{
                       width: 8,
                       height: 8,
@@ -2349,7 +2897,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                 }}
               >
                 {lines.map((line, idx) => (
-                  <div key={`hl-${idx}`}>{renderHighlightedLine(line, THEME[state.theme], `hl-${idx}`)}</div>
+                  <div key={`hl-${idx}`}>{renderHighlightedLine(line, THEME[state.theme], `hl-${idx}`, state.customKeywords)}</div>
                 ))}
               </pre>
               <textarea
@@ -2370,7 +2918,7 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
                   height: '100%',
                   border: 'none',
                   outline: 'none',
-                  background: state.theme === 'dark' ? '#151518' : '#f9f9fb',
+                  background: THEME[state.theme].editorBg,
                   color: 'transparent',
                   caretColor: THEME[state.theme].text,
                   padding: 8,
@@ -2383,13 +2931,33 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
             </div>
           </div>
 
+          {lintIssues.length > 0 && showLintPanel ? (
+            <div style={{ borderTop: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].panel, maxHeight: 120, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px', borderBottom: `1px solid ${THEME[state.theme].border}`, background: THEME[state.theme].panel2 }}>
+                <span style={{ fontSize: 11, color: THEME[state.theme].text, fontWeight: 600 }}>
+                  {lintIssues.filter(i => i.level === 'error').length > 0 && <span style={{ color: '#ef4444' }}>⛔ {lintIssues.filter(i => i.level === 'error').length} error{lintIssues.filter(i => i.level === 'error').length !== 1 ? 's' : ''} </span>}
+                  {lintIssues.filter(i => i.level === 'warning').length > 0 && <span style={{ color: '#fbbf24' }}>⚠ {lintIssues.filter(i => i.level === 'warning').length} warning{lintIssues.filter(i => i.level === 'warning').length !== 1 ? 's' : ''}</span>}
+                </span>
+                <button onClick={() => setShowLintPanel(false)} style={{ background: 'none', border: 'none', color: THEME[state.theme].mut, cursor: 'pointer', fontSize: 13 }}>×</button>
+              </div>
+              {lintIssues.map((issue, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, padding: '3px 10px', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', borderBottom: `1px solid ${THEME[state.theme].border}`, color: issue.level === 'error' ? '#ef4444' : '#fbbf24' }}>
+                  <span style={{ minWidth: 48, color: THEME[state.theme].mut }}>Line {issue.line}</span>
+                  <span>{issue.level === 'error' ? '⛔' : '⚠'} {issue.msg}</span>
+                </div>
+              ))}
+            </div>
+          ) : lintIssues.length > 0 ? (
+            <button onClick={() => setShowLintPanel(true)} style={{ fontSize: 11, padding: '3px 10px', background: THEME[state.theme].panel2, border: 'none', borderTop: `1px solid ${THEME[state.theme].border}`, cursor: 'pointer', color: lintIssues.some(i => i.level === 'error') ? '#ef4444' : '#fbbf24', width: '100%', textAlign: 'left' }}>
+              {lintIssues.some(i => i.level === 'error') ? '⛔' : '⚠'} {lintIssues.length} issue{lintIssues.length !== 1 ? 's' : ''} — click to expand
+            </button>
+          ) : null}
+
           {showFocusZoom ? (
             <div
               style={{
                 borderTop: `1px solid ${THEME[state.theme].border}`,
-                background: state.theme === 'dark'
-                  ? 'linear-gradient(180deg, rgba(247,168,0,.10), rgba(24,24,27,.88))'
-                  : 'linear-gradient(180deg, rgba(201,135,0,.10), rgba(255,255,255,.92))',
+                background: THEME[state.theme].focusGrad,
                 padding: '8px 12px'
               }}
             >
@@ -2430,55 +2998,65 @@ function EditorPane({ state, dispatch, current, focusLineIndex, lineRefs, setLin
 }
 
 function RegistersPanel({ state, current, prev, next, activeDiff, preview, theme, collapsed, onToggle }) {
-  const showBanner = preview && preview.offset !== 0;
+    const showBanner = preview && preview.offset !== 0;
+    const oldSnapshot = activeDiff.backward ? next : prev;
+    const FLAG_NAMES = ['N', 'Z', 'C', 'V'];
 
-  const oldSnapshot = activeDiff.backward ? next : prev;
+    return (
+        <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <PanelHeader title="Registers & Flags" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
+            {collapsed ? null : (
+                <>
+                    {showBanner ? (
+                        <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
+                            Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
+                        </div>
+                    ) : null}
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                        {REG_NAMES.map((reg) => {
+                            const currentVal = current.registers[reg];
+                            const oldVal = oldSnapshot?.registers?.[reg] ?? currentVal;
+                            const changed = activeDiff.regs.has(reg);
+                            const backward = activeDiff.backward;
 
-  return (
-    <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PanelHeader title="Registers" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
-      {collapsed ? null : (
-        <>
-      {showBanner ? (
-        <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
-          Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
+                            return (
+                                <div key={reg} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: 8, padding: '5px 8px', borderBottom: `1px solid ${theme.border}` }}>
+                                    <div style={{ color: theme.mut }}>{reg}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                        {changed ? (
+                                            <>
+                                                <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
+                                                <span style={{ color: theme.mut }}>→</span>
+                                                <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{currentVal}</span>
+                                            </>
+                                        ) : (
+                                            <span>{currentVal}</span>
+                                        )}
+
+                                        {preview?.regs?.[reg] ? (
+                                            <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
+                                                {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.regs[reg]}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* NEW FLAG FOOTER */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '8px', borderTop: `1px solid ${theme.border}`, background: theme.panel2 }}>
+                        {FLAG_NAMES.map((f) => (
+                            <div key={f} style={{ textAlign: 'center' }}>
+                                <div style={{ color: theme.mut, fontSize: 11 }}>{f}</div>
+                                <div style={{ fontWeight: 700 }}>{current.flags[f] ?? 0}</div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
-      ) : null}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-        {REG_NAMES.map((reg) => {
-          const currentVal = current.registers[reg];
-          const oldVal = oldSnapshot?.registers?.[reg] ?? currentVal;
-          const changed = activeDiff.regs.has(reg);
-          const backward = activeDiff.backward;
-
-          return (
-            <div key={reg} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: 8, padding: '5px 8px', borderBottom: `1px solid ${theme.border}` }}>
-              <div style={{ color: theme.mut }}>{reg}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                {changed ? (
-                  <>
-                    <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
-                    <span style={{ color: theme.mut }}>→</span>
-                    <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{currentVal}</span>
-                  </>
-                ) : (
-                  <span>{currentVal}</span>
-                )}
-
-                {preview?.regs?.[reg] ? (
-                  <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
-                    {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.regs[reg]}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-        </>
-      )}
-    </div>
-  );
+    );
 }
 
 function FlagsPanel({ current, theme, collapsed, onToggle }) {
@@ -2486,7 +3064,7 @@ function FlagsPanel({ current, theme, collapsed, onToggle }) {
     <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <PanelHeader title="Flags" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
       {collapsed ? null : (
-        <div style={{ padding: 10, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+         <div style={{ padding: 10, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           {FLAG_NAMES.map((f) => (
             <div key={f} style={{ border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, textAlign: 'center' }}>
               <div style={{ color: theme.mut, fontSize: 11 }}>{f}</div>
@@ -2500,96 +3078,149 @@ function FlagsPanel({ current, theme, collapsed, onToggle }) {
 }
 
 function MemoryPanel({ state, current, prev, next, activeDiff, preview, theme, collapsed, onToggle }) {
-  const oldSnapshot = activeDiff.backward ? next : prev;
-  const oldMap = new Map((oldSnapshot?.memory || []).map((m) => [m.addrHex, m.valHex]));
+    const [jumpAddr, setJumpAddr] = useState('');
+    const oldSnapshot = activeDiff.backward ? next : prev;
+    const oldMap = new Map((oldSnapshot?.memory || []).map((m) => [m.addrHex, m.valHex]));
 
-  return (
-    <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PanelHeader title="Memory" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
-      {collapsed ? null : (
-        <>
-          {preview ? (
-            <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
-              Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
-            </div>
-          ) : null}
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            {current.memory.map((m) => {
-              const changed = activeDiff.mem.has(m.addrHex);
-              const backward = activeDiff.backward;
-              const oldVal = oldMap.get(m.addrHex) || '0x00000000';
+    const handleJump = (e) => {
+        if (e.key === 'Enter') {
+            const search = jumpAddr.trim().toLowerCase().replace(/^0x/, '');
+            if (!search) return;
+            const el = Array.from(document.querySelectorAll('[id^="mem-0x"]'))
+                .find(node => node.id.replace('mem-0x', '').endsWith(search));
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.backgroundColor = 'rgba(247,168,0,0.25)'; // Highlight pulse
+                setTimeout(() => el.style.backgroundColor = 'transparent', 1500);
+            }
+        }
+    };
 
-              return (
-                <div key={m.addrHex} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '95px 1fr', padding: '4px 8px', borderBottom: `1px solid ${theme.border}`, gap: 8 }}>
-                  <div style={{ color: theme.mut }}>{m.addrHex}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {changed ? (
-                      <>
-                        <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
-                        <span style={{ color: theme.mut }}>→</span>
-                        <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{m.valHex}</span>
-                      </>
-                    ) : (
-                      <span>{m.valHex}</span>
-                    )}
-
-                    {m.label ? <span style={{ color: theme.mut, fontStyle: 'italic' }}>{m.label}</span> : null}
-
-                    {preview?.mem?.[m.addrHex] ? (
-                      <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
-                        {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.mem[m.addrHex]}
-                      </span>
+    return (
+        <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <PanelHeader title="Memory" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
+            {collapsed ? null : (
+                <>
+                    <div style={{ padding: '6px', borderBottom: `1px solid ${theme.border}` }}>
+                        <input
+                            value={jumpAddr}
+                            onChange={e => setJumpAddr(e.target.value)}
+                            onKeyDown={handleJump}
+                            placeholder="Jump to address (e.g. 4801) & hit Enter"
+                            spellCheck={false}
+                            style={{
+                                width: '100%', height: 26, borderRadius: 4, padding: '0 8px',
+                                background: theme.terminal, color: theme.text, border: `1px solid ${theme.border}`, fontSize: 12, fontFamily: 'monospace'
+                            }}
+                        />
+                    </div>
+                    {preview ? (
+                        <div style={{ padding: '6px 8px', color: theme.yellow, fontSize: 12, borderBottom: `1px solid ${theme.border}` }}>
+                            Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
+                        </div>
                     ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', transition: 'background-color 0.3s' }}>
+                        {current.memory.map((m) => {
+                            const changed = activeDiff.mem.has(m.addrHex);
+                            const backward = activeDiff.backward;
+                            const oldVal = oldMap.get(m.addrHex) || '0x00000000';
+
+                            return (
+                                <div id={`mem-${m.addrHex.toLowerCase()}`} key={m.addrHex} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '95px 1fr', padding: '4px 8px', borderBottom: `1px solid ${theme.border}`, gap: 8, transition: 'background-color 0.4s ease' }}>
+                                    <div style={{ color: theme.mut }}>{m.addrHex}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                        {changed ? (
+                                            <>
+                                                <span style={{ color: backward ? theme.green : theme.red, textDecoration: 'line-through', fontSize: 11 }}>{oldVal}</span>
+                                                <span style={{ color: theme.mut }}>→</span>
+                                                <span style={{ color: backward ? theme.red : theme.green, fontWeight: 700 }}>{m.valHex}</span>
+                                            </>
+                                        ) : (
+                                            <span>{m.valHex}</span>
+                                        )}
+                                        {m.label ? <span style={{ color: theme.mut, fontStyle: 'italic' }}>{m.label}</span> : null}
+                                        {preview?.mem?.[m.addrHex] ? (
+                                            <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
+                                                {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.mem[m.addrHex]}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
+    );
 }
 
 function StackPanel({ state, current, theme, collapsed, onToggle }) {
-  const sp = current.registers['R6 (SP)'];
-  const fp = current.registers['R5 (FP)'];
+    const [jumpAddr, setJumpAddr] = useState('');
+    const sp = current.registers['R6 (SP)'];
+    const fp = current.registers['R5 (FP)'];
 
-  return (
-    <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <PanelHeader title="Stack" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
-      {collapsed ? null : (
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '6px 8px', color: theme.mut, borderBottom: `1px solid ${theme.border}` }}>
-            <div>Arrow</div><div>Address</div><div>Value</div><div>Label</div>
-          </div>
-          {current.stack.map((r) => {
-            const arrowItems = [];
-            if (r.addrHex === sp) arrowItems.push({ text: '▶ SP', color: theme.green });
-            if (r.addrHex === fp) arrowItems.push({ text: '▶ FP', color: theme.orange });
+    const handleJump = (e) => {
+        if (e.key === 'Enter') {
+            const search = jumpAddr.trim().toLowerCase().replace(/^0x/, '');
+            if (!search) return;
+            const el = Array.from(document.querySelectorAll('[id^="stack-0x"]'))
+                .find(node => node.id.replace('stack-0x', '').endsWith(search));
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.backgroundColor = 'rgba(247,168,0,0.25)';
+                setTimeout(() => el.style.backgroundColor = 'transparent', 1500);
+            }
+        }
+    };
 
-            return (
-              <div key={`${r.addrHex}-${r.label}`} className={r.faded ? 'stack-faded' : ''} style={{
-                display: 'grid',
-                gridTemplateColumns: '66px 110px 110px 1fr',
-                gap: 8,
-                padding: '4px 8px',
-                borderBottom: `1px solid ${theme.border}`,
-                borderLeft: r.addrHex === sp ? `3px solid ${theme.green}` : (r.addrHex === fp ? `3px solid ${theme.orange}` : '3px solid transparent')
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, transition: 'transform 300ms ease' }}>
-                  {arrowItems.length === 0 ? <span style={{ color: theme.mut }}>·</span> : arrowItems.map((a) => <span key={a.text} style={{ color: a.color }}>{a.text}</span>)}
-                </div>
-                <div>{r.addrHex}</div>
-                <div>{r.valHex}</div>
-                <div style={{ color: theme.mut }}>{r.label}</div>
-              </div>
-            );
-          })}
+    return (
+        <div className="asm-panel" style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <PanelHeader title="Stack" theme={theme} right={<button className="asm-btn" onClick={onToggle}>{collapsed ? '▸' : '▾'}</button>} />
+            {collapsed ? null : (
+                <>
+                    <div style={{ padding: '6px', borderBottom: `1px solid ${theme.border}` }}>
+                        <input
+                            value={jumpAddr}
+                            onChange={e => setJumpAddr(e.target.value)}
+                            onKeyDown={handleJump}
+                            placeholder="Jump to address (e.g. fffe) & hit Enter"
+                            spellCheck={false}
+                            style={{
+                                width: '100%', height: 26, borderRadius: 4, padding: '0 8px',
+                                background: theme.terminal, color: theme.text, border: `1px solid ${theme.border}`, fontSize: 12, fontFamily: 'monospace'
+                            }}
+                        />
+                    </div>
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '6px 8px', color: theme.mut, borderBottom: `1px solid ${theme.border}` }}>
+                            <div>Arrow</div><div>Address</div><div>Value</div><div>Label</div>
+                        </div>
+                        {current.stack.map((r) => {
+                            const arrowItems = [];
+                            if (r.addrHex === sp) arrowItems.push({ text: '▶ SP', color: theme.green });
+                            if (r.addrHex === fp) arrowItems.push({ text: '▶ FP', color: theme.orange });
+
+                            return (
+                                <div id={`stack-${r.addrHex.toLowerCase()}`} key={`${r.addrHex}-${r.label}`} className={r.faded ? 'stack-faded' : ''} style={{
+                                    display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '4px 8px', borderBottom: `1px solid ${theme.border}`,
+                                    borderLeft: r.addrHex === sp ? `3px solid ${theme.green}` : (r.addrHex === fp ? `3px solid ${theme.orange}` : '3px solid transparent'),
+                                    transition: 'background-color 0.4s ease'
+                                }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, transition: 'transform 300ms ease' }}>
+                                        {arrowItems.length === 0 ? <span style={{ color: theme.mut }}>·</span> : arrowItems.map((a) => <span key={a.text} style={{ color: a.color }}>{a.text}</span>)}
+                                    </div>
+                                    <div>{r.addrHex}</div>
+                                    <div>{r.valHex}</div>
+                                    <div style={{ color: theme.mut }}>{r.label}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 function BreakpointsPanel({ state, dispatch, bpDraft, setBpDraft, collapsed, onToggle }) {
@@ -2772,11 +3403,11 @@ function TimelinePanel({ state, dispatch, current, timelineVisualLine, trackRef,
                   height: 30,
                   borderRadius: 8,
                   border: `1px solid ${THEME[state.theme].border}`,
-                  background: state.theme === 'dark' ? '#121216' : '#ffffff',
+                  background: THEME[state.theme].terminal,
                   color: THEME[state.theme].text,
                   padding: '0 10px',
                   fontWeight: 600,
-                  boxShadow: state.theme === 'dark' ? 'inset 0 0 0 1px rgba(255,255,255,.03)' : 'inset 0 0 0 1px rgba(0,0,0,.03)'
+                  boxShadow: THEME[state.theme].insetShadow
                 }}
               />
               <span style={{ fontSize: 12 }}>s/line</span>
@@ -2815,7 +3446,7 @@ function TimelinePanel({ state, dispatch, current, timelineVisualLine, trackRef,
                     borderRadius: 999,
                     background: state.timelineState.educationMode
                       ? 'rgba(247,168,0,.55)'
-                      : (state.theme === 'dark' ? '#2f3036' : '#d5d7e1'),
+                      : THEME[state.theme].terminalInput,
                     transition: 'background 180ms ease'
                   }}
                 >
@@ -2850,7 +3481,7 @@ function TimelinePanel({ state, dispatch, current, timelineVisualLine, trackRef,
               if (e.key === 'ArrowLeft') onSetTimelineLine((v) => clamp((typeof v === 'number' ? v : currentIndex) - 1, 0, total));
               if (e.key === 'ArrowRight') onSetTimelineLine((v) => clamp((typeof v === 'number' ? v : currentIndex) + 1, 0, total));
             }}
-            style={{ position: 'relative', height: 48, borderRadius: 8, border: `1px solid ${THEME[state.theme].border}`, overflow: 'hidden', cursor: 'pointer', background: state.theme === 'dark' ? '#111214' : '#eceef3' }}
+            style={{ position: 'relative', height: 48, borderRadius: 8, border: `1px solid ${THEME[state.theme].border}`, overflow: 'hidden', cursor: 'pointer', background: THEME[state.theme].terminal }}
           >
             <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: 10, background: 'linear-gradient(90deg, rgba(79,124,255,.65), rgba(79,124,255,.2))', width: `${playheadPercent}%`, transition: state.timelineState.playing ? 'none' : 'width 200ms ease' }} />
             <div style={{ position: 'absolute', left: 0, top: 12, right: 0, height: 14, display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, total + 1)}, 1fr)` }}>
