@@ -1853,7 +1853,7 @@ function Ilcc() {
   const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
   const [isBackendBusy, setIsBackendBusy] = useState(false);
   const [editorTerminalSplit, setEditorTerminalSplit] = useState(62);
-  const [rightPanelWidth, setRightPanelWidth] = useState(420);
+    const [rightPanelWidth, setRightPanelWidth] = useState(1000);
   const [collapsed, setCollapsed] = useState({
     stack: false,
     editor: false,
@@ -2333,7 +2333,7 @@ function Ilcc() {
           <div className="asm-vsplitter" onMouseDown={beginRightPanelDrag}>
             <div className="asm-vsplitter-line" />
           </div>
-          <div style={{ minHeight: 0, display: 'grid', gridTemplateRows: 'minmax(170px, .9fr) minmax(180px, .8fr) minmax(260px, 1.8fr)', gap: 10 }}>
+          <div style={{ minHeight: 0, display: 'grid', gridTemplateColumns: '1.2fr 1.6fr 1.4fr', gap: 10, height: '100%' }}>
            <RegistersPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.registers} onToggle={() => setCollapsed((c) => ({ ...c, registers: !c.registers }))} />
             <StackPanel state={state} current={current} theme={t} collapsed={collapsed.stack} onToggle={() => setCollapsed((c) => ({ ...c, stack: !c.stack }))} />
             <MemoryPanel state={state} current={current} prev={prev} next={next} activeDiff={activeDiff} preview={preview} theme={t} collapsed={collapsed.memory} onToggle={() => setCollapsed((c) => ({ ...c, memory: !c.memory }))} />
@@ -2425,7 +2425,7 @@ function TopBar({ state, dispatch, onImport, onExport, onSelectSample, onForceTr
           WebLCC
         </button>
         <span style={{ color: THEME[state.theme].border, fontSize: 16 }}>|</span>
-        <strong style={{ letterSpacing: '.04em' }}>CPS340</strong>
+        <strong style={{ letterSpacing: '.04em' }}>CPS330</strong>
         <select
           value={sampleChoice}
           onChange={(e) => {
@@ -3090,7 +3090,7 @@ function MemoryPanel({ state, current, prev, next, activeDiff, preview, theme, c
                 .find(node => node.id.replace('mem-0x', '').endsWith(search));
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.style.backgroundColor = 'rgba(247,168,0,0.25)'; // Highlight pulse
+                el.style.backgroundColor = 'rgba(247,168,0,0.25)';
                 setTimeout(() => el.style.backgroundColor = 'transparent', 1500);
             }
         }
@@ -3106,7 +3106,7 @@ function MemoryPanel({ state, current, prev, next, activeDiff, preview, theme, c
                             value={jumpAddr}
                             onChange={e => setJumpAddr(e.target.value)}
                             onKeyDown={handleJump}
-                            placeholder="Jump to address (e.g. 4801) & hit Enter"
+                            placeholder="Jump to address..."
                             spellCheck={false}
                             style={{
                                 width: '100%', height: 26, borderRadius: 4, padding: '0 8px',
@@ -3119,14 +3119,14 @@ function MemoryPanel({ state, current, prev, next, activeDiff, preview, theme, c
                             Previewing {preview.offset > 0 ? `+${preview.offset}` : preview.offset} steps {preview.offset > 0 ? 'ahead' : 'back'} — not executed
                         </div>
                     ) : null}
-                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', transition: 'background-color 0.3s' }}>
+                    <div style={{ flex: 1, minHeight: 0, overflow: 'auto', transition: 'background-color 0.3s', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
                         {current.memory.map((m) => {
                             const changed = activeDiff.mem.has(m.addrHex);
                             const backward = activeDiff.backward;
                             const oldVal = oldMap.get(m.addrHex) || '0x00000000';
 
                             return (
-                                <div id={`mem-${m.addrHex.toLowerCase()}`} key={m.addrHex} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '95px 1fr', padding: '4px 8px', borderBottom: `1px solid ${theme.border}`, gap: 8, transition: 'background-color 0.4s ease' }}>
+                                <div id={`mem-${m.addrHex.toLowerCase()}`} key={m.addrHex} className={changed ? 'diff-flash' : ''} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', padding: '4px 8px', borderBottom: `1px solid ${theme.border}`, gap: 8, transition: 'background-color 0.4s ease' }}>
                                     <div style={{ color: theme.mut }}>{m.addrHex}</div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                                         {changed ? (
@@ -3138,7 +3138,7 @@ function MemoryPanel({ state, current, prev, next, activeDiff, preview, theme, c
                                         ) : (
                                             <span>{m.valHex}</span>
                                         )}
-                                        {m.label ? <span style={{ color: theme.mut, fontStyle: 'italic' }}>{m.label}</span> : null}
+                                        {m.label ? <span style={{ color: theme.mut, fontStyle: 'italic', fontSize: 11 }}>{m.label}</span> : null}
                                         {preview?.mem?.[m.addrHex] ? (
                                             <span style={{ marginLeft: 'auto', opacity: 0.7, fontStyle: 'italic', color: preview.offset > 0 ? theme.green : theme.orange, fontSize: 12 }}>
                                                 {preview.offset > 0 ? `⏱+${preview.offset}` : `↩${preview.offset}`} → {preview.mem[m.addrHex]}
@@ -3184,7 +3184,7 @@ function StackPanel({ state, current, theme, collapsed, onToggle }) {
                             value={jumpAddr}
                             onChange={e => setJumpAddr(e.target.value)}
                             onKeyDown={handleJump}
-                            placeholder="Jump to address (e.g. fffe) & hit Enter"
+                            placeholder="Jump to address..."
                             spellCheck={false}
                             style={{
                                 width: '100%', height: 26, borderRadius: 4, padding: '0 8px',
@@ -3193,26 +3193,28 @@ function StackPanel({ state, current, theme, collapsed, onToggle }) {
                         />
                     </div>
                     <div style={{ flex: 1, minHeight: 0, overflow: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '6px 8px', color: theme.mut, borderBottom: `1px solid ${theme.border}` }}>
-                            <div>Arrow</div><div>Address</div><div>Value</div><div>Label</div>
+                        {/* UPDATED HEADER: Removed Label column, adjusted widths */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr', gap: 8, padding: '6px 8px', color: theme.mut, borderBottom: `1px solid ${theme.border}` }}>
+                            <div></div><div>Address</div><div>Value</div>
                         </div>
                         {current.stack.map((r) => {
                             const arrowItems = [];
-                            if (r.addrHex === sp) arrowItems.push({ text: '▶ SP', color: theme.green });
-                            if (r.addrHex === fp) arrowItems.push({ text: '▶ FP', color: theme.orange });
+                            // Removed the arrow icons to save horizontal space
+                            if (r.addrHex === sp) arrowItems.push({ text: 'SP', color: theme.green });
+                            if (r.addrHex === fp) arrowItems.push({ text: 'FP', color: theme.orange });
 
                             return (
                                 <div id={`stack-${r.addrHex.toLowerCase()}`} key={`${r.addrHex}-${r.label}`} className={r.faded ? 'stack-faded' : ''} style={{
-                                    display: 'grid', gridTemplateColumns: '66px 110px 110px 1fr', gap: 8, padding: '4px 8px', borderBottom: `1px solid ${theme.border}`,
+                                    display: 'grid', gridTemplateColumns: '40px 1fr 1fr', gap: 8, padding: '4px 8px', borderBottom: `1px solid ${theme.border}`,
                                     borderLeft: r.addrHex === sp ? `3px solid ${theme.green}` : (r.addrHex === fp ? `3px solid ${theme.orange}` : '3px solid transparent'),
                                     transition: 'background-color 0.4s ease'
                                 }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, transition: 'transform 300ms ease' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, fontWeight: 'bold', paddingTop: 2 }}>
                                         {arrowItems.length === 0 ? <span style={{ color: theme.mut }}>·</span> : arrowItems.map((a) => <span key={a.text} style={{ color: a.color }}>{a.text}</span>)}
                                     </div>
                                     <div>{r.addrHex}</div>
                                     <div>{r.valHex}</div>
-                                    <div style={{ color: theme.mut }}>{r.label}</div>
+                                    {/* Label div was removed here */}
                                 </div>
                             );
                         })}

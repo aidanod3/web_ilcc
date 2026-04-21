@@ -216,7 +216,7 @@ export default function Home() {
             fontWeight: 400,
             color: '#6b7280',
             letterSpacing: '0',
-          }}>LCC · CPS340</span>
+          }}>LCC · CPS330</span>
         </h1>
 
         {/* CTA row */}
