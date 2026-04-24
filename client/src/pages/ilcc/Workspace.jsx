@@ -1,5 +1,5 @@
 /*
- * Main.jsx — Primary layout for the ILCC page.
+ * Workspace.jsx — Primary layout for the ILCC page.
  *
  * Two-column layout that fills all space below the Header:
  *
@@ -19,14 +19,14 @@
  */
 
 import { Panel, Group, Separator } from 'react-resizable-panels';
-import styles from './Main.module.css';
+import styles from './Workspace.module.css';
 import Editor from './panels/Editor';
 import Terminal from './panels/Terminal';
 import CPU from './panels/CPU';
 import Stack from './panels/Stack';
 import Memory from './panels/Memory';
 
-export default function Main({ editorRef, output, debugState, isDebugging }) {
+export default function Workspace({ editorRef, output, debugState, isDebugging }) {
   return (
     <div className={styles.layout}>
 

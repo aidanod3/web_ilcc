@@ -19,7 +19,7 @@
 
 import { useRef } from 'react';
 import Header from './Header';
-import Main from './Main';
+import Workspace from './Workspace';
 import useRunProgram from '../../hooks/useRunProgram';
 import useDebugSession from '../../hooks/useDebugSession';
 
@@ -75,8 +75,8 @@ export default function Ilcc() {
         iteration={debug_session.iteration}
       />
 
-      {/* Main content area: editor, terminal, and debugger panels */}
-      <Main
+      {/* Workspace: editor, terminal, and debugger panels */}
+      <Workspace
         editorRef={editorRef}
         output={debug_session.isDebugging ? debug_session.output : runner.output}
         debugState={debug_session.state}

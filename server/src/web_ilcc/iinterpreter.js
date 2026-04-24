@@ -4,8 +4,9 @@
 
 const fs = require("fs");
 const path = require("path");
-const { generateBSTLSTContent } = require("../utils/genStats.js");
-const nameHandler = require("../utils/name.js");
+/* Stats, name file, and diff removed — not needed for web app */
+const generateBSTLSTContent = () => '';
+const nameHandler = { createNameFile: () => '' };
 
 const newline = process.platform === "win32" ? "\r\n" : "\n";
 
@@ -46,6 +47,8 @@ class Interpreter {
 		this.instructionsCap = 500000; // Limit the number of instructions to prevent infinite loops
 		this.debugMode = false; // Debug mode flag
 		this.hasJumped = false; // Flag to track jump/branch instruction executions
+		this.currentIteration = 0; // What step of interpretation are we on. Cannot go negative
+		this.snapshot = []; // Contains what updates occured at any step in memory. Appended to when new sections of program are executed
 	}
 
 	main(args) {
@@ -280,6 +283,9 @@ class Interpreter {
 
 	// extracts header entries and loads machine code into memory
 	loadExecutableBuffer(buffer) {
+		if (this.options.loadPoint != null) {
+			this.loadPoint = this.options.loadPoint;
+		}
 		let offset = 0;
 
 		// Read file signature
@@ -360,15 +366,932 @@ class Interpreter {
 		this.pc = (this.loadPoint + startAddress) & 0xffff;
 	}
 
-	run() {
+	initializeLog() {
+		this.snapshot = [];
+		this.currentIteration = 0;
+		this.memoryChange = {
+			hasChanged: false,
+			address: this.loadPoint,
+			old: Array(this.memMax + 1 - this.loadPoint).fill(0),
+			new: this.initialMem.slice(this.loadPoint, this.memMax + 1),
+		};
+		let logEntry = {
+			pc: this.pc,
+			ir: 0,
+			registers: this.r.slice(),
+			flags: { c: this.c, v: this.v, n: this.n, z: this.z },
+			memory: this.memoryChange,
+		};
+		this.snapshot.push(logEntry);
+	}
+
+	run(listing) {
 		this.spInitial = this.r[6]; // Assuming r6 is the stack pointer
 
+		let update;
+		let newlineCount = 0;
+		let memoryDisplayRows = 10; // Number of memory rows to display
+		let memoryBaseAddress = this.loadPoint; // Base address for memory display
+		let stackOptions = {
+			mode: "relative",
+			stackBaseAddress: 0xfff2,
+			register: 5,
+		}; // Can be relative mode or static mode
+		// Register mode will follow a relative, static mode will stay fixed at a given address
+		let stepNumber = 1; // Number of steps to execute
+		let lastStepNumber = stepNumber;
+		let skipSteps = false;
+		let skipDisplay = false;
+		let paneLayout = { column0: "ro", column1: "mc", column2: "" };
+		let columnCount = 1;
+		let codeLines = 20;
+		let colors = {
+			old: "\x1b[91m",
+			new: "\x1b[92m",
+			reset: "\x1b[m",
+			highlight: "\x1b[48;5;238m",
+		};
+
+    let cleanListing = this.locationLineMap(listing);
+
+    if (this.options.instructionCap != null) {
+      this.instructionsCap = Math.max(1, this.options.instructionCap);
+    }
+
+		if (this.options.interactiveMode) {
+			this.initializeLog();
+
+			update = this.stateUpdates(0, 0);
+			newlineCount = this.displayInteractiveMode(
+				cleanListing,
+				update,
+				memoryBaseAddress,
+				memoryDisplayRows,
+				stackOptions,
+				paneLayout,
+				codeLines,
+				colors
+			);
+			console.log("\nTo view all commands, enter 'h'\n");
+			newlineCount += 3;
+			if (this.options.colorblindMode) {
+				colors.old = "\x1b[93m";
+				colors.new = "\x1b[94m";
+			}
+		}
+		this.lineLength = 0;
+
 		while (this.running) {
-			this.step();
+			if (this.options.interactiveMode) {
+				process.stdout.write("Input: ");
+				newlineCount++;
+				lastStepNumber = stepNumber;
+				skipSteps = false;
+				skipDisplay = false;
+				let input = this.readLineFromStdin();
+				let output;
+
+				switch (input.inputLine[0]) {
+					case "h": // Print the help menu
+						this.clearLines(newlineCount);
+						newlineCount = this.displayHelpMenu();
+						skipSteps = true;
+						skipDisplay = true;
+						output = { error: "" };
+						break;
+					case "a": // Set Memory Display address
+						output = this.handleMemoryInput(
+							input.inputLine.substring(1)
+						);
+						if (output.error == "") {
+							memoryBaseAddress = output.memoryBaseAddress;
+							skipSteps = true;
+						}
+						break;
+					case "m": // Set Memory Display Rows
+						output = this.handleRowsInput(
+							input.inputLine.substring(1)
+						);
+						if (output.error == "") {
+							memoryDisplayRows = output.memoryDisplayRows;
+							skipSteps = true;
+						}
+						break;
+					case "s": // Set stack mode
+						output = this.handleStackInput(
+							input.inputLine.substring(1)
+						);
+						if (output.error == "") {
+							stackOptions = output.stackOptions;
+							skipSteps = true;
+						}
+						break;
+					case "c": // Set code window lines
+						output = this.handleCodeWindowLines(
+							input.inputLine.substring(1)
+						);
+						if (output.error == "") {
+							codeLines = output.codeLines;
+							skipSteps = true;
+						}
+						break;
+					case "l": // Set pane layout
+						output = this.handlePaneLayout(
+							input.inputLine.substring(1)
+						);
+						if (output.error == "") {
+							paneLayout = output.paneLayout;
+							columnCount = output.columnCount;
+							skipSteps = true;
+						}
+						break;
+
+					case "q": // Quit
+						this.running = false;
+						output = { error: "" };
+						break;
+					default:
+						output = this.handleStepsInput(
+							input.inputLine,
+							lastStepNumber
+						);
+						if (output.error == "") {
+							stepNumber = output.stepNumber;
+						}
+				}
+
+				if (output.error != "") {
+					console.error(output.error);
+					newlineCount++;
+					continue;
+				}
+
+				if (!skipDisplay) this.clearLines(newlineCount);
+
+        let originalIteration = this.currentIteration;
+        if (!skipSteps) this.handleSteps(stepNumber);
+        let newIteration = this.currentIteration;
+
+        if (!this.options.efficicentMode) {
+          update = this.stateUpdates(originalIteration, newIteration);
+        } else {
+          update = this.stateUpdates(0, 1);
+        }
+
+				if (!skipDisplay)
+					newlineCount = this.displayInteractiveMode(
+						cleanListing,
+						update,
+						memoryBaseAddress,
+						memoryDisplayRows,
+						stackOptions,
+						paneLayout,
+						codeLines,
+						colors
+					);
+
+				// let spaces = "=".repeat((48 * columnCount) / 2 - 4);
+				// process.stdout.write(`${spaces}`);
+				// process.stdout.write(` Output `);
+				// process.stdout.write(`${spaces}\n`);
+
+				// console.log(this.output);
+				// newlineCount += (this.output.match(/\n/g) || []).length + 2;
+			} else {
+				// Normal LCC execution, handle 1 step at a time until termination
+				this.handleSteps(1);
+			}
 		}
 	}
 
-	step() {
+	isHexNumber(input) {
+		return /^(0x)?[0-9a-fA-F]+$/.test(input);
+	}
+
+	isDecNumber(input) {
+		return /^-?\d+$/.test(input);
+	}
+
+	displayHelpMenu() {
+		let infoPrompt = "\nCommands:\n";
+		infoPrompt += "h: Help\n";
+		infoPrompt +=
+			" - Displays this help menu. Do not add {} in commands.\n\n";
+		infoPrompt +=
+			"a{hex}: Memory Display Address Selector (default loadPoint)\n";
+		infoPrompt += " - Memory Display module will start at address {hex}\n";
+		infoPrompt += " - (e.g., m1, m100, mfff0)\n\n";
+		infoPrompt += "m{int}: Memory Display Rows Selector (default 10)\n";
+		infoPrompt += " - Memory Display module will show {int} rows\n";
+		infoPrompt += " - 0 will turn off module\n";
+		infoPrompt += " - (e.g. r10, r20, r0)\n\n";
+		infoPrompt += "c{int}: Code Snippet Rows Selector (default 5)\n";
+		infoPrompt += " - Code Snippet module will show {int} rows\n";
+		infoPrompt += " - 0 will turn off module\n";
+		infoPrompt += " - (e.g. c10, c20, c0)\n\n";
+		infoPrompt += "s{hex}: Stack Controller Static Mode\n";
+		infoPrompt += " - Add a hex number after 's' to set Stack view to\n";
+		infoPrompt += " - start and stay at that address.\n";
+		infoPrompt += " - (e.g., sfff0, s3000, s0)\n\n";
+		infoPrompt +=
+			"s{register}: Stack Controller Follow Mode (default fp)\n";
+		infoPrompt += " - Will set the Stack view to follow memory\n";
+		infoPrompt += " - centered around address in {register}\n";
+		infoPrompt += " - (e.g., sr0, sr5, sfp)\n\n";
+		infoPrompt += "l{'r,c,m,o,/'}: Layout Editor (default ro/mc) \n";
+		infoPrompt += " - Will change the layout of the information panes\n";
+		infoPrompt += " - with up to 3 columns of panes.\n";
+		infoPrompt += " - Enter panes from top down, with '/' to move to\n";
+		infoPrompt += " - next column. 'r' for Register pane,\n";
+		infoPrompt += " - 'c' for Code Snippet, 'm' for Memory Display\n";
+		infoPrompt += " - and 'o' for Output. No letter will hide pane\n";
+		infoPrompt += " - (e.g., lrmo/c, lro/c/m, lcm,ro)\n\n";
+		infoPrompt += "q: Quit \n";
+		infoPrompt += " - Terminates the program in it's current state\n\n";
+		infoPrompt += "{int}: Step Selector (default 1)\n";
+		infoPrompt += " - Enter a positive or negative number of steps\n";
+		infoPrompt += " - for the program to step through. The last\n";
+		infoPrompt += " - entered step value is remembered\n";
+		infoPrompt += " - 0 will reprint the current state\n";
+		console.log(infoPrompt);
+		let newlineCount = (infoPrompt.match(/\n/g) || []).length + 1;
+		return newlineCount;
+	}
+
+	handleMemoryInput(inputLine) {
+		let output = { error: "" };
+
+		if (this.isHexNumber(inputLine)) {
+			output.memoryBaseAddress = parseInt(inputLine, 16);
+		} else {
+			output.error = "Invalid input. Please enter a hex number.";
+		}
+
+		return output;
+	}
+
+	handleRowsInput(inputLine) {
+		let output = { error: "" };
+
+		if (this.isDecNumber(inputLine)) {
+			output.memoryDisplayRows = Math.max(0, parseInt(inputLine, 10));
+		} else {
+			output.error = "Invalid input. Please enter a number.";
+		}
+
+		return output;
+	}
+
+	handleStackInput(inputLine) {
+		let stackOptions = {};
+		let output = { error: "", stackOptions: stackOptions };
+		switch (inputLine) {
+			case "r0":
+				stackOptions.register = 0;
+				stackOptions.mode = "relative";
+				break;
+			case "r1":
+				stackOptions.register = 1;
+				stackOptions.mode = "relative";
+				break;
+			case "r2":
+				stackOptions.register = 2;
+				stackOptions.mode = "relative";
+				break;
+			case "r3":
+				stackOptions.register = 3;
+				stackOptions.mode = "relative";
+				break;
+			case "r4":
+				stackOptions.register = 4;
+				stackOptions.mode = "relative";
+				break;
+			case "r5":
+			case "fp":
+				stackOptions.register = 5;
+				stackOptions.mode = "relative";
+				break;
+			case "r6":
+			case "sp":
+				stackOptions.register = 6;
+				stackOptions.mode = "relative";
+				break;
+			case "r7":
+			case "lr":
+				stackOptions.register = 7;
+				stackOptions.mode = "relative";
+				break;
+			default:
+				if (this.isHexNumber(inputLine)) {
+					stackOptions.stackBaseAddress = parseInt(inputLine, 16);
+					stackOptions.mode = "static";
+				} else {
+					output.error =
+						"Invalid input. Please enter a hex number or register.";
+				}
+		}
+		return output;
+	}
+
+	handleCodeWindowLines(inputLine) {
+		let output = { error: "" };
+		if (inputLine == "") {
+			output.codeLines = 0;
+		} else if (this.isDecNumber(inputLine)) {
+			output.codeLines = Math.max(0, parseInt(inputLine, 10));
+		} else {
+			output.error = "Invalid input. Please enter a number.";
+		}
+		return output;
+	}
+
+	handlePaneLayout(inputLine) {
+		let output = {
+			error: "",
+			paneLayout: { column0: "", column1: "", column2: "" },
+			columnCount: 1,
+		};
+		let lineSplit = inputLine.split("/");
+		output.columnCount = lineSplit.length;
+
+		for (let i = 0; i < lineSplit.length; i++) {
+			for (let j = 0; j < lineSplit[i].length; j++) {
+				let char = lineSplit[i][j];
+				switch (char) {
+					case "r":
+					case "c":
+					case "m":
+					case "o":
+						output.paneLayout[`column${i}`] += char;
+						break;
+					default:
+						output.error = `${char} is not a valid pane identifier. Only 'r', 'c', and 'm' are.`;
+						return output;
+				}
+			}
+		}
+
+		return output;
+	}
+
+  handleStepsInput(inputLine, lastStepNumber) {
+    let output = { error: "" };
+    if (inputLine == "") {
+      output.stepNumber = lastStepNumber;
+    } else if (this.isDecNumber(inputLine)) {
+      output.stepNumber = parseInt(inputLine, 10);
+      if (this.options.efficicentMode && output.stepNumber < 0) {
+        output.error = "Cannot go backwards in efficicent mode.";
+      }
+    } else {
+      output.error = "Invalid input. Please enter a number.";
+    }
+    return output;
+  }
+
+	clearLines(linesToClear) {
+		// Move cursor up however many lines we wrote in this iteration
+		process.stdout.write(`\x1b[${linesToClear}A`);
+		// if (this.lineLength > 0) {
+		// 	// If there was already output on this line, move cursor past current output
+		// 	process.stdout.write(`\x1b[${this.lineLength}C`);
+		// }
+		// Clear from cursor to bottom of screen
+		process.stdout.write(`\x1b[0J`);
+	}
+
+	handleSteps(stepNumber) {
+		if (stepNumber === 0) {
+			// Reprint current state
+			return;
+		}
+		// Check if new instructions are to be executed
+		if (stepNumber > 0) {
+			// When true, new inputs from user should be read, otherwise, restore the input
+			for (let i = 0; i < Math.abs(stepNumber) && this.running; i++) {
+				this.currentIteration++;
+				this.executeNextInstruction(
+					this.currentIteration == this.snapshot.length
+				);
+			}
+		} else {
+			// New State should not be less than 0
+			let newState = Math.max(this.currentIteration + stepNumber, 0);
+			this.restorePrevState(newState);
+			this.currentIteration = newState;
+		}
+	}
+
+	restorePrevState(newState) {
+		let log = this.snapshot[newState];
+
+		// Restore old pc
+		this.pc = log.pc;
+
+		// Restore old flags
+		this.c = log.flags.c;
+		this.v = log.flags.v;
+		this.n = log.flags.n;
+		this.z = log.flags.z;
+
+		// Restore old register values
+		for (let i = 0; i < 8; i++) this.r[i] = log.registers[i];
+
+		// Undo any changes to memory
+		for (let i = this.currentIteration; i >= newState; i--) {
+			if (this.snapshot[i].memory.hasChanged) {
+				this.restorePrevMemory(i);
+			}
+		}
+	}
+
+	restorePrevMemory(state) {
+		// console.log("TEST: ", this.snapshot[state], state);
+		// console.log("MEMORY: ", this.snapshot[state].memory);
+
+		let oldMem = this.snapshot[state].memory;
+		if (oldMem.address != null) {
+			let oldValues = oldMem.old;
+			for (let i = 0; i < oldValues.length; i++) {
+				this.mem[oldMem.address + i] = oldValues[i];
+			}
+		}
+	}
+
+	stateUpdates(oldIteration, newIteration) {
+		oldIteration = Math.max(oldIteration, 0);
+		newIteration = Math.max(newIteration, 0);
+		// console.log("State Updates: ", oldIteration, newIteration);
+
+		let update = {
+			registers: {
+				old: this.snapshot[oldIteration].registers,
+				new: this.snapshot[newIteration].registers,
+			},
+			pc: {
+				old: this.snapshot[oldIteration].pc,
+				new: this.snapshot[newIteration].pc,
+			},
+			ir: {
+				old: this.snapshot[oldIteration].ir,
+				new: this.snapshot[newIteration].ir,
+			},
+			flags: {
+				old: this.snapshot[oldIteration].flags,
+				new: this.snapshot[newIteration].flags,
+			},
+			memory: {},
+		};
+
+		// Track all memory changes between two iterations
+		let changes = {};
+		if (oldIteration < newIteration) {
+			for (let i = newIteration; i > oldIteration; i--) {
+				let memoryChange = this.snapshot[i].memory;
+				if (memoryChange.hasChanged) {
+					let baseAddress = memoryChange.address;
+					let length = memoryChange.new.length;
+					for (let j = 0; j < length; j++) {
+						changes[baseAddress + j] = memoryChange.old[j];
+					}
+				}
+			}
+		} else {
+			for (let i = newIteration + 1; i <= oldIteration; i++) {
+				let memoryChange = this.snapshot[i].memory;
+				if (memoryChange.hasChanged) {
+					let baseAddress = memoryChange.address;
+					let length = memoryChange.new.length;
+					for (let j = 0; j < length; j++) {
+						changes[baseAddress + j] = memoryChange.new[j];
+					}
+				}
+			}
+			update.pc = {
+				old: this.snapshot[newIteration].pc,
+				new: this.snapshot[oldIteration].pc,
+			};
+		}
+		// Compare change values with this.mem to detect true changes
+		for (let address in changes) {
+			let oldValue = changes[address];
+			let newValue = this.mem[address];
+			if (oldValue != newValue) {
+				update.memory[address] = { old: oldValue, new: newValue };
+			}
+		}
+
+		// console.log(update);
+
+		return update;
+	}
+
+	locationLineMap(listing) {
+		let keys = {};
+		let lines = [];
+		for (const key of Object.keys(listing)) {
+			let line = listing[key];
+			keys[listing[key].locCtr] = lines.length;
+			lines.push(line);
+		}
+		return { keys: keys, lines: lines };
+	}
+
+	codeSnippetSyntaxHighlight(listing) {
+		let outputString = "";
+		let colors = {
+			green: "\x1b[92m",
+			purple: "\x1b[38;5;141m",
+			red: "\x1b[91m",
+			yellow: "\x1b[38;5;228m",
+			reset: "\x1b[39m",
+		};
+
+		if (listing.macWord != null) {
+			return listing.sourceLine.replace(/[\r\n]/g, "");
+		}
+
+		if (listing.label != null) {
+			outputString += `${listing.label}:`;
+		}
+
+		outputString = outputString.padEnd(12);
+
+		outputString += `${colors.green}${listing.mnemonic}${colors.reset} `;
+
+		for (let operand of listing.operands) {
+			if (/(r[0-7]|fp|sp|lr)\b/.test(operand)) {
+				outputString += `${colors.red}${operand}${colors.reset}`;
+			} else if (
+				this.isDecNumber(operand) ||
+				/^0x[0-9a-fA-F]+$/.test(operand) ||
+				/'[^"]*'/.test(operand)
+			) {
+				outputString += `${colors.purple}${operand}${colors.reset}`;
+			} else if (/"[^"]*"/.test(operand)) {
+				outputString += `${colors.yellow}${operand}${colors.reset}`;
+			} else {
+				outputString += `${operand}`;
+			}
+			outputString += ", ";
+		}
+
+		if (listing.operands.length > 0) {
+			outputString = outputString.slice(0, outputString.length - 2);
+		}
+
+		return outputString;
+	}
+
+	getVisibleLength(str) {
+		// Utility function to get the visible length of a string (excluding ANSI codes)
+		return str.replace(/\x1b\[[0-9;]*m/g, "").length;
+	}
+
+	registerStackDisplay(update, colors, stackOptions) {
+		let stackAddress = 0xfff2;
+		switch (stackOptions.mode) {
+			case "relative":
+				let relativeAddress =
+					update.registers.new[stackOptions.register];
+				let displaySize = 4;
+				if (
+					relativeAddress < 0xffff - displaySize &&
+					relativeAddress != 0
+				) {
+					stackAddress = Math.max(relativeAddress - 9, 0);
+				}
+
+				break;
+			case "static":
+				stackAddress = stackOptions.stackBaseAddress;
+				break;
+		}
+
+		stackAddress = Math.max(0, Math.min(0xfff2, stackAddress));
+
+		let newfp = update.registers.new[5];
+		let newsp = update.registers.new[6];
+		let oldfp = update.registers.old[5];
+		let oldsp = update.registers.old[6];
+
+		let outputLines = [];
+
+		outputLines.push("┌─────────────────┬────────────────────────────┐");
+		outputLines.push("│    Registers    │ Stack ─ Addr ─── Memory    │");
+		outputLines.push("├─────────────────┼───────┬──────┬─────────────┤");
+		// Handle base registers
+		for (let i = 0; i < 14; i++) {
+			let oldRegValue = "";
+			let newRegValue = "";
+			let registerName = "";
+			// r0 to r7
+			if (i < 8) {
+				oldRegValue = update.registers.old[i]
+					.toString(16)
+					.padStart(4, "0");
+				newRegValue = update.registers.new[i]
+					.toString(16)
+					.padStart(4, "0");
+				registerName = `r${i.toString()}`;
+			} else if (i >= 9 && i <= 11) {
+				oldRegValue = update.registers.old[i - 4]
+					.toString(16)
+					.padStart(4, "0");
+				newRegValue = update.registers.new[i - 4]
+					.toString(16)
+					.padStart(4, "0");
+				registerName = ["fp", "sp", "lr"][i - 9];
+			} else if (i === 12) {
+				oldRegValue = update.pc.old.toString(16).padStart(4, "0");
+				newRegValue = update.pc.new.toString(16).padStart(4, "0");
+				registerName = "pc";
+			} else if (i === 13) {
+				oldRegValue = update.ir.old.toString(16).padStart(4, "0");
+				newRegValue = update.ir.new.toString(16).padStart(4, "0");
+				registerName = "ir";
+			}
+
+			let outputString = "";
+
+			if (i === 8) {
+				outputString += `├─────────────────┤ `;
+			} else {
+				if (oldRegValue !== newRegValue) {
+					outputString += `│ ${registerName}: ${colors.old}${oldRegValue}${colors.reset} > ${colors.new}${newRegValue}${colors.reset} │ `;
+				} else {
+					outputString += `│ ${registerName}: ${newRegValue}        │ `;
+				}
+			}
+
+			if (newfp == stackAddress) {
+				outputString += `${colors.new}fp${colors.reset}`;
+			} else if (oldfp == stackAddress) {
+				outputString += `${colors.old}fp${colors.reset}`;
+			} else {
+				outputString += "  ";
+			}
+
+			if (newsp == stackAddress) {
+				outputString += `${colors.new}sp${colors.reset}`;
+			} else if (oldsp == stackAddress) {
+				outputString += `${colors.old}sp${colors.reset}`;
+			} else {
+				outputString += "  ";
+			}
+
+			if (
+				newfp == stackAddress ||
+				oldfp == stackAddress ||
+				newsp == stackAddress ||
+				oldsp == stackAddress
+			) {
+				outputString += ">";
+			} else {
+				outputString += " ";
+			}
+
+			outputString += ` │ ${stackAddress
+				.toString(16)
+				.padStart(4, "0")} │ `;
+			if (stackAddress in update.memory) {
+				let oldMemValue = update.memory[stackAddress].old;
+				let newMemValue = update.memory[stackAddress].new;
+				outputString += `${colors.old}${oldMemValue
+					.toString(16)
+					.padStart(4, "0")}${colors.reset} > ${
+					colors.new
+				}${newMemValue.toString(16).padStart(4, "0")}${colors.reset} │`;
+			} else {
+				let memValue = this.mem[stackAddress];
+				outputString += `${memValue
+					.toString(16)
+					.padStart(4, "0")}        │`;
+			}
+			stackAddress++;
+			outputLines.push(outputString);
+		}
+
+		outputLines.push("├──────────┬──────┴─┬─────┴──┬───┴────┬────────┤");
+
+		// Handle flags
+		let outputString = "";
+		outputString += "│  Flags:  ";
+		for (let flag of ["c", "v", "n", "z"]) {
+			if (update.flags.old[flag] !== update.flags.new[flag]) {
+				outputString += `│ ${flag}: ${colors.old}${update.flags.old[flag]}${colors.reset}>${colors.new}${update.flags.new[flag]}${colors.reset} `;
+			} else {
+				outputString += `│ ${flag}: ${update.flags.new[flag]}   `;
+			}
+		}
+		outputString += "│";
+		outputLines.push(outputString);
+		outputLines.push("└──────────┴────────┴────────┴────────┴────────┘");
+		return outputLines;
+	}
+
+	codeSnippetDisplay(update, colors, listing, codeLines) {
+		let outputLines = [];
+		let mainLineKey = update.pc.old - this.loadPoint;
+		let mainLineIndex = listing.keys[mainLineKey];
+
+		let codeLinesMin = -Math.floor(codeLines / 2) + mainLineIndex;
+		let codeLinesMax =
+			Math.floor(codeLines / 2) + (codeLines % 2) + mainLineIndex;
+
+		if (codeLinesMin < 0) {
+			codeLinesMax += -codeLinesMin;
+			codeLinesMin = 0;
+		} else if (codeLinesMax > listing.lines.length) {
+			codeLinesMin -= codeLinesMax - listing.lines.length;
+			codeLinesMax = listing.lines.length;
+		}
+
+		codeLinesMin = Math.max(codeLinesMin, 0);
+		codeLinesMax = Math.min(codeLinesMax, listing.lines.length);
+
+		outputLines.push("┌───────────────┤ Code Snippet ├───────────────┐");
+
+		for (let i = codeLinesMin; i < codeLinesMax; i++) {
+			let outputString = "";
+
+			let codeLine = this.codeSnippetSyntaxHighlight(listing.lines[i]);
+
+			// Remove ANSI codes for length calculation
+			const visibleLength = this.getVisibleLength(codeLine);
+			let prefix = i === mainLineIndex ? "> " : "  ";
+			let padded = codeLine + " ".repeat(42 - visibleLength);
+
+			// Now add the prefix and wrap in the box
+			if (i === mainLineIndex) {
+				outputString += `│ \x1b[48;5;236m${prefix}${padded}${colors.reset} │`;
+			} else {
+				outputString += `│ ${prefix}${padded} │`;
+			}
+			outputLines.push(outputString);
+		}
+		outputLines.push("└──────────────────────────────────────────────┘");
+		return outputLines;
+	}
+
+	memoryDisplayDisplay(update, colors, baseMemAddress, memoryRows) {
+		let outputLines = [];
+		outputLines.push("┌────┬─────────┤ Memory Display ├──────────────┐");
+		outputLines.push(
+			"│\x1b[4mAddr│  +0   +1   +2   +3   +4   +5   +6   +7  \x1b[0m│"
+		);
+		let outputString = "";
+
+		for (let i = 0; i < 8 * memoryRows; i++) {
+			let addr = baseMemAddress + i;
+			if (addr > 0xffff) {
+				if (baseMemAddress % 8 != 0) {
+					let offset = (baseMemAddress % 8) * 5 + 1; // Calculate the offset for the next row
+					outputString += " ".repeat(offset) + "│";
+					outputLines.append(outputString);
+				}
+				break; // Stop if we exceed the maximum memory address
+			}
+			let value =
+				this.mem[addr] !== undefined
+					? this.mem[addr].toString(16).padStart(4, "0")
+					: "xxxx";
+			if (i % 8 === 0) {
+				outputString += `│${addr.toString(16).padStart(4, "0")}│`;
+			}
+			if (addr == update.pc.old) {
+				outputString += `>${colors.highlight}${value}${colors.reset}`;
+			} else if (addr in update.memory) {
+				outputString += ` ${colors.new}${value}${colors.reset}`;
+			} else {
+				outputString += ` ${value}`;
+			}
+			if (i % 8 === 7) {
+				outputString += " │";
+				outputLines.push(outputString);
+				outputString = "";
+			}
+		}
+		outputLines.push("└────┴─────────────────────────────────────────┘");
+		return outputLines;
+	}
+
+	outputDisplay() {
+		let outputLines = [];
+		let brokenOutput = this.output.split("\n");
+
+		// console.log(brokenOutput);
+
+		outputLines.push("┌──────────────────┤ Output ├──────────────────┐");
+
+		for (let codeIndex = 0; codeIndex < brokenOutput.length; codeIndex++) {
+			let codeLine = brokenOutput[codeIndex].replaceAll("\r", "");
+			if (codeLine == "") {
+				continue;
+			}
+			while (codeLine.length > 44) {
+				outputLines.push(`│ ${codeLine.slice(0, 44)} │`);
+				codeLine = codeLine.slice(44);
+			}
+
+			outputLines.push(`│ ${codeLine.padEnd(44)} │`);
+		}
+
+		outputLines.push("└──────────────────────────────────────────────┘");
+		return outputLines;
+	}
+
+	displayInteractiveMode(
+		cleanListing,
+		update,
+		baseMemAddress = 0,
+		memoryRows = 10,
+		stackOptions,
+		paneLayout,
+		codeLines,
+		colors
+	) {
+		let registerStackOutput = [];
+		registerStackOutput = this.registerStackDisplay(
+			update,
+			colors,
+			stackOptions
+		);
+
+		let codeSnippetOutput = [];
+		if (codeLines != 0) {
+			codeSnippetOutput = this.codeSnippetDisplay(
+				update,
+				colors,
+				cleanListing,
+				codeLines
+			);
+		}
+
+		let memoryDisplayOutput = [];
+		if (memoryRows != 0) {
+			memoryDisplayOutput = this.memoryDisplayDisplay(
+				update,
+				colors,
+				baseMemAddress,
+				memoryRows
+			);
+		}
+
+		let outputDisplayOutput = [];
+		outputDisplayOutput = this.outputDisplay();
+
+		let outputString = "\n";
+
+		let columns = [[], [], []];
+
+		for (let i = 0; i < 3; i++) {
+			let tokens = paneLayout[`column${i}`];
+			for (let char of tokens) {
+				let element = [];
+				switch (char) {
+					case "r":
+						element = registerStackOutput;
+						break;
+					case "c":
+						element = codeSnippetOutput;
+						break;
+					case "m":
+						element = memoryDisplayOutput;
+						break;
+					case "o":
+						element = outputDisplayOutput;
+						break;
+					default:
+						[];
+				}
+				columns[i].push(...element);
+			}
+		}
+		let blank = " ".repeat(48);
+		let size = Math.max(
+			columns[0].length,
+			columns[1].length,
+			columns[2].length
+		);
+		for (let i = 0; i < size; i++) {
+			for (let j = 0; j < 3; j++) {
+				if (columns[j].length > i) {
+					outputString += columns[j][i];
+				} else if (columns[j] != 0) {
+					outputString += blank;
+				}
+			}
+			outputString += "\n";
+		}
+
+		console.log(outputString);
+		// Count how many newline characters are in the outputString
+		const newlineCount = (outputString.match(/\n/g) || []).length;
+		return newlineCount + 1; // +1 for the final newline by console.log
+	}
+
+	executeNextInstruction(readInNewInput) {
 		// Fetch instruction
 		this.ir = this.mem[this.pc++];
 		// Decode instruction
@@ -386,6 +1309,13 @@ class Interpreter {
 		this.eopcode = this.ir & 0x1f; // eopcode (bits 4-0)
 		this.trapvec = this.ir & 0xff; // trap vector (bits 7-0)
 
+		this.memoryChange = {
+			hasChanged: false,
+			address: null,
+			old: null,
+			new: null,
+		};
+
 		if (this.debugMode) {
 			// TODO: decide how to handle e2e test case
 			// to quit debug mode
@@ -395,9 +1325,6 @@ class Interpreter {
 			// }
 			this.debug();
 		}
-
-		const prevRegs = this.r.slice(); // saves r0–r7
-		const prevPC = this.pc; // saves the previous PC value
 
 		// Execute instruction
 		switch (this.opcode) {
@@ -454,9 +1381,32 @@ class Interpreter {
 				this.running = false;
 		}
 
-		// if any registers changed or flags were set, print them out
-		if (this.debugMode && this.running) {
-			let regsOrFlagsOutput = "";
+		let logEntry = {
+			pc: this.pc,
+			ir: this.ir,
+			registers: this.r.slice(),
+			flags: { c: this.c, v: this.v, n: this.n, z: this.z },
+			memory: this.memoryChange,
+		};
+
+    // Only update the change log if this is a new execution
+    if (!this.options.efficicentMode) {
+      if (readInNewInput) {
+        this.snapshot.push(logEntry);
+      } else {
+        this.snapshot[this.currentIteration] = logEntry;
+      }
+    } else {
+      if (this.snapshot.length < 2) {
+        this.snapshot.push(logEntry);
+      } else {
+        this.snapshot[0] = this.snapshot[1];
+        this.snapshot[1] = logEntry;
+      }
+    }
+    // if any registers changed or flags were set, print them out
+    if (this.debugMode && this.running) {
+      let regsOrFlagsOutput = "";
 
 			for (let i = 0; i < 8; i++) {
 				const oldVal = prevRegs[i];
@@ -705,9 +1655,13 @@ class Interpreter {
 		switch (this.eopcode) {
 			case 0: // PUSH // mem[--sp] = sr
 				// decrement stack pointer and store value
+				this.memoryChange.hasChanged = true;
 				this.r[6] = (this.r[6] - 1) & 0xffff;
 				// save source register to memory at address pointed at by stack pointer
+				this.memoryChange.address = this.r[6];
+				this.memoryChange.old = [this.mem[this.r[6]]];
 				this.mem[this.r[6]] = this.r[this.sr];
+				this.memoryChange.new = [this.mem[this.r[6]]];
 				break;
 			case 1: // POP // dr = mem[sp++];
 				// load value from memory at address pointed at by stack pointer to destination
@@ -871,8 +1825,11 @@ class Interpreter {
 
 	executeST() {
 		const address = (this.pc + this.pcoffset9) & 0xffff;
+		this.memoryChange.address = address;
+		this.memoryChange.old = [this.mem[address]];
 		this.mem[address] = this.r[this.sr];
 		if (address > this.memMax) this.memMax = address;
+		this.memoryChange.new = [this.r[this.sr]];
 	}
 
 	executeMVI() {
@@ -890,7 +1847,11 @@ class Interpreter {
 
 	executeSTR() {
 		const address = (this.r[this.baser] + this.offset6) & 0xffff;
+		this.memoryChange.address = address;
+		this.memoryChange.old = [this.mem[address]];
 		this.mem[address] = this.r[this.sr];
+		this.memoryChange.new = [this.r[this.sr]];
+		this.memoryChange.hasChanged = true;
 	}
 
 	executeJMP() {
@@ -919,6 +1880,7 @@ class Interpreter {
 			this.writeOutput(char);
 			address = (address + 1) & 0xffff;
 			charCode = this.mem[address];
+			this.lineLength += 1;
 		}
 	}
 
@@ -1027,14 +1989,24 @@ class Interpreter {
 
 	executeSIN() {
 		let address = this.r[this.sr];
+		this.memoryChange.address = address;
+		this.memoryChange.old = [];
+		this.memoryChange.new = [];
+
 		let { inputLine: input, isSimulated } = this.readLineFromStdin();
 
 		for (let i = 0; i < input.length; i++) {
+			this.memoryChange.old.push(this.mem[address]);
 			this.mem[address] = input.charCodeAt(i);
+			this.memoryChange.new.push(this.mem[address]);
 			address = (address + 1) & 0xffff;
 		}
 		// Null-terminate the string
+		this.memoryChange.old.push(this.mem[address]);
 		this.mem[address] = 0;
+		this.memoryChange.new.push(this.mem[address]);
+
+		this.memoryChange.hasChanged = true;
 
 		// add newline here if input is simulated
 		if (isSimulated) {
@@ -1115,7 +2087,9 @@ class Interpreter {
 	// be followed by a newline, as in the case of
 	// aout, dout, sout, etc.
 	writeOutput(message) {
-		process.stdout.write(message);
+		if (!this.options.interactiveMode) {
+			process.stdout.write(message);
+		}
 		this.output += message;
 	}
 
@@ -1125,10 +2099,15 @@ class Interpreter {
 	// without a newline.
 	writeDebugOutputOrElse(message) {
 		if (this.debugMode) {
-			process.stdout.write(message + "\n");
+			if (!this.interactiveMode) {
+				process.stdout.write(message + "\n");
+			}
 		} else {
-			process.stdout.write(message);
+			if (!this.options.interactiveMode) {
+				process.stdout.write(message);
+			}
 		}
+		this.lineLength += message.length;
 		this.output += message;
 	}
 
@@ -1138,7 +2117,9 @@ class Interpreter {
 				this.running = false;
 				break;
 			case 1: // NL
+				this.lineLength = 0;
 				this.writeOutput(newline);
+				this.newlinePrinted = true;
 				break;
 			case 2: // DOUT
 				let value = this.r[this.sr];
