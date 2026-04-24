@@ -69,7 +69,7 @@ export default function Ilcc() {
         onDebug={handleDebug}
         onStep={() => debug_session.step(1)}
         onStop={handleStop}
-        canStepForward={debug_session.isDebugging && !debug_session.programDone}
+        canStepForward={debug_session.isDebugging && !debug_session.programDone && !debug_session.inputMode}
         iteration={debug_session.iteration}
       />
 

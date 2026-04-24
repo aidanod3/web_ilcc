@@ -6,8 +6,8 @@ const { WebSocketServer } = require('ws');
    assembler and interpreter when running inside the web server. */
 global.it = function () {};
 
-const { handleRunSocket }  = require('./src/routes/run');
-const debugRoutes          = require('./src/routes/debug');
+const { handleRunSocket }   = require('./src/routes/run');
+const { handleDebugSocket } = require('./src/routes/debug');
 
 const app    = express();
 const server = http.createServer(app);
@@ -18,8 +18,6 @@ app.use(express.json());
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
-
-app.use('/api/debug', debugRoutes);
 
 /* ── WebSocket server ──
    noServer: true means we handle the HTTP upgrade ourselves,
@@ -32,6 +30,10 @@ server.on('upgrade', (request, socket, head) => {
   if (url === '/api/run') {
     wss.handleUpgrade(request, socket, head, (ws) => {
       handleRunSocket(ws);
+    });
+  } else if (url === '/api/debug') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      handleDebugSocket(ws);
     });
   } else {
     /* Reject unknown WebSocket paths. */

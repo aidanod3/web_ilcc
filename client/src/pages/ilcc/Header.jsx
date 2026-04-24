@@ -17,15 +17,13 @@
  *   onRun          — callback: assemble + execute to completion.
  *   onDebug        — callback: start (or restart) a debug session.
  *   onStep         — callback: step forward one instruction.
- *   onStepBack     — callback: step backward one instruction.
  *   onStop         — callback: end the current run or debug session.
- *   canStepBack    — whether stepping backward is possible (iteration > 0).
  *   canStepForward — whether stepping forward is possible (program hasn't halted).
  *   iteration      — current step number displayed during debugging.
  */
 
 import styles from './Header.module.css';
-import { Play, Loader, BugPlay, RotateCcw, Square, StepBack, StepForward } from 'lucide-react';
+import { Play, Loader, BugPlay, RotateCcw, Square, StepForward } from 'lucide-react';
 
 export default function Header({
   isRunning,
@@ -33,9 +31,7 @@ export default function Header({
   onRun,
   onDebug,
   onStep,
-  onStepBack,
   onStop,
-  canStepBack,
   canStepForward,
   iteration,
 }) {
@@ -69,19 +65,11 @@ export default function Header({
           {isDebugging ? <RotateCcw size={16} /> : <BugPlay size={16} />}
         </button>
 
-        {/* Step controls: only visible while a debug session is active. */}
+        {/* Step forward: only visible while a debug session is active. */}
         {isDebugging && (
-          <>
-            {/* Step backward: restores the previous snapshot. */}
-            <button className={styles.btn} type="button" onClick={onStepBack} disabled={!canStepBack}>
-              <StepBack size={16} />
-            </button>
-
-            {/* Step forward: executes the next instruction. */}
-            <button className={styles.btn} type="button" onClick={onStep} disabled={!canStepForward}>
-              <StepForward size={16} />
-            </button>
-          </>
+          <button className={styles.btn} type="button" onClick={onStep} disabled={!canStepForward}>
+            <StepForward size={16} />
+          </button>
         )}
 
         {/* Stop: ends the current run or debug session.

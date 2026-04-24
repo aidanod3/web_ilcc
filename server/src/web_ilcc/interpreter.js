@@ -35,28 +35,29 @@ class Interpreter {
 		this.running = true;
 		this.output = ""; // Output string
 		this.inputBuffer = ""; // Input buffer for SIN (if needed)
-		this.options = {}; // Options from lcc.js
-		this.instructionsExecuted = 0; // For program statistics
-		this.maxStackSize = 0; // For program statistics
+		// this.options = {}; // Options from lcc.js (CLI only)
+		this.instructionsExecuted = 0; // For infinite-loop detection
+		// this.maxStackSize = 0; // For program statistics (CLI only)
 		this.loadPoint = 0; // Default load point is 0
 		this.spInitial = 0; // For tracking stack size
 		this.memMax = 0; // Keep track of the highest memory address used
 		this.inputFileName = ""; // Name of the input file
-		this.generateStats = false; // Whether to generate .lst and .bst files
+		// this.generateStats = false; // Whether to generate .lst and .bst files (CLI only)
 		this.headerLines = [];
 		this.instructionsCap = 500000; // Limit the number of instructions to prevent infinite loops
-		this.debugMode = false; // Debug mode flag
-		this.hasJumped = false; // Flag to track jump/branch instruction executions
-		this.currentIteration = 0; // What step of interpretation are we on. Cannot go negative
-		this.lastSnapshot;
-		this.currentSnapshot;
-		this.snapshot = []; // Contains what updates occured at any step in memory. Appended to when new sections of program are executed
+		// this.debugMode = false; // CLI symbolic debugger flag — not used in web
+		// this.hasJumped = false; // Only read by the CLI debug block — not used in web
+		this.currentIteration = 0; // How many instructions have been executed (used by handleSteps)
+		// this.lastSnapshot;   // CLI state tracking — replaced by debugger.js diff logic
+		// this.currentSnapshot;
+		// this.snapshot = [];
 		this.onOutput = null;        // Callback set by runner/debugger service — called on every write
 		this.onInputRequest = null;  // Callback invoked when the interpreter needs input from the user
 		this._inputResolve = null;   // Resolve fn for the pending input Promise
 		this.memoryChanges = []        // Tracks memory writes per instruction (used by snapshot system)
 	}
 
+	/* ── CLI entry point — not used in the web app ─────────────────────────
 	main(args) {
 		args = args || process.argv.slice(2);
 
@@ -230,6 +231,9 @@ class Interpreter {
 		}
 	}
 
+	── end CLI entry point ── */
+
+	/* ── CLI stats filename helper — not used in web app ───────────────────
 	constructBSTLSTFileName(inputFileName, isBST) {
 		const parsedPath = path.parse(inputFileName);
 		// Remove extension and add '.bst'
@@ -239,6 +243,7 @@ class Interpreter {
 			ext: isBST ? ".bst" : ".lst",
 		});
 	}
+	── end CLI stats filename helper ── */
 
 	// for use in lcc.js
 	// makes sure that the file is a valid executable file by checking
@@ -289,9 +294,8 @@ class Interpreter {
 
 	// extracts header entries and loads machine code into memory
 	loadExecutableBuffer(buffer) {
-		if (this.options.loadPoint != null) {
-			this.loadPoint = this.options.loadPoint;
-		}
+		// this.options.loadPoint — CLI-only override, not used in web
+		// this.loadPoint defaults to 0 set in the constructor
 		let offset = 0;
 
 		// Read file signature
@@ -372,12 +376,14 @@ class Interpreter {
 		this.pc = (this.loadPoint + startAddress) & 0xffff;
 	}
 
+	/* ── initializeLog — references undefined logEntry, not used in web ────
 	initializeLog() {
 		this.snapshot = [];
-		
 		this.snapshot.push(logEntry);
 	}
+	── end initializeLog ── */
 
+	/* ── initialize — references undefined vars, not used in web ───────────
 	initialize() {
 		if (this.options.instructionCap != null) {
 			this.instructionsCap = Math.max(1, this.options.instructionCap);
@@ -401,27 +407,25 @@ class Interpreter {
 			update = this.stateUpdates(0, 0);
 		}
 	}
+	── end initialize ── */
 
+	/* ── run — not called in web; runner/debugger services use handleSteps ──
 	async run(steps, listing) {
 		let update;
-
-		let stepNumber = steps; // Number of steps to execute
-
+		let stepNumber = steps;
 		this.memoryChanges = [];
 
 		if (this.options.interactiveMode) {
 			this.lastSnapshot = this.currentSnapshot;
 			await this.handleSteps(stepNumber);
 			this.currentSnapshot.memoryChanges = this.memoryChanges;
-
 			update = this.stateUpdates(this.lastSnapshot, this.currentSnapshot);
-
 			return update;
 		} else {
-			// Normal LCC execution, handle 1 step at a time until termination
 			await this.handleSteps(this.instructionsCap+1);
 		}
 	}
+	── end run ── */
 
 	async handleSteps(stepNumber) {
 		for (let i = 0; i < stepNumber && this.running; i++) {
@@ -466,95 +470,13 @@ class Interpreter {
 	// 	}
 	// }
 
-	stateUpdates(oldSnapshot, newSnapshot) {
-		// oldIteration = Math.max(oldIteration, 0);
-		// newIteration = Math.max(newIteration, 0);
-		// console.log("State Updates: ", oldIteration, newIteration);
+	/* ── stateUpdates — replaced by buildDiff() in services/debugger.js ────
+	stateUpdates(oldSnapshot, newSnapshot) { ... }
+	── end stateUpdates ── */
 
-		let update = {
-			registers: {
-				old: oldSnapshot.registers,
-				new: newSnapshot.registers,
-			},
-			pc: {
-				old: oldSnapshot.pc,
-				new: newSnapshot.pc,
-			},
-			ir: {
-				old: oldSnapshot.ir,
-				new: newSnapshot.ir,
-			},
-			flags: {
-				old: oldSnapshot.flags,
-				new: newSnapshot.flags,
-			},
-			memory: {},
-		};
-
-		// Track all memory changes between two iterations
-		let changes = {};
-
-		// for (let i = 0; i < this.memoryChanges.length; i++) {
-		// 	let memoryChange = this.memoryChanges[i];
-		// 	if (memoryChange.address in changes) {
-		// 		changes[address] = 
-		// 	}
-		// }
-
-		// if (oldIteration < newIteration) {
-		// 	for (let i = newIteration; i > oldIteration; i--) {
-		// 		let memoryChange = this.snapshot[i].memory;
-		// 		if (memoryChange.hasChanged) {
-		// 			let baseAddress = memoryChange.address;
-		// 			let length = memoryChange.new.length;
-		// 			for (let j = 0; j < length; j++) {
-		// 				changes[baseAddress + j] = memoryChange.old[j];
-		// 			}
-		// 		}
-		// 	}
-		// } else {
-		// 	for (let i = newIteration + 1; i <= oldIteration; i++) {
-		// 		let memoryChange = this.snapshot[i].memory;
-		// 		if (memoryChange.hasChanged) {
-		// 			let baseAddress = memoryChange.address;
-		// 			let length = memoryChange.new.length;
-		// 			for (let j = 0; j < length; j++) {
-		// 				changes[baseAddress + j] = memoryChange.new[j];
-		// 			}
-		// 		}
-		// 	}
-		// 	update.pc = {
-		// 		old: newSnapshot.pc,
-		// 		new: oldSnapshot.pc,
-		// 	};
-		// }
-		// Compare change values with this.mem to detect true changes
-
-
-
-		for (let address in changes) {
-			let oldValue = changes[address];
-			let newValue = this.mem[address];
-			if (oldValue != newValue) {
-				update.memory[address] = { old: oldValue, new: newValue };
-			}
-		}
-
-		// console.log(update);
-
-		return update;
-	}
-
-	locationLineMap(listing) {
-		let keys = {};
-		let lines = [];
-		for (const key of Object.keys(listing)) {
-			let line = listing[key];
-			keys[listing[key].locCtr] = lines.length;
-			lines.push(line);
-		}
-		return { keys: keys, lines: lines };
-	}
+	/* ── locationLineMap — never called in web app ──────────────────────────
+	locationLineMap(listing) { ... }
+	── end locationLineMap ── */
 
 	async executeNextInstruction(readInNewInput) {
 		// Fetch instruction
@@ -574,15 +496,8 @@ class Interpreter {
 		this.eopcode = this.ir & 0x1f; // eopcode (bits 4-0)
 		this.trapvec = this.ir & 0xff; // trap vector (bits 7-0)
 
-		if (this.debugMode) {
-			// TODO: decide how to handle e2e test case
-			// to quit debug mode
-			// if (isTestMode) {
-			//   this.running = false;
-			//   return;
-			// }
-			await this.debug();
-		}
+		// ── CLI symbolic debugger hook — not used in web ──
+		// if (this.debugMode) { await this.debug(); }
 
 		// Execute instruction
 		switch (this.opcode) {
@@ -638,192 +553,30 @@ class Interpreter {
 				this.error(`Unknown opcode: ${this.opcode}`);
 				this.running = false;
 		}
-    
-    // if any registers changed or flags were set, print them out
-    if (this.debugMode && this.running) {
-      let regsOrFlagsOutput = "";
 
-			for (let i = 0; i < 8; i++) {
-				const oldVal = prevRegs[i];
-				const newVal = this.r[i];
-				if (oldVal !== newVal) {
-					const hexOld = oldVal.toString(16).padStart(1, "0");
-					const hexNew = newVal.toString(16).padStart(1, "0");
-					regsOrFlagsOutput += `     <r${i} = ${hexOld}/${hexNew}>`;
-				}
-			}
-
-			const [n, z, c, v] = [this.n, this.z, this.c, this.v];
-
-			if (this.flagsSet) {
-				if (regsOrFlagsOutput.trim() !== "") {
-					regsOrFlagsOutput += " "; // a 1 space inbetween regs and flags
-				} else {
-					regsOrFlagsOutput += "     "; // add 5 spaces to pad flags
-				}
-				regsOrFlagsOutput += `<NZCV = ${n}${z}${c}${v}>`;
-				this.flagsSet = false; // Reset the flag set
-			}
-
-			if (this.hasJumped) {
-				if (regsOrFlagsOutput.trim() === "") {
-					regsOrFlagsOutput += "     "; // add 5 spaces to pad flags
-				}
-				regsOrFlagsOutput += `<pc = ${prevPC.toString(
-					16
-				)}/${this.pc.toString(16)}>`;
-				this.hasJumped = false; // Reset the jump flag
-			}
-
-			if (regsOrFlagsOutput.trim() !== "") {
-				this.writeDebugOutput(regsOrFlagsOutput);
-			}
-		}
+		/* ── CLI symbolic debugger output — references undefined prevRegs/prevPC ─
+		if (this.debugMode && this.running) { ... }
+		── end CLI debug output ── */
 
 		this.instructionsExecuted++;
 
-		// Check if the instruction limit has been reached
-		// Note: This is a safety feature to prevent infinite loops
-		// 2nd Note: This matches exactly the # of instructions
-		// permitted to run by from the lcc before entering the debugger
-		if (
-			this.instructionsExecuted >= this.instructionsCap &&
-			!this.debugMode
-		) {
-			// instead of exiting the program, this condition instead
-			// initiates the execution of the symbolic debugger
-			// detect if the program is running in the terminal
-			if (process.stdin.isTTY) {
-				// If running in the terminal, we can trigger debug mode
-				console.error("Possible infinite loop");
-				this.debugMode = true;
-			} else {
-				// else, terminate the program
-				this.running = false;
-				fatalExit("Possible infinite loop", 1);
-			}
-
-			//// TODO: implement a custom LCC.js behavior to set flags to toggle
-			////       off potential infinite loop detection
-		}
-
-		// Track max stack size
-		let sp = this.r[6];
-		let stackSize = sp === 0 ? 0 : MAX_MEMORY - sp;
-		if (stackSize > this.maxStackSize) {
-			this.maxStackSize = stackSize;
-		}
-	}
-
-	// convert source hex to matching mnemonic
-	hexToMnemonic(hex) {
-		const mnemonics = {
-			0x0000: "BR",
-			0x1000: "ADD",
-			0x2000: "LD",
-			0x3000: "ST",
-			0x4000: "BL",
-			0x5000: "AND",
-			0x6000: "LDR",
-			0x7000: "STR",
-			0x8000: "CMP",
-			0x9000: "NOT",
-			0xa000: "CASE10",
-			0xb000: "SUB",
-			0xc000: "JMP/RET",
-			0xd000: "MVI",
-			0xe000: "LEA",
-			0xf000: "TRAP",
-		};
-		let mnemonic =
-			mnemonics[hex & 0xf000] || `Unknown(${hex.toString(16)})`;
-		if (mnemonic === "CASE10") {
-			// Handle the extended opcode separately
-			const extendedMnemonics = {
-				0x0: "PUSH",
-				0x1: "POP",
-				0x2: "SRL",
-				0x3: "SRA",
-				0x4: "SLL",
-				0x5: "ROL",
-				0x6: "ROR",
-				0x7: "MUL",
-				0x8: "DIV",
-				0x9: "REM",
-				0xa: "OR",
-				0xb: "XOR",
-				0xc: "MVR",
-				0xd: "SEXT",
-			};
-			mnemonic =
-				extendedMnemonics[hex & 0x000f] ||
-				`Unknown(${hex.toString(16)})`;
-		}
-
-		if (mnemonic === "TRAP") {
-			const trapMnemonics = {
-				0x00: "HALT",
-				0x01: "NL",
-				0x02: "DOUT",
-				0x03: "UDOUT",
-				0x04: "HOUT",
-				0x05: "AOUT",
-				0x06: "SOUT",
-				0x07: "DIN",
-				0x08: "HIN",
-				0x09: "AIN",
-				0x0a: "SIN",
-				0x0b: "M",
-				0x0c: "R",
-				0x0d: "S",
-				0x0e: "BP",
-			};
-			mnemonic =
-				trapMnemonics[hex & 0x000f] || `Unknown(${hex.toString(16)})`;
-		}
-
-		if (mnemonic === "BR") {
-			const brMnemonics = {
-				0x00: "BRZ",
-				0x01: "BRNZ",
-				0x02: "BRN",
-				0x03: "BRP",
-				0x04: "BRLT",
-				0x05: "BRGT",
-				0x06: "BRC",
-				0x07: "BR",
-			};
-			mnemonic = brMnemonics[this.code] || `Unknown(${hex.toString(16)})`;
-		}
-
-		return mnemonic;
-	}
-
-	formatDebugState(line, source) {
-		return `${line.toString(16).padStart(3, " ")}: ${source
-			.toString(16)
-			.padStart(4, "0")}`;
-	}
-
-	async debug() {
-		const line = this.pc - 1;
-		const source = this.mem[line] || "(unknown)";
-		const mnemonic = this.hexToMnemonic(this.ir);
-		process.stdout.write(`${mnemonic.toLowerCase()}>>> `); // we don't want a newline here
-
-		const { inputLine, isSimulated } = await this.readLineFromStdin();
-
-		const trimmedInput = inputLine.trim().toLowerCase();
-		if (trimmedInput === "q") {
-			// this.writeDebugOutput('Exiting debugger...');
+		// Safety cap — prevents infinite loops from hanging the server
+		if (this.instructionsExecuted >= this.instructionsCap) {
 			this.running = false;
-		} else {
-			const state = this.formatDebugState(line, source);
-			this.writeDebugOutput(
-				`${state}     ; ${mnemonic.toLowerCase()} \n`
-			);
+			fatalExit("Possible infinite loop", 1);
 		}
+
+		// Track max stack size (stats only — kept for future use)
+		// let sp = this.r[6];
+		// let stackSize = sp === 0 ? 0 : MAX_MEMORY - sp;
+		// if (stackSize > this.maxStackSize) { this.maxStackSize = stackSize; }
 	}
+
+	/* ── CLI symbolic debugger methods — not used in web app ───────────────
+	   hexToMnemonic(hex)        — maps IR bits to mnemonic string
+	   formatDebugState(l, src)  — formats "addr: hex ; mnemonic"
+	   debug()                   — interactive per-instruction prompt
+	─────────────────────────────────────────────────────────────────────── */
 
 	// cmp    1000  000  sr1 000 sr2   nzcv sr1 - sr2 (set flags)
 	// cmp    1000  000  sr1 1  imm5   nzcv sr1 - imm5 (set flags)
@@ -1245,21 +998,13 @@ class Interpreter {
 		}
 	}
 
-	// This function writes output to stdout,
-	// and it also adds a newline at the end.
-	// It is used for writing debug output that should
-	// be followed by a newline, as in the case of
-	// debug messages, error messages, etc.
+	/* ── writeDebugOutput — only used by CLI symbolic debugger ─────────────
 	writeDebugOutput(message) {
 		process.stdout.write(message + "\n");
 		this.output += message;
 	}
+	── end writeDebugOutput ── */
 
-	// This function writes output to stdout,
-	// but it does not add a newline at the end.
-	// It is used for writing output that should not
-	// be followed by a newline, as in the case of
-	// aout, dout, sout, etc.
 	writeOutput(message) {
 		this.output += message;
 		if (this.onOutput) this.onOutput(message);
@@ -1309,11 +1054,7 @@ class Interpreter {
 				this.writeDebugOutputOrElse(aoutChar);
 				break;
 			case 6: // SOUT
-				// print string at address
 				this.executeSOUT();
-				if (this.debugMode) {
-					this.writeDebugOutput("");
-				}
 				break;
 			case 7: // DIN
 				while (true) {
