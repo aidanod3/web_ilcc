@@ -77,6 +77,8 @@ export default function Ilcc() {
       <Workspace
         editorRef={editorRef}
         output={debug_session.isDebugging ? debug_session.output : runner.output}
+        inputMode={debug_session.isDebugging ? debug_session.inputMode : runner.inputMode}
+        onSendInput={debug_session.isDebugging ? debug_session.sendInput : runner.sendInput}
         debugState={debug_session.state}
         isDebugging={debug_session.isDebugging}
       />

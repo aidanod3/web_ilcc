@@ -26,7 +26,7 @@ import CPU from './panels/CPU';
 import Stack from './panels/Stack';
 import Memory from './panels/Memory';
 
-export default function Workspace({ editorRef, output, debugState, isDebugging }) {
+export default function Workspace({ editorRef, output, inputMode, onSendInput, debugState, isDebugging }) {
   return (
     <div className={styles.layout}>
 
@@ -49,7 +49,7 @@ export default function Workspace({ editorRef, output, debugState, isDebugging }
           <Panel defaultSize={30} minSize={15}>
             <div className={styles.pane}>
               <div className={styles.paneHeader}>Terminal</div>
-              <Terminal output={output} />
+              <Terminal output={output} inputMode={inputMode} onSendInput={onSendInput} />
             </div>
           </Panel>
 

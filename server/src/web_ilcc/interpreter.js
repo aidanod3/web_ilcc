@@ -48,7 +48,13 @@ class Interpreter {
 		this.debugMode = false; // Debug mode flag
 		this.hasJumped = false; // Flag to track jump/branch instruction executions
 		this.currentIteration = 0; // What step of interpretation are we on. Cannot go negative
+		this.lastSnapshot;
+		this.currentSnapshot;
 		this.snapshot = []; // Contains what updates occured at any step in memory. Appended to when new sections of program are executed
+		this.onOutput = null;        // Callback set by runner/debugger service — called on every write
+		this.onInputRequest = null;  // Callback invoked when the interpreter needs input from the user
+		this._inputResolve = null;   // Resolve fn for the pending input Promise
+		this.memoryChanges = []        // Tracks memory writes per instruction (used by snapshot system)
 	}
 
 	main(args) {
@@ -378,7 +384,7 @@ class Interpreter {
 		}
 
 		if (this.options.interactiveMode) {
-			this.memoryChange = {
+			this.memoryChanges = {
 				hasChanged: false,
 				address: this.loadPoint,
 				old: Array(this.memMax + 1 - this.loadPoint).fill(0),
@@ -389,95 +395,76 @@ class Interpreter {
 				ir: 0,
 				registers: this.r.slice(),
 				flags: { c: this.c, v: this.v, n: this.n, z: this.z },
-				memory: this.memoryChange,
+				memory: this.memoryChanges,
 			};
 
 			update = this.stateUpdates(0, 0);
 		}
 	}
 
-	run(steps, listing) {
+	async run(steps, listing) {
 		let update;
-		let newlineCount = 0;
 
 		let stepNumber = steps; // Number of steps to execute
-		let lastStepNumber = stepNumber;
 
-		this.memoryChange = {
-			hasChanged: false,
-			address: null,
-			old: null,
-			new: null,
-		};
+		this.memoryChanges = [];
 
 		if (this.options.interactiveMode) {
-				lastStepNumber = stepNumber;
-				skipSteps = false;
-				skipDisplay = false;
+			this.lastSnapshot = this.currentSnapshot;
+			await this.handleSteps(stepNumber);
+			this.currentSnapshot.memoryChanges = this.memoryChanges;
 
+			update = this.stateUpdates(this.lastSnapshot, this.currentSnapshot);
 
-			let originalIteration = this.currentIteration;
-			if (!skipSteps) this.handleSteps(stepNumber);
-			let newIteration = this.currentIteration;
-
-			if (!this.options.efficicentMode) {
-					update = this.stateUpdates(originalIteration, newIteration);
-				} else {
-					update = this.stateUpdates(0, 1);
-			}
-
-			} else {
-				// Normal LCC execution, handle 1 step at a time until termination
-				this.handleSteps(1);
+			return update;
+		} else {
+			// Normal LCC execution, handle 1 step at a time until termination
+			await this.handleSteps(this.instructionsCap+1);
 		}
 	}
 
-	handleSteps(stepNumber) {
-		// Check if new instructions are to be executed
-
+	async handleSteps(stepNumber) {
 		for (let i = 0; i < stepNumber && this.running; i++) {
 			this.currentIteration++;
-			this.executeNextInstruction(
-				this.currentIteration == this.snapshot.length
-			);
+			await this.executeNextInstruction(true);
 		}
 	}
 
-	restorePrevState(newState) {
-		let log = this.snapshot[newState];
+	// restorePrevState(newState) {
+	// 	let log = this.snapshot[newState];
 
-		// Restore old pc
-		this.pc = log.pc;
+	// 	// Restore old pc
+	// 	this.pc = log.pc;
 
-		// Restore old flags
-		this.c = log.flags.c;
-		this.v = log.flags.v;
-		this.n = log.flags.n;
-		this.z = log.flags.z;
+	// 	// Restore old flags
+	// 	this.c = log.flags.c;
+	// 	this.v = log.flags.v;
+	// 	this.n = log.flags.n;
+	// 	this.z = log.flags.z;
 
-		// Restore old register values
-		for (let i = 0; i < 8; i++) this.r[i] = log.registers[i];
+	// 	// Restore old register values
+	// 	for (let i = 0; i < 8; i++) this.r[i] = log.registers[i];
 
-		// Undo any changes to memory
-		for (let i = this.currentIteration; i >= newState; i--) {
-			if (this.snapshot[i].memory.hasChanged) {
-				this.restorePrevMemory(i);
-			}
-		}
-	}
+	// 	// Undo any changes to memory
+	// 	for (let i = this.currentIteration; i >= newState; i--) {
+	// 		if (this.snapshot[i].memory.hasChanged) {
+	// 			this.restorePrevMemory(i);
+	// 		}
+	// 	}
+	// }
 
-	restorePrevMemory(state) {
-		// console.log("TEST: ", this.snapshot[state], state);
-		// console.log("MEMORY: ", this.snapshot[state].memory);
+	// restorePrevMemory(state) {
+	// 	// console.log("TEST: ", this.snapshot[state], state);
+	// 	// console.log("MEMORY: ", this.snapshot[state].memory);
 
-		let oldMem = this.snapshot[state].memory;
-		if (oldMem.address != null) {
-			let oldValues = oldMem.old;
-			for (let i = 0; i < oldValues.length; i++) {
-				this.mem[oldMem.address + i] = oldValues[i];
-			}
-		}
-	}
+	// 	let oldMem = this.snapshot[state].memory;
+	// 	if (oldMem.address != null) {
+	// 		let oldValues = oldMem.old;
+	// 		for (let i = 0; i < oldValues.length; i++) {
+	// 			this.mem[oldMem.address + i] = oldValues[i];
+	// 		}
+	// 	}
+	// }
 
 	stateUpdates(oldSnapshot, newSnapshot) {
 		// oldIteration = Math.max(oldIteration, 0);
@@ -506,34 +493,45 @@ class Interpreter {
 
 		// Track all memory changes between two iterations
 		let changes = {};
-		if (oldIteration < newIteration) {
-			for (let i = newIteration; i > oldIteration; i--) {
-				let memoryChange = this.snapshot[i].memory;
-				if (memoryChange.hasChanged) {
-					let baseAddress = memoryChange.address;
-					let length = memoryChange.new.length;
-					for (let j = 0; j < length; j++) {
-						changes[baseAddress + j] = memoryChange.old[j];
-					}
-				}
-			}
-		} else {
-			for (let i = newIteration + 1; i <= oldIteration; i++) {
-				let memoryChange = this.snapshot[i].memory;
-				if (memoryChange.hasChanged) {
-					let baseAddress = memoryChange.address;
-					let length = memoryChange.new.length;
-					for (let j = 0; j < length; j++) {
-						changes[baseAddress + j] = memoryChange.new[j];
-					}
-				}
-			}
-			update.pc = {
-				old: newSnapshot.pc,
-				new: oldSnapshot.pc,
-			};
-		}
+
+		// for (let i = 0; i < this.memoryChanges.length; i++) {
+		// 	let memoryChange = this.memoryChanges[i];
+		// 	if (memoryChange.address in changes) {
+		// 		changes[address] = 
+		// 	}
+		// }
+
+		// if (oldIteration < newIteration) {
+		// 	for (let i = newIteration; i > oldIteration; i--) {
+		// 		let memoryChange = this.snapshot[i].memory;
+		// 		if (memoryChange.hasChanged) {
+		// 			let baseAddress = memoryChange.address;
+		// 			let length = memoryChange.new.length;
+		// 			for (let j = 0; j < length; j++) {
+		// 				changes[baseAddress + j] = memoryChange.old[j];
+		// 			}
+		// 		}
+		// 	}
+		// } else {
+		// 	for (let i = newIteration + 1; i <= oldIteration; i++) {
+		// 		let memoryChange = this.snapshot[i].memory;
+		// 		if (memoryChange.hasChanged) {
+		// 			let baseAddress = memoryChange.address;
+		// 			let length = memoryChange.new.length;
+		// 			for (let j = 0; j < length; j++) {
+		// 				changes[baseAddress + j] = memoryChange.new[j];
+		// 			}
+		// 		}
+		// 	}
+		// 	update.pc = {
+		// 		old: newSnapshot.pc,
+		// 		new: oldSnapshot.pc,
+		// 	};
+		// }
 		// Compare change values with this.mem to detect true changes
+
+
+
 		for (let address in changes) {
 			let oldValue = changes[address];
 			let newValue = this.mem[address];
@@ -558,7 +556,7 @@ class Interpreter {
 		return { keys: keys, lines: lines };
 	}
 
-	executeNextInstruction(readInNewInput) {
+	async executeNextInstruction(readInNewInput) {
 		// Fetch instruction
 		this.ir = this.mem[this.pc++];
 		// Decode instruction
@@ -583,7 +581,7 @@ class Interpreter {
 			//   this.running = false;
 			//   return;
 			// }
-			this.debug();
+			await this.debug();
 		}
 
 		// Execute instruction
@@ -634,7 +632,7 @@ class Interpreter {
 				this.executeLEA();
 				break;
 			case 15: // TRAP
-				this.executeTRAP();
+				await this.executeTRAP();
 				break;
 			default:
 				this.error(`Unknown opcode: ${this.opcode}`);
@@ -807,13 +805,13 @@ class Interpreter {
 			.padStart(4, "0")}`;
 	}
 
-	debug() {
+	async debug() {
 		const line = this.pc - 1;
 		const source = this.mem[line] || "(unknown)";
 		const mnemonic = this.hexToMnemonic(this.ir);
 		process.stdout.write(`${mnemonic.toLowerCase()}>>> `); // we don't want a newline here
 
-		const { inputLine, isSimulated } = this.readLineFromStdin();
+		const { inputLine, isSimulated } = await this.readLineFromStdin();
 
 		const trimmedInput = inputLine.trim().toLowerCase();
 		if (trimmedInput === "q") {
@@ -892,13 +890,18 @@ class Interpreter {
 		switch (this.eopcode) {
 			case 0: // PUSH // mem[--sp] = sr
 				// decrement stack pointer and store value
-				this.memoryChange.hasChanged = true;
 				this.r[6] = (this.r[6] - 1) & 0xffff;
 				// save source register to memory at address pointed at by stack pointer
-				this.memoryChange.address = this.r[6];
-				this.memoryChange.old = [this.mem[this.r[6]]];
+				this.memoryChanges.old = [this.mem[this.r[6]]];
 				this.mem[this.r[6]] = this.r[this.sr];
-				this.memoryChange.new = [this.mem[this.r[6]]];
+				this.memoryChanges.new = [this.mem[this.r[6]]];
+
+				let memoryChange = {}
+				memoryChange.address = this.r[6];
+				memoryChange.old = [this.mem[this.r[6]]];
+				this.mem[this.r[6]] = this.r[this.sr];
+				memoryChange.new = [this.mem[this.r[6]]];
+				this.memoryChanges.push(memoryChange);
 				break;
 			case 1: // POP // dr = mem[sp++];
 				// load value from memory at address pointed at by stack pointer to destination
@@ -1062,11 +1065,13 @@ class Interpreter {
 
 	executeST() {
 		const address = (this.pc + this.pcoffset9) & 0xffff;
-		this.memoryChange.address = address;
-		this.memoryChange.old = [this.mem[address]];
+		let memoryChange = {}
+		memoryChange.address = address;
+		memoryChange.old = [this.mem[address]];
 		this.mem[address] = this.r[this.sr];
 		if (address > this.memMax) this.memMax = address;
-		this.memoryChange.new = [this.r[this.sr]];
+		memoryChange.new = [this.r[this.sr]];
+		this.memoryChanges.push(memoryChange);
 	}
 
 	executeMVI() {
@@ -1084,11 +1089,13 @@ class Interpreter {
 
 	executeSTR() {
 		const address = (this.r[this.baser] + this.offset6) & 0xffff;
-		this.memoryChange.address = address;
-		this.memoryChange.old = [this.mem[address]];
+		let memoryChange = {}
+		memoryChange.address = address;
+		memoryChange.old = [this.mem[address]];
 		this.mem[address] = this.r[this.sr];
-		this.memoryChange.new = [this.r[this.sr]];
-		this.memoryChange.hasChanged = true;
+		if (address > this.memMax) this.memMax = address;
+		memoryChange.new = [this.r[this.sr]];
+		this.memoryChanges.push(memoryChange);
 	}
 
 	executeJMP() {
@@ -1121,136 +1128,66 @@ class Interpreter {
 		}
 	}
 
-	readLineFromStdin() {
-		if (this.inputBuffer && this.inputBuffer.length > 0) {
-			// Use the inputBuffer to simulate user input
-			this.inputBuffer = this.inputBuffer.replace(/\r\n/g, "\n");
-			// TODO: check to make sure this behaves as expected on both Linux and Windows
-			const newlineIndex = this.inputBuffer.indexOf("\n");
-			let inputLine = "";
-			if (newlineIndex !== -1) {
-				inputLine = this.inputBuffer.slice(0, newlineIndex);
-				this.inputBuffer = this.inputBuffer.slice(newlineIndex + 1);
-			} else {
-				inputLine = this.inputBuffer;
-				this.inputBuffer = "";
-			}
-			// Echo the simulated input back to output and stdout
-			///// this.writeOutput(inputLine + '\n');
-			this.writeOutput(inputLine);
-			return { inputLine, isSimulated: true };
-		} else {
-			// Original code for reading from stdin
-			let input = "";
-			let buffer = Buffer.alloc(1);
-			let fd = process.stdin.fd;
-
-			while (true) {
-				try {
-					let bytesRead = fs.readSync(fd, buffer, 0, 1, null);
-					if (bytesRead === 0) {
-						// EOF
-						break;
-					}
-					let char = buffer.toString("utf8");
-
-					// If it's a UNIX newline, we're done.
-					if (char === "\n") {
-						break;
-					}
-
-					// If it's '\r', check whether the next char is '\n'.
-					if (char === "\r") {
-						const nextBytes = fs.readSync(fd, buffer, 0, 1, null);
-						if (nextBytes > 0) {
-							const nextChar = buffer.toString(
-								"utf8",
-								0,
-								nextBytes
-							);
-							// If nextChar is not '\n', we treat this '\r' as a line terminator
-							// and the nextChar is actually the start of the next line.
-							if (nextChar !== "\n") {
-								input += nextChar; // Or handle it differently if you prefer
-							}
-						}
-						break;
-					}
-
-					input += char;
-				} catch (err) {
-					if (err.code === "EAGAIN") {
-						// Resource temporarily unavailable, wait a bit and retry
-						continue;
-					} else {
-						throw err;
-					}
-				}
-			}
-			input = input.replace(/\r$/, "");
-			return { inputLine: input, isSimulated: false };
+	async readLineFromStdin() {
+		if (!this.inputBuffer || this.inputBuffer.length === 0) {
+			// No input available — notify the service and suspend until it arrives
+			if (this.onInputRequest) this.onInputRequest();
+			await new Promise(resolve => { this._inputResolve = resolve; });
 		}
+		// Consume one line from the buffer
+		this.inputBuffer = this.inputBuffer.replace(/\r\n/g, "\n");
+		const newlineIndex = this.inputBuffer.indexOf("\n");
+		let inputLine = "";
+		if (newlineIndex !== -1) {
+			inputLine = this.inputBuffer.slice(0, newlineIndex);
+			this.inputBuffer = this.inputBuffer.slice(newlineIndex + 1);
+		} else {
+			inputLine = this.inputBuffer;
+			this.inputBuffer = "";
+		}
+		// Echo the input back to the terminal (like a real tty would)
+		this.writeOutput(inputLine);
+		return { inputLine, isSimulated: true };
 	}
 
-	readCharFromStdin() {
-		if (this.inputBuffer && this.inputBuffer.length > 0) {
-			let ainChar = this.inputBuffer.charAt(0);
-			this.inputBuffer = this.inputBuffer.slice(1);
-			// Echo the simulated input back to output and stdout
-			this.writeOutput(ainChar + newline);
-			return { char: ainChar, isSimulated: true };
-		} else {
-			// Read one character from stdin
-			let ainBuffer = Buffer.alloc(1);
-			let fd = process.stdin.fd;
-			let ainBytesRead = 0;
-
-			// Keep trying to read until we get a character
-			while (ainBytesRead === 0) {
-				try {
-					ainBytesRead = fs.readSync(fd, ainBuffer, 0, 1, null);
-				} catch (err) {
-					if (err.code === "EAGAIN") {
-						continue;
-					} else {
-						throw err;
-					}
-				}
-			}
-
-			// If we got here, we successfully read a character
-			let ainChar = ainBuffer.toString("utf8");
-			return { char: ainChar, isSimulated: false };
+	async readCharFromStdin() {
+		if (!this.inputBuffer || this.inputBuffer.length === 0) {
+			// No input available — notify the service and suspend until it arrives
+			if (this.onInputRequest) this.onInputRequest();
+			await new Promise(resolve => { this._inputResolve = resolve; });
 		}
+		let ainChar = this.inputBuffer.charAt(0);
+		this.inputBuffer = this.inputBuffer.slice(1);
+		// Echo the character back to the terminal
+		this.writeOutput(ainChar + newline);
+		return { char: ainChar, isSimulated: true };
 	}
 
-	executeSIN() {
+	async executeSIN() {
 		let address = this.r[this.sr];
-		this.memoryChange.address = address;
-		this.memoryChange.old = [];
-		this.memoryChange.new = [];
+		let memoryChange = {};
+		memoryChange.address = address;
+		memoryChange.old = [];
+		memoryChange.new = [];
 
-		let { inputLine: input, isSimulated } = this.readLineFromStdin();
+		let { inputLine: input, isSimulated } = await this.readLineFromStdin();
 
 		for (let i = 0; i < input.length; i++) {
-			this.memoryChange.old.push(this.mem[address]);
+			memoryChange.old.push(this.mem[address]);
 			this.mem[address] = input.charCodeAt(i);
-			this.memoryChange.new.push(this.mem[address]);
+			memoryChange.new.push(this.mem[address]);
 			address = (address + 1) & 0xffff;
 		}
 		// Null-terminate the string
-		this.memoryChange.old.push(this.mem[address]);
+		memoryChange.old.push(this.mem[address]);
 		this.mem[address] = 0;
-		this.memoryChange.new.push(this.mem[address]);
+		memoryChange.new.push(this.mem[address]);
 
-		this.memoryChange.hasChanged = true;
+		this.memoryChanges.push(memoryChange);
 
-		// add newline here if input is simulated
+		// Echo a newline after the input (readLineFromStdin already echoed the text)
 		if (isSimulated) {
 			this.writeOutput(newline);
-		} //// else, add input to the output buffer w/ newline delimeter
-		else {
-			this.output += input + newline;
 		}
 	}
 
@@ -1324,10 +1261,8 @@ class Interpreter {
 	// be followed by a newline, as in the case of
 	// aout, dout, sout, etc.
 	writeOutput(message) {
-		if (!this.options.interactiveMode) {
-			process.stdout.write(message);
-		}
 		this.output += message;
+		if (this.onOutput) this.onOutput(message);
 	}
 
 	// This function writes debug output to stdout,
@@ -1335,20 +1270,11 @@ class Interpreter {
 	// If debugMode is off, it writes the message
 	// without a newline.
 	writeDebugOutputOrElse(message) {
-		if (this.debugMode) {
-			if (!this.interactiveMode) {
-				process.stdout.write(message + "\n");
-			}
-		} else {
-			if (!this.options.interactiveMode) {
-				process.stdout.write(message);
-			}
-		}
 		this.lineLength += message.length;
-		this.output += message;
+		this.writeOutput(message);
 	}
 
-	executeTRAP() {
+	async executeTRAP() {
 		switch (this.trapvec) {
 			case 0: // HALT
 				this.running = false;
@@ -1392,7 +1318,7 @@ class Interpreter {
 			case 7: // DIN
 				while (true) {
 					let { inputLine: dinInput, isSimulated } =
-						this.readLineFromStdin();
+						await this.readLineFromStdin();
 
 					if (dinInput.trim() === "") {
 						continue;
@@ -1420,7 +1346,7 @@ class Interpreter {
 			case 8: // HIN
 				while (true) {
 					let { inputLine: hinInput, isSimulated } =
-						this.readLineFromStdin();
+						await this.readLineFromStdin();
 
 					if (hinInput.trim() === "") {
 						continue;
@@ -1445,13 +1371,11 @@ class Interpreter {
 				}
 				break;
 			case 9: // AIN
-				let { char: ainChar, isSimulated } = this.readCharFromStdin();
+				let { char: ainChar } = await this.readCharFromStdin();
 				this.r[this.dr] = ainChar.charCodeAt(0);
-				// No need to echo input here; already handled in readCharFromStdin()
 				break;
 			case 10: // SIN
-				// read a line of input from the user
-				this.executeSIN();
+				await this.executeSIN();
 				break;
 			case 11: // m
 				this.executeM();
