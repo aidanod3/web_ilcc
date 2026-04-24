@@ -1,166 +1,178 @@
 /*
  * useDebugSession.js — Hook for managing an interactive debug session.
  *
- * This hook handles the "Debug" action: assembling the user's code on
- * the server, creating a persistent interpreter session, and then
- * stepping forward/backward through execution one instruction at a time.
+ * Opens a WebSocket to /api/debug, sends the source code to assemble and
+ * load, then waits for the user to step through execution. The server
+ * keeps the interpreter instance alive for the lifetime of the connection.
  *
- * The server keeps the interpreter instance in memory, keyed by a
- * sessionId (UUID). Each step request returns a *diff* of what changed
- * (registers, flags, PC, IR, and only the memory addresses that were
- * modified), so the frontend doesn't need to receive the full 64K
- * memory on every step.
+ * After each step the server sends a diff of only what changed (registers,
+ * flags, PC, IR, and modified memory addresses) — the frontend never needs
+ * the full 64K memory on every update.
  *
  * State:
- *   isDebugging     — true when a debug session is active.
- *   iteration       — current step number (0 = initial state before
- *                     any instructions have executed).
- *   programRunning  — true if the assembly program hasn't halted yet.
- *                     When false, stepping forward is disabled.
- *   output          — the program's accumulated stdout output.
- *   state           — the latest diff object from stateUpdates(), shaped:
- *                     {
- *                       registers: { old: [r0..r7], new: [r0..r7] },
- *                       pc:        { old, new },
- *                       ir:        { old, new },
- *                       flags:     { old: {c,v,n,z}, new: {c,v,n,z} },
- *                       memory:    { [addr]: { old, new }, ... }
- *                     }
+ *   isDebugging  — true while the WebSocket session is active.
+ *   output       — accumulated text the program has printed.
+ *   inputMode    — true when the program hit SIN/DIN and needs input.
+ *   debugState   — latest diff from the server:
+ *                  {
+ *                    pc:        number,
+ *                    ir:        number,
+ *                    registers: { r0: number, r2: number, ... },  ← only changed
+ *                    flags:     { n: 0, z: 1, ... },              ← only changed
+ *                    memory:    [{ addr, value }, ...]            ← only changed
+ *                  }
+ *   iteration    — how many steps forward have been executed (0 = not started).
+ *   programDone  — true once the program executes a HALT/trap 0.
  *
  * Methods:
- *   start(code) — POST to /api/debug/start. Assembles the code, creates
- *                 a session, and returns the initial state (iteration 0).
- *                 If a session already exists, it stops the old one first.
- *   step(count) — POST to /api/debug/step. Steps forward (count > 0) or
- *                 backward (count < 0). Returns the diff between the
- *                 previous and new iteration.
- *   stop()      — POST to /api/debug/stop. Destroys the server-side
- *                 session and resets all local state.
+ *   start(code)      — open WebSocket, send { type:'start', code }.
+ *   step(n)          — send { type:'step', n } to step forward n instructions.
+ *   sendInput(text)  — send { type:'input', text }, clear inputMode.
+ *   stop()           — close WebSocket and reset all state.
  *
- * The sessionId is stored in a ref (not state) because it's never
- * rendered — it's only used as an identifier in API requests.
- *
- * API contract (server/src/routes/debug.js):
- *   /start  →  Request:  { code, input? }
- *              Response: { sessionId, state, listing, iteration, running }
- *   /step   →  Request:  { sessionId, count }
- *              Response: { state, iteration, running, output }
- *   /stop   →  Request:  { sessionId }
- *              Response: { success: true }
+ * WebSocket protocol:
+ *   client → server:  { type: 'start', code }
+ *   client → server:  { type: 'step',  n }
+ *   client → server:  { type: 'input', text }
+ *   server → client:  { type: 'output',      text }
+ *   server → client:  { type: 'input_request'      }
+ *   server → client:  { type: 'step_result',  diff, iteration }
+ *   server → client:  { type: 'error',        message }
+ *   server → client:  { type: 'done'                 }
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 export default function useDebugSession() {
-  const [isDebugging, setIsDebugging] = useState(false);
-  const [iteration, setIteration] = useState(0);
-  const [programRunning, setProgramRunning] = useState(true);
-  const [output, setOutput] = useState('');
-  const [state, setState] = useState(null);
+  const [isDebugging,  setIsDebugging]  = useState(false);
+  const [output,       setOutput]       = useState('');
+  const [inputMode,    setInputMode]    = useState(false);
+  const [debugState,   setDebugState]   = useState(null);
+  const [iteration,   setIteration]   = useState(0);
+  const [programDone, setProgramDone] = useState(false);
 
-  /* sessionId is a ref because we never render it — it's just an
-     opaque key sent to the server to identify this debug session. */
-  const sessionIdRef = useRef(null);
+  /* Live WebSocket — ref so changes don't trigger re-renders. */
+  const wsRef = useRef(null);
 
-  /* ── Start a new debug session ── */
-  const start = useCallback(async (code) => {
+  /* Close socket on unmount. */
+  useEffect(() => {
+    return () => wsRef.current?.close();
+  }, []);
+
+  /* ── start(code) ────────────────────────────────────────────────────────
+     Opens the WebSocket and sends the source code. The server assembles it,
+     loads it into the interpreter, initialises the snapshot log, and then
+     waits — it does NOT start executing until the first step command. */
+  const start = useCallback((code) => {
     if (!code.trim()) return;
 
-    /* If we're already in a session, fire-and-forget a stop for cleanup.
-       We don't await it — the new /start will work regardless. */
-    if (sessionIdRef.current) {
-      fetch('/api/debug/stop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sessionIdRef.current }),
-      }).catch(() => {});
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
 
-    /* Reset local state before starting */
+    /* Reset all state for a fresh session. */
+    setIsDebugging(true);
     setOutput('');
-    setState(null);
-
-    try {
-      const res = await fetch('/api/debug/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error);
-      }
-
-      /* Store the session ID and hydrate state from the response */
-      sessionIdRef.current = data.sessionId;
-      setIsDebugging(true);
-      setIteration(data.iteration);              /* 0 on a fresh session */
-      setProgramRunning(data.programRunning);   /* true until HALT trap */
-      setState(data.state);                     /* initial state object */
-      setOutput('');
-    } catch (err) {
-      /* Re-throw so the caller (index.jsx) can handle it */
-      throw err;
-    }
-  }, []);
-
-  /* ── Step forward or backward ──
-     count > 0: execute N instructions forward (new snapshots are created).
-     count < 0: restore N snapshots backward (no new execution). */
-  const step = useCallback(async (count) => {
-    if (!sessionIdRef.current) return;
-
-    try {
-      const res = await fetch('/api/debug/step', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sessionIdRef.current, count }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setOutput(`Error: ${data.error}`);
-        return;
-      }
-
-      setIteration(data.iteration);
-      setProgramRunning(data.programRunning);
-      setState(data.state);          /* state object from this step */
-      setOutput(data.output);        /* accumulated program stdout */
-    } catch (err) {
-      setOutput(`Error: ${err.message}`);
-    }
-  }, []);
-
-  /* ── Stop the session and reset everything ── */
-  const stop = useCallback(() => {
-    /* Fire-and-forget the server cleanup */
-    if (sessionIdRef.current) {
-      fetch('/api/debug/stop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sessionIdRef.current }),
-      }).catch(() => {});
-      sessionIdRef.current = null;
-    }
-
-    /* Reset all local state to idle */
-    setIsDebugging(false);
+    setInputMode(false);
+    setDebugState(null);
     setIteration(0);
-    setProgramRunning(true);
-    setState(null);
+    setProgramDone(false);
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/api/debug`);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'start', code }));
+    };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+
+      switch (msg.type) {
+        /* Program printed something during a step. */
+        case 'output':
+          setOutput(prev => prev + msg.text);
+          break;
+
+        /* Program hit SIN/DIN — disable step buttons until input sent. */
+        case 'input_request':
+          setInputMode(true);
+          break;
+
+        /* Server executed a step and returned the state diff. */
+        case 'step_result':
+          setDebugState(msg.diff);
+          setIteration(msg.iteration);
+          break;
+
+        /* Program reached HALT — no more forward steps possible. */
+        case 'done':
+          setProgramDone(true);
+          break;
+
+        /* Assembly or runtime error. */
+        case 'error':
+          setOutput(prev => prev + `\nError: ${msg.message}`);
+          break;
+      }
+    };
+
+    ws.onerror = () => {
+      setOutput(prev => prev + '\nWebSocket error — could not reach server.');
+      setIsDebugging(false);
+    };
+
+    ws.onclose = () => {
+      setIsDebugging(false);
+    };
+  }, []);
+
+  /* ── step(n) ────────────────────────────────────────────────────────────
+     Execute n instructions forward. Server responds with step_result. */
+  const step = useCallback((n = 1) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'step', n }));
+    }
+  }, []);
+
+  /* ── sendInput(text) ────────────────────────────────────────────────────
+     Provide input to a paused SIN/DIN. After sending, the server does NOT
+     auto-resume — it waits for the next step command. */
+  const sendInput = useCallback((text) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'input', text }));
+      setInputMode(false);
+    }
+  }, []);
+
+  /* ── stop() ─────────────────────────────────────────────────────────────
+     Closes the WebSocket (which destroys the server-side session) and
+     resets all local state back to idle. */
+  const stop = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setIsDebugging(false);
     setOutput('');
+    setInputMode(false);
+    setDebugState(null);
+    setIteration(0);
+    setProgramDone(false);
   }, []);
 
   return {
     isDebugging,
-    iteration,
-    programRunning,
     output,
-    state,
+    inputMode,
+    debugState,
+    iteration,
+    programDone,
     start,
     step,
+    sendInput,
     stop,
   };
 }

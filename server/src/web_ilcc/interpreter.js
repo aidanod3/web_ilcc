@@ -4,8 +4,9 @@
 
 const fs = require("fs");
 const path = require("path");
-const { generateBSTLSTContent } = require("../utils/genStats.js");
-const nameHandler = require("../utils/name.js");
+/* Stats, name file, and diff removed — not needed for web app */
+const generateBSTLSTContent = () => '';
+const nameHandler = { createNameFile: () => '' };
 
 const newline = process.platform === "win32" ? "\r\n" : "\n";
 
@@ -46,6 +47,8 @@ class Interpreter {
 		this.instructionsCap = 500000; // Limit the number of instructions to prevent infinite loops
 		this.debugMode = false; // Debug mode flag
 		this.hasJumped = false; // Flag to track jump/branch instruction executions
+		this.currentIteration = 0; // What step of interpretation are we on. Cannot go negative
+		this.snapshot = []; // Contains what updates occured at any step in memory. Appended to when new sections of program are executed
 	}
 
 	main(args) {
@@ -280,6 +283,9 @@ class Interpreter {
 
 	// extracts header entries and loads machine code into memory
 	loadExecutableBuffer(buffer) {
+		if (this.options.loadPoint != null) {
+			this.loadPoint = this.options.loadPoint;
+		}
 		let offset = 0;
 
 		// Read file signature
@@ -360,15 +366,199 @@ class Interpreter {
 		this.pc = (this.loadPoint + startAddress) & 0xffff;
 	}
 
-	run() {
-		this.spInitial = this.r[6]; // Assuming r6 is the stack pointer
+	initializeLog() {
+		this.snapshot = [];
+		
+		this.snapshot.push(logEntry);
+	}
 
-		while (this.running) {
-			this.step();
+	initialize() {
+		if (this.options.instructionCap != null) {
+			this.instructionsCap = Math.max(1, this.options.instructionCap);
+		}
+
+		if (this.options.interactiveMode) {
+			this.memoryChange = {
+				hasChanged: false,
+				address: this.loadPoint,
+				old: Array(this.memMax + 1 - this.loadPoint).fill(0),
+				new: this.initialMem.slice(this.loadPoint, this.memMax + 1),
+			};
+			this.currentSnapshot = {
+				pc: this.pc,
+				ir: 0,
+				registers: this.r.slice(),
+				flags: { c: this.c, v: this.v, n: this.n, z: this.z },
+				memory: this.memoryChange,
+			};
+
+			update = this.stateUpdates(0, 0);
 		}
 	}
 
-	step() {
+	run(steps, listing) {
+		let update;
+		let newlineCount = 0;
+
+		let stepNumber = steps; // Number of steps to execute
+		let lastStepNumber = stepNumber;
+
+		this.memoryChange = {
+			hasChanged: false,
+			address: null,
+			old: null,
+			new: null,
+		};
+
+		if (this.options.interactiveMode) {
+				lastStepNumber = stepNumber;
+				skipSteps = false;
+				skipDisplay = false;
+
+
+			let originalIteration = this.currentIteration;
+			if (!skipSteps) this.handleSteps(stepNumber);
+			let newIteration = this.currentIteration;
+
+			if (!this.options.efficicentMode) {
+					update = this.stateUpdates(originalIteration, newIteration);
+				} else {
+					update = this.stateUpdates(0, 1);
+			}
+
+			} else {
+				// Normal LCC execution, handle 1 step at a time until termination
+				this.handleSteps(1);
+		}
+	}
+
+	handleSteps(stepNumber) {
+		// Check if new instructions are to be executed
+
+		for (let i = 0; i < stepNumber && this.running; i++) {
+			this.currentIteration++;
+			this.executeNextInstruction(
+				this.currentIteration == this.snapshot.length
+			);
+		}
+	}
+
+	restorePrevState(newState) {
+		let log = this.snapshot[newState];
+
+		// Restore old pc
+		this.pc = log.pc;
+
+		// Restore old flags
+		this.c = log.flags.c;
+		this.v = log.flags.v;
+		this.n = log.flags.n;
+		this.z = log.flags.z;
+
+		// Restore old register values
+		for (let i = 0; i < 8; i++) this.r[i] = log.registers[i];
+
+		// Undo any changes to memory
+		for (let i = this.currentIteration; i >= newState; i--) {
+			if (this.snapshot[i].memory.hasChanged) {
+				this.restorePrevMemory(i);
+			}
+		}
+	}
+
+	restorePrevMemory(state) {
+		// console.log("TEST: ", this.snapshot[state], state);
+		// console.log("MEMORY: ", this.snapshot[state].memory);
+
+		let oldMem = this.snapshot[state].memory;
+		if (oldMem.address != null) {
+			let oldValues = oldMem.old;
+			for (let i = 0; i < oldValues.length; i++) {
+				this.mem[oldMem.address + i] = oldValues[i];
+			}
+		}
+	}
+
+	stateUpdates(oldSnapshot, newSnapshot) {
+		// oldIteration = Math.max(oldIteration, 0);
+		// newIteration = Math.max(newIteration, 0);
+		// console.log("State Updates: ", oldIteration, newIteration);
+
+		let update = {
+			registers: {
+				old: oldSnapshot.registers,
+				new: newSnapshot.registers,
+			},
+			pc: {
+				old: oldSnapshot.pc,
+				new: newSnapshot.pc,
+			},
+			ir: {
+				old: oldSnapshot.ir,
+				new: newSnapshot.ir,
+			},
+			flags: {
+				old: oldSnapshot.flags,
+				new: newSnapshot.flags,
+			},
+			memory: {},
+		};
+
+		// Track all memory changes between two iterations
+		let changes = {};
+		if (oldIteration < newIteration) {
+			for (let i = newIteration; i > oldIteration; i--) {
+				let memoryChange = this.snapshot[i].memory;
+				if (memoryChange.hasChanged) {
+					let baseAddress = memoryChange.address;
+					let length = memoryChange.new.length;
+					for (let j = 0; j < length; j++) {
+						changes[baseAddress + j] = memoryChange.old[j];
+					}
+				}
+			}
+		} else {
+			for (let i = newIteration + 1; i <= oldIteration; i++) {
+				let memoryChange = this.snapshot[i].memory;
+				if (memoryChange.hasChanged) {
+					let baseAddress = memoryChange.address;
+					let length = memoryChange.new.length;
+					for (let j = 0; j < length; j++) {
+						changes[baseAddress + j] = memoryChange.new[j];
+					}
+				}
+			}
+			update.pc = {
+				old: newSnapshot.pc,
+				new: oldSnapshot.pc,
+			};
+		}
+		// Compare change values with this.mem to detect true changes
+		for (let address in changes) {
+			let oldValue = changes[address];
+			let newValue = this.mem[address];
+			if (oldValue != newValue) {
+				update.memory[address] = { old: oldValue, new: newValue };
+			}
+		}
+
+		// console.log(update);
+
+		return update;
+	}
+
+	locationLineMap(listing) {
+		let keys = {};
+		let lines = [];
+		for (const key of Object.keys(listing)) {
+			let line = listing[key];
+			keys[listing[key].locCtr] = lines.length;
+			lines.push(line);
+		}
+		return { keys: keys, lines: lines };
+	}
+
+	executeNextInstruction(readInNewInput) {
 		// Fetch instruction
 		this.ir = this.mem[this.pc++];
 		// Decode instruction
@@ -395,9 +585,6 @@ class Interpreter {
 			// }
 			this.debug();
 		}
-
-		const prevRegs = this.r.slice(); // saves r0–r7
-		const prevPC = this.pc; // saves the previous PC value
 
 		// Execute instruction
 		switch (this.opcode) {
@@ -453,10 +640,10 @@ class Interpreter {
 				this.error(`Unknown opcode: ${this.opcode}`);
 				this.running = false;
 		}
-
-		// if any registers changed or flags were set, print them out
-		if (this.debugMode && this.running) {
-			let regsOrFlagsOutput = "";
+    
+    // if any registers changed or flags were set, print them out
+    if (this.debugMode && this.running) {
+      let regsOrFlagsOutput = "";
 
 			for (let i = 0; i < 8; i++) {
 				const oldVal = prevRegs[i];
@@ -705,9 +892,13 @@ class Interpreter {
 		switch (this.eopcode) {
 			case 0: // PUSH // mem[--sp] = sr
 				// decrement stack pointer and store value
+				this.memoryChange.hasChanged = true;
 				this.r[6] = (this.r[6] - 1) & 0xffff;
 				// save source register to memory at address pointed at by stack pointer
+				this.memoryChange.address = this.r[6];
+				this.memoryChange.old = [this.mem[this.r[6]]];
 				this.mem[this.r[6]] = this.r[this.sr];
+				this.memoryChange.new = [this.mem[this.r[6]]];
 				break;
 			case 1: // POP // dr = mem[sp++];
 				// load value from memory at address pointed at by stack pointer to destination
@@ -871,8 +1062,11 @@ class Interpreter {
 
 	executeST() {
 		const address = (this.pc + this.pcoffset9) & 0xffff;
+		this.memoryChange.address = address;
+		this.memoryChange.old = [this.mem[address]];
 		this.mem[address] = this.r[this.sr];
 		if (address > this.memMax) this.memMax = address;
+		this.memoryChange.new = [this.r[this.sr]];
 	}
 
 	executeMVI() {
@@ -890,7 +1084,11 @@ class Interpreter {
 
 	executeSTR() {
 		const address = (this.r[this.baser] + this.offset6) & 0xffff;
+		this.memoryChange.address = address;
+		this.memoryChange.old = [this.mem[address]];
 		this.mem[address] = this.r[this.sr];
+		this.memoryChange.new = [this.r[this.sr]];
+		this.memoryChange.hasChanged = true;
 	}
 
 	executeJMP() {
@@ -919,6 +1117,7 @@ class Interpreter {
 			this.writeOutput(char);
 			address = (address + 1) & 0xffff;
 			charCode = this.mem[address];
+			this.lineLength += 1;
 		}
 	}
 
@@ -1027,14 +1226,24 @@ class Interpreter {
 
 	executeSIN() {
 		let address = this.r[this.sr];
+		this.memoryChange.address = address;
+		this.memoryChange.old = [];
+		this.memoryChange.new = [];
+
 		let { inputLine: input, isSimulated } = this.readLineFromStdin();
 
 		for (let i = 0; i < input.length; i++) {
+			this.memoryChange.old.push(this.mem[address]);
 			this.mem[address] = input.charCodeAt(i);
+			this.memoryChange.new.push(this.mem[address]);
 			address = (address + 1) & 0xffff;
 		}
 		// Null-terminate the string
+		this.memoryChange.old.push(this.mem[address]);
 		this.mem[address] = 0;
+		this.memoryChange.new.push(this.mem[address]);
+
+		this.memoryChange.hasChanged = true;
 
 		// add newline here if input is simulated
 		if (isSimulated) {
@@ -1115,7 +1324,9 @@ class Interpreter {
 	// be followed by a newline, as in the case of
 	// aout, dout, sout, etc.
 	writeOutput(message) {
-		process.stdout.write(message);
+		if (!this.options.interactiveMode) {
+			process.stdout.write(message);
+		}
 		this.output += message;
 	}
 
@@ -1125,10 +1336,15 @@ class Interpreter {
 	// without a newline.
 	writeDebugOutputOrElse(message) {
 		if (this.debugMode) {
-			process.stdout.write(message + "\n");
+			if (!this.interactiveMode) {
+				process.stdout.write(message + "\n");
+			}
 		} else {
-			process.stdout.write(message);
+			if (!this.options.interactiveMode) {
+				process.stdout.write(message);
+			}
 		}
+		this.lineLength += message.length;
 		this.output += message;
 	}
 
@@ -1138,7 +1354,9 @@ class Interpreter {
 				this.running = false;
 				break;
 			case 1: // NL
+				this.lineLength = 0;
 				this.writeOutput(newline);
+				this.newlinePrinted = true;
 				break;
 			case 2: // DOUT
 				let value = this.r[this.sr];
