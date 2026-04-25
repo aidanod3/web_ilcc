@@ -26,7 +26,7 @@ import CPU from './panels/CPU';
 import Stack from './panels/Stack';
 import Memory from './panels/Memory';
 
-export default function Workspace({ editorRef, output, inputMode, onSendInput, debugState, isDebugging }) {
+export default function Workspace({ editorRef, output, inputMode, onSendInput, debugState, memoryMap, isDebugging }) {
   return (
     <div className={styles.layout}>
 
@@ -72,7 +72,7 @@ export default function Workspace({ editorRef, output, inputMode, onSendInput, d
 
             <div className={styles.debugSection}>
               <div className={styles.sectionHeader}>Stack</div>
-              <Stack debugState={debugState} />
+              <Stack debugState={debugState} memoryMap={memoryMap} />
             </div>
           </div>
 
@@ -82,7 +82,7 @@ export default function Workspace({ editorRef, output, inputMode, onSendInput, d
           {/* Bottom row: Memory viewer */}
           <div className={styles.debugSection}>
             <div className={styles.sectionHeader}>Memory</div>
-            <Memory debugState={debugState} />
+            <Memory debugState={debugState} memoryMap={memoryMap} />
           </div>
 
         </div>

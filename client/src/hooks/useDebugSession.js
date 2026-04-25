@@ -51,6 +51,11 @@ export default function useDebugSession() {
   const [iteration,   setIteration]   = useState(0);
   const [programDone, setProgramDone] = useState(false);
 
+  /* Sparse map of every memory cell written since the session started.
+     Key: address (number), Value: current cell value (number).
+     Only grows — never shrinks within a session.  Reset on start/stop. */
+  const [memoryMap, setMemoryMap] = useState({});
+
   /* Live WebSocket — ref so changes don't trigger re-renders. */
   const wsRef = useRef(null);
 
@@ -78,6 +83,7 @@ export default function useDebugSession() {
     setDebugState(null);
     setIteration(0);
     setProgramDone(false);
+    setMemoryMap({});
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/api/debug`);
@@ -105,6 +111,16 @@ export default function useDebugSession() {
         case 'step_result':
           setDebugState(msg.diff);
           setIteration(msg.iteration);
+          /* Merge any memory writes from this step into the running map. */
+          if (msg.diff.memory?.length) {
+            setMemoryMap(prev => {
+              const next = { ...prev };
+              for (const ch of msg.diff.memory) {
+                next[ch.addr] = ch.new;
+              }
+              return next;
+            });
+          }
           break;
 
         /* Program reached HALT — no more forward steps possible. */
@@ -161,6 +177,7 @@ export default function useDebugSession() {
     setDebugState(null);
     setIteration(0);
     setProgramDone(false);
+    setMemoryMap({});
   }, []);
 
   return {
@@ -170,6 +187,7 @@ export default function useDebugSession() {
     debugState,
     iteration,
     programDone,
+    memoryMap,
     start,
     step,
     sendInput,

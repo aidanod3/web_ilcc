@@ -642,19 +642,16 @@ class Interpreter {
 
 		switch (this.eopcode) {
 			case 0: // PUSH // mem[--sp] = sr
-				// decrement stack pointer and store value
 				this.r[6] = (this.r[6] - 1) & 0xffff;
-				// save source register to memory at address pointed at by stack pointer
-				this.memoryChanges.old = [this.mem[this.r[6]]];
-				this.mem[this.r[6]] = this.r[this.sr];
-				this.memoryChanges.new = [this.mem[this.r[6]]];
-
-				let memoryChange = {}
-				memoryChange.address = this.r[6];
-				memoryChange.old = [this.mem[this.r[6]]];
-				this.mem[this.r[6]] = this.r[this.sr];
-				memoryChange.new = [this.mem[this.r[6]]];
-				this.memoryChanges.push(memoryChange);
+				{
+					const mc = {
+						address: this.r[6],
+						old: [this.mem[this.r[6]]],   // read BEFORE the write
+					};
+					this.mem[this.r[6]] = this.r[this.sr];
+					mc.new = [this.mem[this.r[6]]];
+					this.memoryChanges.push(mc);
+				}
 				break;
 			case 1: // POP // dr = mem[sp++];
 				// load value from memory at address pointed at by stack pointer to destination

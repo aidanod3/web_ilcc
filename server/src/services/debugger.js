@@ -78,6 +78,26 @@ function createDebugSession(sourceCode, callbacks) {
     };
   }
 
+  /* Flatten the interpreter's raw memoryChanges into individual cell diffs.
+     Each raw entry covers one or more consecutive addresses (e.g. SIN writes
+     a whole string starting at change.address).  We expand those into one
+     { addr, old, new } object per cell so the frontend can do O(1) lookups. */
+  function normalizeMemoryChanges(rawChanges) {
+    const cells = [];
+    for (const change of rawChanges) {
+      const base = change.address;
+      const len  = Math.min((change.old || []).length, (change.new || []).length);
+      for (let i = 0; i < len; i++) {
+        cells.push({
+          addr: (base + i) & 0xffff,
+          old:  change.old[i],
+          new:  change.new[i],
+        });
+      }
+    }
+    return cells;
+  }
+
   /* Build a full state diff between two snapshots.
      Every field carries both the old and new value so the client can render
      "old → new" highlights without needing to remember the previous state. */
@@ -112,6 +132,9 @@ function createDebugSession(sourceCode, callbacks) {
 
       const before = captureState();
 
+      /* Clear the change log so we only capture writes from this step. */
+      interp.memoryChanges = [];
+
       try {
         await interp.handleSteps(n);
       } catch (err) {
@@ -122,6 +145,9 @@ function createDebugSession(sourceCode, callbacks) {
 
       const after = captureState();
       const diff  = buildDiff(before, after);
+
+      /* Attach flattened memory changes so the client can update its map. */
+      diff.memory = normalizeMemoryChanges(interp.memoryChanges);
 
       if (!interp.running) {
         onDone();

@@ -80,6 +80,7 @@ export default function Ilcc() {
         inputMode={debug_session.isDebugging ? debug_session.inputMode : runner.inputMode}
         onSendInput={debug_session.isDebugging ? debug_session.sendInput : runner.sendInput}
         debugState={debug_session.debugState}
+        memoryMap={debug_session.memoryMap}
         isDebugging={debug_session.isDebugging}
       />
 
