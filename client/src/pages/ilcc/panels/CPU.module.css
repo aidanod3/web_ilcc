@@ -76,6 +76,29 @@
 
 /* Highlight for values that changed on the last step */
 .changed {
-  background: rgba(74, 222, 128, 0.25);
-  outline: 1px solid rgba(74, 222, 128, 0.55);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+/* ── Old/new diff display ──────────────────────────────────────────────── */
+
+/* Previous value — shown to the left of the arrow */
+.old {
+  color: #f87171;   /* red-400 */
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+/* Arrow separator between old and new */
+.sep {
+  color: var(--text3);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  padding: 0 2px;
+}
+
+/* Current value after the change */
+.new {
+  color: #4ade80;   /* green-400 */
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
 }

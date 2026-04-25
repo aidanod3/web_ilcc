@@ -78,28 +78,26 @@ function createDebugSession(sourceCode, callbacks) {
     };
   }
 
-  /* Build a diff between two snapshots — only include what changed. */
+  /* Build a full state diff between two snapshots.
+     Every field carries both the old and new value so the client can render
+     "old → new" highlights without needing to remember the previous state. */
   function buildDiff(before, after) {
-    const diff = {
-      pc:        after.pc,
-      ir:        after.ir,
-      registers: {},
-      flags:     {},
-    };
-
+    const registers = [];
     for (let i = 0; i < 8; i++) {
-      if (before.registers[i] !== after.registers[i]) {
-        diff.registers[`r${i}`] = after.registers[i];
-      }
+      registers.push({ old: before.registers[i], new: after.registers[i] });
     }
 
-    for (const flag of ['n', 'z', 'c', 'v']) {
-      if (before.flags[flag] !== after.flags[flag]) {
-        diff.flags[flag] = after.flags[flag];
-      }
+    const flags = {};
+    for (const f of ['n', 'z', 'c', 'v']) {
+      flags[f] = { old: before.flags[f], new: after.flags[f] };
     }
 
-    return diff;
+    return {
+      pc:        { old: before.pc, new: after.pc },
+      ir:        { old: before.ir, new: after.ir },
+      registers,
+      flags,
+    };
   }
 
   /* ── Public session API ── */
