@@ -72,6 +72,12 @@ export default function useDebugSession() {
     if (!code.trim()) return;
 
     if (wsRef.current) {
+      /* Null out handlers before closing so the old onclose can't fire
+         asynchronously and stomp the new session's isDebugging = true. */
+      wsRef.current.onopen    = null;
+      wsRef.current.onmessage = null;
+      wsRef.current.onerror   = null;
+      wsRef.current.onclose   = null;
       wsRef.current.close();
       wsRef.current = null;
     }
