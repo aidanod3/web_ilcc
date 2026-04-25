@@ -25,6 +25,7 @@
 import { useState } from 'react';
 import styles from './Header.module.css';
 import { Play, Loader, BugPlay, RotateCcw, Square, StepForward } from 'lucide-react';
+import logo from '../../assets/ilcc_wht.PNG';
 
 export default function Header({
   isRunning,
@@ -50,9 +51,9 @@ export default function Header({
   return (
     <header className={styles.header}>
 
-      {/* Left: app title */}
+      {/* Left: logo */}
       <div>
-        <h1>&lt;ilcc&gt;</h1>
+        <img src={logo} alt="ilcc" className={styles.logo} />
       </div>
 
       {/* Center: action buttons */}

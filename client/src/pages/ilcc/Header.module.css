@@ -9,9 +9,12 @@
   padding: 8px 8px 0;
 }
 
-.header h1 {
-  font-size: 1.6rem;
-  margin-bottom: 4px;
+.logo {
+  height: 36px;
+  width: auto;
+  display: block;
+  padding: 4px 0;
+  padding-left: 5px;
 }
 
 .actions {
