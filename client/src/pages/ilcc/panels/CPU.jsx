@@ -112,9 +112,11 @@ export default function CPU({ debugState }) {
     <div className={styles.content}>
 
       {/* ── Registers r0 – r7 ── */}
+      {/* Key includes entry.new so React remounts the element whenever the
+          value changes, restarting the CSS flash animation from scratch. */}
       <div className={styles.section}>
         {registers.map((entry, i) => (
-          <Row key={i} label={`r${i}`} entry={entry} />
+          <Row key={`r${i}:${entry.new}`} label={`r${i}`} entry={entry} />
         ))}
       </div>
 
@@ -125,7 +127,7 @@ export default function CPU({ debugState }) {
           const changed = entry.old !== entry.new;
           return (
             <div
-              key={f}
+              key={`${f}:${entry.new}`}
               className={`${styles.flag} ${changed ? styles.changed : ''}`}
             >
               <span className={styles.flagLabel}>{f.toUpperCase()}</span>
@@ -138,7 +140,7 @@ export default function CPU({ debugState }) {
       {/* ── Named pointers: fp sp lr pc ir ── */}
       <div className={styles.section}>
         {pointers.map(({ label, entry }) => (
-          <Row key={label} label={label} entry={entry} />
+          <Row key={`${label}:${entry.new}`} label={label} entry={entry} />
         ))}
       </div>
 

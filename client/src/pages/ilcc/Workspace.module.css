@@ -29,16 +29,18 @@
   overflow: hidden;
 }
 
-/* Draggable resize handle between editor and terminal */
+/* ── Resize handles ── */
+
+/* Horizontal bar — separates vertically-stacked panels (editor/terminal, Stack/Memory) */
 .resizeHandle {
   height: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: ns-resize;
+  flex-shrink: 0;
 }
 
-/* Visual indicator pill inside the resize handle */
 .resizeHandle::after {
   content: "";
   width: 30px;
@@ -54,58 +56,72 @@
   width: 100%;
 }
 
-/* ── Right column: single debugger card ── */
+/* Vertical bar — separates horizontally-adjacent panels (CPU State / Stack+Memory) */
+.resizeHandleV {
+  width: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ew-resize;
+  flex-shrink: 0;
+}
+
+.resizeHandleV::after {
+  content: "";
+  width: 2px;
+  height: 30px;
+  background: var(--bg3);
+  border-radius: 8px;
+  transition: background 0.15s, height 0.15s;
+}
+
+.resizeHandleV:hover::after,
+.resizeHandleV[data-resize-handle-active]::after {
+  background: var(--text2);
+  height: 100%;
+}
+
+/* ── Right column: two vertically-stacked debugger panels ── */
 
 .rightColumn {
   flex: 1;
-  display: flex;
-  flex-direction: column;
   min-height: 0;
+  /* No display:flex here — the PanelGroup (.rightGroup) fills it via height:100% */
 }
 
-/* One unified card wrapping all debug sections */
+/* Stretches the outer PanelGroup to fill .rightColumn */
+.rightGroup {
+  height: 100%;
+}
+
+/* Individual debug card (CPU State or Stack/Memory) */
 .debugCard {
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  overflow: hidden;
   background: var(--bg1);
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
 }
 
-/* Top row: CPU State + Stack side by side */
-.debugUpper {
-  flex: 3;
-  display: flex;
-  flex-direction: row;
+/* Inner PanelGroup inside the Stack/Memory card */
+.innerGroup {
+  flex: 1;
   min-height: 0;
 }
 
-/* Each debug section fills its space inside the card */
+/* Section inside the Stack/Memory card (Stack or Memory) */
 .debugSection {
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   overflow: hidden;
-}
-
-/* Internal dividers — subtle lines instead of separate card borders */
-.debugDividerV {
-  width: 1px;
-  background: var(--border);
-}
-
-.debugDividerH {
-  height: 1px;
-  background: var(--border);
 }
 
 /* ── Shared ── */
 
-/* Panel header bar — used by editor, terminal */
+/* Panel header bar — used by editor and terminal panes */
 .paneHeader {
   flex-shrink: 0;
   height: 40px;
@@ -119,7 +135,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Section header — used by each debugger card (CPU State, Stack, Memory) */
+/* Section header — used by CPU State, Stack, Memory */
 .sectionHeader {
   flex-shrink: 0;
   height: 40px;

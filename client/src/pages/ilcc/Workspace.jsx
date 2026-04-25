@@ -3,19 +3,19 @@
  *
  * Two-column layout that fills all space below the Header:
  *
- *   Left column (flex: 2):
- *     Uses react-resizable-panels to split vertically between:
- *       - Code Editor (70% default, min 20%)
- *       - Terminal     (30% default, min 15%)
- *     The user can drag the separator to resize them.
+ *   Left column (flex: 3):
+ *     react-resizable-panels split (vertical):
+ *       - Code Editor (88.5% default, min 20%)
+ *       - Terminal     (rest, min 15%)
  *
  *   Right column (flex: 1):
- *     Single card with no top-level header. Interior is split into:
- *       - Top row:    CPU State + Stack side by side, each with its own header
- *       - Bottom row: Memory with its own header
- *
- * TODO: Wire props from index.jsx once editor source and debug state
- *       are connected (code, setCode, debugState, output, etc.).
+ *     react-resizable-panels split (horizontal):
+ *       - CPU State card     (40% default, min 20%)
+ *       - Stack/Memory card  (60% default, min 25%)
+ *           └─ inner split (vertical):
+ *               - Stack  (50% default, min 15%) — virtual scroll, full 64K range
+ *               - Memory (50% default, min 15%) — sparse, program-area writes
+ *     Both inner panels have a jump-to-address bar.
  */
 
 import { Panel, Group, Separator } from 'react-resizable-panels';
@@ -34,7 +34,6 @@ export default function Workspace({ editorRef, output, inputMode, onSendInput, d
       <div className={styles.leftColumn}>
         <Group orientation="vertical">
 
-          {/* Code editor panel — 70% of the left column by default */}
           <Panel defaultSize={88.5} minSize={20}>
             <div className={styles.pane}>
               <div className={styles.paneHeader}>Code Editor</div>
@@ -42,10 +41,8 @@ export default function Workspace({ editorRef, output, inputMode, onSendInput, d
             </div>
           </Panel>
 
-          {/* Draggable separator between editor and terminal */}
           <Separator className={styles.resizeHandle} />
 
-          {/* Terminal panel — 30% of the left column by default */}
           <Panel defaultSize={30} minSize={15}>
             <div className={styles.pane}>
               <div className={styles.paneHeader}>Terminal</div>
@@ -56,36 +53,46 @@ export default function Workspace({ editorRef, output, inputMode, onSendInput, d
         </Group>
       </div>
 
-      {/* ── Right column: single debugger card with internal sections ── */}
+      {/* ── Right column: CPU State (left) + Stack/Memory (right) ── */}
       <div className={styles.rightColumn}>
-        <div className={styles.debugCard}>
+        <Group orientation="horizontal" className={styles.rightGroup}>
 
-          {/* Top row: CPU State + Stack side by side */}
-          <div className={styles.debugUpper}>
-            <div className={styles.debugSection}>
+          {/* CPU State card */}
+          <Panel defaultSize={40} minSize={20}>
+            <div className={styles.debugCard}>
               <div className={styles.sectionHeader}>CPU State</div>
               <CPU debugState={debugState} />
             </div>
+          </Panel>
 
-            {/* Vertical divider between CPU and Stack */}
-            <div className={styles.debugDividerV} />
+          <Separator className={styles.resizeHandleV} />
 
-            <div className={styles.debugSection}>
-              <div className={styles.sectionHeader}>Stack</div>
-              <Stack debugState={debugState} memoryMap={memoryMap} />
+          {/* Stack / Memory card — internally split into two sub-panels */}
+          <Panel defaultSize={60} minSize={25}>
+            <div className={styles.debugCard}>
+              <Group orientation="vertical" className={styles.innerGroup}>
+
+                <Panel defaultSize={50} minSize={15}>
+                  <div className={styles.debugSection}>
+                    <div className={styles.sectionHeader}>Stack</div>
+                    <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
+                  </div>
+                </Panel>
+
+                <Separator className={styles.resizeHandle} />
+
+                <Panel defaultSize={50} minSize={15}>
+                  <div className={styles.debugSection}>
+                    <div className={styles.sectionHeader}>Memory</div>
+                    <Memory debugState={debugState} memoryMap={memoryMap} />
+                  </div>
+                </Panel>
+
+              </Group>
             </div>
-          </div>
+          </Panel>
 
-          {/* Horizontal divider between top row and memory */}
-          <div className={styles.debugDividerH} />
-
-          {/* Bottom row: Memory viewer */}
-          <div className={styles.debugSection}>
-            <div className={styles.sectionHeader}>Memory</div>
-            <Memory debugState={debugState} memoryMap={memoryMap} />
-          </div>
-
-        </div>
+        </Group>
       </div>
 
     </div>

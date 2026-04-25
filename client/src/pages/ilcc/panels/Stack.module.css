@@ -1,22 +1,71 @@
 /* Stack panel styles */
 
+/* Outer wrapper — fills the space below the section header */
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Jump-to-address bar ── */
+.jumpBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+}
+
+.jumpLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.jumpInput {
+  flex: 1;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+  min-width: 0;
+}
+
+.jumpInput:focus {
+  border-color: #4ade80;
+}
+
+/* ── Scrollable rows area ── */
 .content {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: 6px 0;
 }
 
-/* Single stack row: address + value */
+/* Single stack row */
 .row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 6px;
+  padding: 3px 10px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .row:hover {
@@ -34,33 +83,34 @@
   font-size: 12px;
   font-family: "JetBrains Mono", monospace;
   color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
 }
 
-/* Tag badges (SP, FP, etc.) next to stack values */
-.tag {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text2);
-  background-color: var(--bg3);
-  padding: 1px 5px;
-  border-radius: 3px;
-  text-transform: uppercase;
+/* ── Changed-row highlight (flash → settle) ── */
+@keyframes cell-flash {
+  from { background: rgba(74, 222, 128, 0.28); }
+  to   { background: rgba(74, 222, 128, 0.08); }
 }
 
-/* Highlight for values that changed on the last step */
 .changed {
-  background: rgba(74, 222, 128, 0.25);
-  outline: 1px solid rgba(74, 222, 128, 0.55);
+  background: rgba(74, 222, 128, 0.08);
+  animation: cell-flash 0.6s ease-out forwards;
 }
 
 /* Empty state placeholder */
 .empty {
-  padding: 10px 6px;
+  padding: 10px;
   font-size: 12px;
   color: var(--text3);
 }
 
-/* ── Pointer tags (sp>, fp>, fpsp>) ──────────────────────────────────────── */
+/* ── Pointer tags ── */
+
+/* Current sp / fp — green */
 .pointerTag {
   font-size: 11px;
   font-family: "JetBrains Mono", monospace;
@@ -72,7 +122,19 @@
   user-select: none;
 }
 
-/* ── Old/new diff display ─────────────────────────────────────────────────── */
+/* Previous sp — red, same size/layout as .pointerTag */
+.pointerTagOld {
+  font-size: 11px;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  color: #f87171;
+  min-width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── Old/new diff display ── */
 .old { color: #f87171; font-family: "JetBrains Mono", monospace; font-size: 12px; }
 .sep { color: var(--text3); font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 0 2px; }
 .new { color: #4ade80; font-family: "JetBrains Mono", monospace; font-size: 12px; }

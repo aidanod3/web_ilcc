@@ -55,6 +55,13 @@ function handleDebugSocket(ws) {
         });
 
         iteration = 0;
+
+        /* Send the initial program-area memory so the Memory panel is
+           pre-populated with the loaded executable's contents. */
+        if (session) {
+          const cells = session.getInitialMemory();
+          send({ type: 'memory_init', cells });
+        }
         break;
       }
 

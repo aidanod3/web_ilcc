@@ -107,6 +107,16 @@ export default function useDebugSession() {
           setInputMode(true);
           break;
 
+        /* Initial program memory sent once after successful assembly. */
+        case 'memory_init': {
+          const init = {};
+          for (const { addr, value } of msg.cells) {
+            init[addr] = value;
+          }
+          setMemoryMap(init);
+          break;
+        }
+
         /* Server executed a step and returned the state diff. */
         case 'step_result':
           setDebugState(msg.diff);

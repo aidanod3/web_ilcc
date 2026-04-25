@@ -166,6 +166,21 @@ function createDebugSession(sourceCode, callbacks) {
       }
     },
 
+    /* Return every cell in the loaded program range [loadPoint, memMax] as it
+       exists immediately after the executable is loaded.  We include zero-
+       valued cells because they are meaningful parts of the program: null
+       terminators inside .string literals, and .zero allocations used as
+       input buffers.  Skipping zeros would leave gaps in the Memory panel. */
+    getInitialMemory() {
+      const cells = [];
+      const start = interp.loadPoint ?? 0;
+      const end   = interp.memMax   ?? start;
+      for (let addr = start; addr <= end; addr++) {
+        cells.push({ addr, value: interp.mem[addr] });
+      }
+      return cells;
+    },
+
     cleanup,
   };
 }

@@ -1,5 +1,53 @@
 /* Memory panel styles */
 
+/* Outer wrapper — fills the space below the section header */
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Jump-to-address input row */
+.jumpBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+}
+
+.jumpLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.jumpInput {
+  flex: 1;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+  min-width: 0;
+}
+
+.jumpInput:focus {
+  border-color: var(--accent, #4ade80);
+}
+
+/* Scrollable rows area */
 .content {
   flex: 1;
   overflow-y: auto;
@@ -17,6 +65,7 @@
   top: 0;
   background-color: var(--bg2);
   border-bottom: 2px solid var(--bg3);
+  flex-shrink: 0;
 }
 
 .colLabel {
@@ -27,7 +76,7 @@
   color: var(--text2);
 }
 
-/* First column (address) stretches, offset columns are fixed width */
+/* First column (address) stretches, value column is fixed width */
 .colLabel:first-child {
   flex: 1;
 }
@@ -37,12 +86,13 @@
   text-align: left;
 }
 
-/* Single memory row: base address + 4 values */
+/* Single memory row */
 .row {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 3px 12px;
+  flex-shrink: 0;
 }
 
 .row:hover {
@@ -68,10 +118,15 @@
   border-radius: 4px;
 }
 
-/* Highlight for values that changed on the last step */
+/* ── Changed-row highlight (flash → settle) ── */
+@keyframes cell-flash {
+  from { background: rgba(74, 222, 128, 0.28); }
+  to   { background: rgba(74, 222, 128, 0.08); }
+}
+
 .changed {
-  background: rgba(74, 222, 128, 0.25);
-  outline: 1px solid rgba(74, 222, 128, 0.55);
+  background: rgba(74, 222, 128, 0.08);
+  animation: cell-flash 0.6s ease-out forwards;
 }
 
 /* Empty state placeholder */
@@ -79,6 +134,7 @@
   padding: 10px 12px;
   font-size: 12px;
   color: var(--text3);
+  flex-shrink: 0;
 }
 
 /* ── Old/new diff display ─────────────────────────────────────────────────── */

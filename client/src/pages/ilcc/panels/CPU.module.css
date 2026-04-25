@@ -74,9 +74,15 @@
   font-family: "JetBrains Mono", monospace;
 }
 
-/* Highlight for values that changed on the last step */
+/* ── Changed-row highlight (flash → settle) ── */
+@keyframes cell-flash {
+  from { background: rgba(74, 222, 128, 0.28); }
+  to   { background: rgba(74, 222, 128, 0.08); }
+}
+
 .changed {
   background: rgba(74, 222, 128, 0.08);
+  animation: cell-flash 0.6s ease-out forwards;
 }
 
 /* ── Old/new diff display ──────────────────────────────────────────────── */
