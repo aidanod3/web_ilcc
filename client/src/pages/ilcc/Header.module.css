@@ -73,3 +73,30 @@
   align-items: center;
   gap: 10px;
 }
+
+/* Step-count number input — sits to the left of the StepForward button */
+.stepInput {
+  width: 48px;
+  height: 30.5px;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0;
+  outline: none;
+  /* Remove browser spin arrows — the value is edited directly */
+  -moz-appearance: textfield;
+}
+
+.stepInput::-webkit-inner-spin-button,
+.stepInput::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stepInput:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
