@@ -1,27 +1,15 @@
 /*
  * CPU.jsx — CPU state panel.
  *
- * Displays three sections that together reflect the full architectural state
- * of the LCC processor after the most recent debug step:
+ * Two sections:
+ *   Registers — r0…r7, then fp (r5), sp (r6), lr (r7), pc, ir
+ *   Flags     — N Z C V shown inline as "N: 0  Z: 0  C: 0  V: 0"
  *
- *   Registers  — r0 … r7  (general-purpose)
- *   Flags      — N  Z  C  V  (condition codes)
- *   Pointers   — fp (r5), sp (r6), lr (r7), pc, ir
- *
- * Each field receives an {old, new} pair from the server diff.  When old ≠ new
- * the row is highlighted and the value is rendered as "old > new", matching
- * the screenshot style (old in red, new in green).
- *
- * All numbers are formatted as 4-digit lowercase hex.
+ * Each field receives an {old, new} pair from the server diff. When
+ * old ≠ new the row / flag value is highlighted (old in red, new in green).
  *
  * Props:
  *   debugState — latest diff from useDebugSession, or null before first step.
- *     {
- *       pc:        { old: number, new: number },
- *       ir:        { old: number, new: number },
- *       registers: [ { old, new }, … ],   // 8 entries
- *       flags:     { n, z, c, v }          // each { old, new }
- *     }
  */
 
 import styles from './CPU.module.css';
@@ -30,13 +18,11 @@ import styles from './CPU.module.css';
 
 const hex4 = (v) => (v >>> 0).toString(16).padStart(4, '0');
 
-/* Renders "old > new" when the value changed, otherwise just the current value. */
+/* Renders "old > new" when changed, otherwise just the current value. */
 function DiffValue({ entry }) {
   if (!entry) return <span className={styles.value}>0000</span>;
   const { old: o, new: n } = entry;
-  if (o === n) {
-    return <span className={styles.value}>{hex4(n)}</span>;
-  }
+  if (o === n) return <span className={styles.value}>{hex4(n)}</span>;
   return (
     <span>
       <span className={styles.old}>{hex4(o)}</span>
@@ -46,7 +32,8 @@ function DiffValue({ entry }) {
   );
 }
 
-/* A single label : value row, highlighted if the value changed. */
+/* A single label : value row, highlighted + keyed on new value so the
+   flash animation restarts whenever the value changes. */
 function Row({ label, entry }) {
   const changed = entry && entry.old !== entry.new;
   return (
@@ -57,33 +44,38 @@ function Row({ label, entry }) {
   );
 }
 
-/* ── placeholder shown before the first step ─────────────────────────────── */
+/* ── empty state (before first step) ────────────────────────────────────── */
 
-const ZERO_ENTRY = { old: 0, new: 0 };
+const ZERO = { old: 0, new: 0 };
+const ZERO_FLAG = { old: 0, new: 0 };
 
 function EmptyState() {
   return (
     <div className={styles.content}>
+
       <div className={styles.section}>
+        <div className={styles.sectionTitle}>Registers</div>
         {Array.from({ length: 8 }, (_, i) => (
-          <Row key={i} label={`r${i}`} entry={ZERO_ENTRY} />
+          <Row key={i} label={`r${i}`} entry={ZERO} />
         ))}
-      </div>
-
-      <div className={styles.flagRow}>
-        {['N', 'Z', 'C', 'V'].map((f) => (
-          <div key={f} className={styles.flag}>
-            <span className={styles.flagLabel}>{f}</span>
-            <span className={styles.flagValue}>0</span>
-          </div>
+        <div className={styles.divider} />
+        {[['fp', ZERO], ['sp', ZERO], ['lr', ZERO], ['pc', ZERO], ['ir', ZERO]].map(([label, entry]) => (
+          <Row key={label} label={label} entry={entry} />
         ))}
       </div>
 
       <div className={styles.section}>
-        {['fp', 'sp', 'lr', 'pc', 'ir'].map((label) => (
-          <Row key={label} label={label} entry={ZERO_ENTRY} />
-        ))}
+        <div className={styles.sectionTitle}>Flags</div>
+        <div className={styles.flagLine}>
+          {['N', 'Z', 'C', 'V'].map(f => (
+            <span key={f} className={styles.flagItem}>
+              <span className={styles.flagName}>{f}:</span>
+              <span className={styles.flagVal}>0</span>
+            </span>
+          ))}
+        </div>
       </div>
+
     </div>
   );
 }
@@ -95,11 +87,6 @@ export default function CPU({ debugState }) {
 
   const { registers, flags, pc, ir } = debugState;
 
-  /*
-   * Pointers section reuses the register diff entries for fp/sp/lr so the
-   * highlight logic is consistent (same underlying register).
-   *   fp = r5,  sp = r6,  lr = r7
-   */
   const pointers = [
     { label: 'fp', entry: registers[5] },
     { label: 'sp', entry: registers[6] },
@@ -111,37 +98,39 @@ export default function CPU({ debugState }) {
   return (
     <div className={styles.content}>
 
-      {/* ── Registers r0 – r7 ── */}
-      {/* Key includes entry.new so React remounts the element whenever the
-          value changes, restarting the CSS flash animation from scratch. */}
+      {/* ── Registers: r0–r7 then named aliases + pc/ir ── */}
       <div className={styles.section}>
+        <div className={styles.sectionTitle}>Registers</div>
+
         {registers.map((entry, i) => (
           <Row key={`r${i}:${entry.new}`} label={`r${i}`} entry={entry} />
         ))}
-      </div>
 
-      {/* ── Condition flags: N Z C V ── */}
-      <div className={styles.flagRow}>
-        {['n', 'z', 'c', 'v'].map((f) => {
-          const entry = flags[f];
-          const changed = entry.old !== entry.new;
-          return (
-            <div
-              key={`${f}:${entry.new}`}
-              className={`${styles.flag} ${changed ? styles.changed : ''}`}
-            >
-              <span className={styles.flagLabel}>{f.toUpperCase()}</span>
-              <span className={styles.flagValue}>{entry.new}</span>
-            </div>
-          );
-        })}
-      </div>
+        <div className={styles.divider} />
 
-      {/* ── Named pointers: fp sp lr pc ir ── */}
-      <div className={styles.section}>
         {pointers.map(({ label, entry }) => (
           <Row key={`${label}:${entry.new}`} label={label} entry={entry} />
         ))}
+      </div>
+
+      {/* ── Flags: N Z C V inline ── */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Flags</div>
+        <div className={styles.flagLine}>
+          {['n', 'z', 'c', 'v'].map((f) => {
+            const entry   = flags[f];
+            const changed = entry.old !== entry.new;
+            return (
+              <span
+                key={`${f}:${entry.new}`}
+                className={`${styles.flagItem} ${changed ? styles.changed : ''}`}
+              >
+                <span className={styles.flagName}>{f.toUpperCase()}:</span>
+                <span className={changed ? styles.new : styles.flagVal}>{entry.new}</span>
+              </span>
+            );
+          })}
+        </div>
       </div>
 
     </div>

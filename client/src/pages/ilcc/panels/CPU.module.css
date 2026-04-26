@@ -10,13 +10,14 @@
   gap: 16px;
 }
 
-/* Group of related values (registers, flags, pointers) */
+/* Group of related values (registers, flags) */
 .section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
+/* Small section heading */
 .sectionTitle {
   font-size: 10px;
   font-weight: 600;
@@ -24,7 +25,14 @@
   letter-spacing: 0.08em;
   color: var(--text3);
   padding: 0 6px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+/* Thin rule between r0–r7 and the named pointer aliases */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
 }
 
 /* Single register/pointer row: label on left, value on right */
@@ -32,8 +40,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 3px 6px;
+  padding: 0 6px;
   border-radius: 4px;
+  height: 24px;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .label {
@@ -46,32 +58,30 @@
   font-family: "JetBrains Mono", monospace;
 }
 
-/* Condition code flags displayed in a horizontal row */
-.flagRow {
+/* ── Inline flags: N: 0  Z: 0  C: 0  V: 0 ── */
+
+.flagLine {
   display: flex;
-  gap: 6px;
-  padding: 0 6px;
+  gap: 12px;
+  padding: 3px 6px;
 }
 
-.flag {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.flagItem {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 4px;
+  gap: 3px;
+  padding: 2px 5px;
   border-radius: 4px;
-}
-
-.flagLabel {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.flagValue {
-  font-size: 14px;
+  font-size: 12px;
   font-family: "JetBrains Mono", monospace;
+}
+
+.flagName {
+  color: var(--text2);
+}
+
+.flagVal {
+  color: var(--text);
 }
 
 /* ── Changed-row highlight (flash → settle) ── */
@@ -85,16 +95,14 @@
   animation: cell-flash 0.6s ease-out forwards;
 }
 
-/* ── Old/new diff display ──────────────────────────────────────────────── */
+/* ── Old/new diff display ── */
 
-/* Previous value — shown to the left of the arrow */
 .old {
-  color: #f87171;   /* red-400 */
+  color: #f87171;
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
 }
 
-/* Arrow separator between old and new */
 .sep {
   color: var(--text3);
   font-family: "JetBrains Mono", monospace;
@@ -102,9 +110,8 @@
   padding: 0 2px;
 }
 
-/* Current value after the change */
 .new {
-  color: #4ade80;   /* green-400 */
+  color: #4ade80;
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
 }

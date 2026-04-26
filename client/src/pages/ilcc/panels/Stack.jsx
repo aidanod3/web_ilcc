@@ -75,7 +75,7 @@ export default function Stack({ debugState, memoryMap = {}, isDebugging = false 
 
   /* Scroll the current sp row into view whenever sp changes. */
   useEffect(() => {
-    spRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    spRowRef.current?.scrollIntoView({ block: 'center', behavior: 'instant' });
   }, [sp]);
 
   /* Address range: ROWS_ABOVE_SP rows above displaySp, then every address to 0xffff. */

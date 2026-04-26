@@ -77,7 +77,7 @@ export default function Memory({ debugState, memoryMap = {}, isDebugging = false
     const firstChanged = [...changesThisStep.keys()].sort((a, b) => a - b)[0];
 
     function tryScroll() {
-      rowRefs.current[firstChanged]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      rowRefs.current[firstChanged]?.scrollIntoView({ block: 'center', behavior: 'instant' });
     }
 
     tryScroll();
