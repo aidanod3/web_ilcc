@@ -59,29 +59,52 @@ export default function Header({
       {/* Center: action buttons */}
       <div className={styles.actions}>
 
-        {/* Run: assembles + executes to completion.
-            Hidden while debugging (debug has its own step controls). */}
-        {!isDebugging && (
-          <button className={styles.btn} type="button" onClick={onRun} disabled={isRunning}>
-            {isRunning ? <Loader size={16} /> : <Play size={16} fill="currentColor" />}
+        {/* ── Button group: Run/Restart · Debug · Stop ──
+            Always visible; colours and icons change with mode.
+              Idle:      Play   | BugPlay       | Stop (muted)
+              Running:   Loader | BugPlay (off) | Stop (red)
+              Debugging: Restart(green) | BugPlay (off) | Stop (red) */}
+        <div className={styles.btnGroup}>
+
+          {/* Left — Play (idle) · Spinner (running) · Restart (debugging) */}
+          <button
+            className={`${isDebugging ? styles.btnGreen : styles.btn} ${styles.btnGroupLeft}`}
+            type="button"
+            onClick={isDebugging ? onDebug : onRun}
+            disabled={isRunning && !isDebugging}
+          >
+            {isRunning && !isDebugging
+              ? <Loader size={16} />
+              : isDebugging
+                ? <RotateCcw size={16} />
+                : <Play size={16} fill="currentColor" />}
           </button>
-        )}
 
-        {/* Debug: starts a new debug session, or restarts the current one.
-            Shows a restart icon (RotateCcw) when already debugging. */}
-        <button
-          className={isDebugging ? styles.btnGreen : styles.btn}
-          type="button"
-          onClick={onDebug}
-          disabled={isRunning}
-        >
-          {isDebugging ? <RotateCcw size={16} /> : <BugPlay size={16} />}
-        </button>
+          {/* Middle — BugPlay: starts debug when idle, disabled when active */}
+          <button
+            className={`${styles.btn} ${styles.btnGroupMid}`}
+            type="button"
+            onClick={!isDebugging && !isRunning ? onDebug : undefined}
+            disabled={isRunning || isDebugging}
+          >
+            <BugPlay size={16} />
+          </button>
 
-        {/* Step controls: count input + forward button, debug mode only. */}
+          {/* Right — Stop: red when active, muted when idle */}
+          <button
+            className={`${isRunning || isDebugging ? styles.btnRed : styles.btn} ${styles.btnGroupRight}`}
+            type="button"
+            onClick={onStop}
+            disabled={!isRunning && !isDebugging}
+          >
+            <Square size={16} />
+          </button>
+
+        </div>
+
+        {/* Step controls: count input + forward button, debug mode only */}
         {isDebugging && (
           <>
-            {/* Number of instructions to execute per step */}
             <input
               className={styles.stepInput}
               type="number"
@@ -92,8 +115,6 @@ export default function Header({
               disabled={!canStepForward}
               aria-label="Steps per click"
             />
-
-            {/* Execute stepCount instructions forward */}
             <button
               className={styles.btn}
               type="button"
@@ -105,13 +126,6 @@ export default function Header({
           </>
         )}
 
-        {/* Stop: ends the current run or debug session.
-            Only visible when something is active. */}
-        {(isRunning || isDebugging) && (
-          <button className={styles.btnRed} type="button" onClick={onStop}>
-            <Square size={16} />
-          </button>
-        )}
       </div>
 
       {/* Right: step counter during debugging */}
