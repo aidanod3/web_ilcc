@@ -49,6 +49,60 @@
   background: var(--bg3);
 }
 
+/* ── Code Templates dropdown ── */
+
+.templatesWrapper {
+  position: relative;
+  margin-left: 20px;
+}
+
+/* Nullify the margin that .menuBtn carries — it now lives on the wrapper */
+.templatesWrapper .menuBtn {
+  margin-left: 0;
+}
+
+.templateDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+
+.templateItem {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.templateItem:hover {
+  background: var(--bg3);
+}
+
+.templateEmpty {
+  padding: 8px 10px;
+  color: var(--text2);
+  font-size: 0.85rem;
+}
+
 /* ── Centre section (action buttons) ── */
 
 .actions {

@@ -19,8 +19,8 @@
  * The side panel is toggled by the chevron on the left of the editor header.
  */
 
-import { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef } from 'react';
+import { Upload, Download } from 'lucide-react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import styles from './Workspace.module.css';
 import Editor from './panels/Editor';
@@ -35,17 +35,10 @@ export default function Workspace({
   output, inputMode, onSendInput,
   debugState, memoryMap, isDebugging, iteration,
   tabs, activeTabId, onSwitchTab, onNewTab, onCloseTab, onRenameTab,
+  onImportFiles, onExport,
 }) {
-  const sidePanelRef = useRef(null);
-  const [sideCollapsed, setSideCollapsed] = useState(false);
-
-  const toggleSidePanel = () => {
-    if (sidePanelRef.current?.isCollapsed()) {
-      sidePanelRef.current.expand();
-    } else {
-      sidePanelRef.current.collapse();
-    }
-  };
+  const sidePanelRef  = useRef(null);
+  const fileInputRef  = useRef(null);
 
   return (
     <div className={styles.workspaceOuter}>
@@ -53,14 +46,12 @@ export default function Workspace({
       {/* ── Outer horizontal split: side panel | right area ── */}
       <Group orientation="horizontal" className={styles.outerHGroup}>
 
-        {/* Collapsible side panel — full height */}
+        {/* Collapsible side panel — full height (commented out for now)
         <Panel
           ref={sidePanelRef}
           collapsible
           defaultSize={18}
           minSize={12}
-          onCollapse={() => setSideCollapsed(true)}
-          onExpand={() => setSideCollapsed(false)}
         >
           <div className={styles.sidePanel}>
             <div className={styles.sectionHeader}>Panel</div>
@@ -68,6 +59,7 @@ export default function Workspace({
         </Panel>
 
         <Separator className={styles.resizeHandleV} />
+        */}
 
         {/* Right area — vertical split: top row | terminal */}
         <Panel minSize={30}>
@@ -80,17 +72,37 @@ export default function Workspace({
                 {/* Code Editor — absorbs all available width */}
                 <div className={styles.editorWrapper}>
                   <div className={styles.pane}>
+                    {/* Hidden file input for importing .a files */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".a"
+                      style={{ display: 'none' }}
+                      onChange={e => {
+                        const files = Array.from(e.target.files);
+                        if (files.length) onImportFiles(files);
+                        e.target.value = '';
+                      }}
+                    />
                     <div className={styles.paneHeader}>
-                      <button
-                        className={styles.panelToggle}
-                        onClick={toggleSidePanel}
-                        title={sideCollapsed ? 'Open side panel' : 'Close side panel'}
-                      >
-                        {sideCollapsed
-                          ? <ChevronRight size={14} />
-                          : <ChevronLeft  size={14} />}
-                      </button>
-                      Code Editor
+                      <span>Code</span>
+                      <div className={styles.paneHeaderActions}>
+                        <button
+                          className={styles.paneActionBtn}
+                          onClick={() => fileInputRef.current.click()}
+                          title="Import .a files"
+                        >
+                          <Upload size={14} />
+                        </button>
+                        <button
+                          className={styles.paneActionBtn}
+                          onClick={onExport}
+                          title="Export all tabs"
+                        >
+                          <Download size={14} />
+                        </button>
+                      </div>
                     </div>
                     <TabBar
                       tabs={tabs}

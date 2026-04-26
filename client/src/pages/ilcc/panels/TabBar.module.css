@@ -90,6 +90,34 @@
   outline: none;
 }
 
+/* Pencil rename button — appears on hover before the close button */
+.renameBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+}
+
+.tab:hover .renameBtn,
+.tab.active .renameBtn {
+  opacity: 1;
+}
+
+.renameBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
 /* Close (×) button */
 .closeBtn {
   flex-shrink: 0;

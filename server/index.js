@@ -1,4 +1,6 @@
 const http    = require('http');
+const fs      = require('fs');
+const path    = require('path');
 const express = require('express');
 const { WebSocketServer } = require('ws');
 
@@ -17,6 +19,23 @@ app.use(express.json());
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+/* Returns every .a file in src/demos as [{ name, content }] */
+app.get('/api/demos', (req, res) => {
+  const demosDir = path.join(__dirname, 'src', 'demos');
+  try {
+    const files = fs.readdirSync(demosDir)
+      .filter(f => f.endsWith('.a'))
+      .sort();
+    const demos = files.map(name => ({
+      name,
+      content: fs.readFileSync(path.join(demosDir, name), 'utf8'),
+    }));
+    res.json(demos);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read demos directory' });
+  }
 });
 
 /* ── WebSocket server ──

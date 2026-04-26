@@ -14,7 +14,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import styles from './Header.module.css';
-import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, Menu, Settings } from 'lucide-react';
+import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, Menu, Settings, FileCode2, ChevronDown } from 'lucide-react';
 import logo from '../../assets/ilcc_wht.PNG';
 
 export default function Header({
@@ -26,36 +26,93 @@ export default function Header({
   onStop,
   canStepForward,
   onMenuOpen,
+  onImportTemplate,
 }) {
   const [stepCountStr, setStepCountStr] = useState('1');
+
+  /* Settings dropdown */
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef(null);
+
+  /* Code Templates dropdown */
+  const [templatesOpen,   setTemplatesOpen]   = useState(false);
+  const [templates,       setTemplates]       = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const templatesRef     = useRef(null);
+  const templatesFetched = useRef(false);
 
   const parseStepCount = (str) => {
     const v = parseInt(str, 10);
     return (isNaN(v) || v < 1) ? 1 : v;
   };
 
-  /* Close the settings dropdown when clicking outside it */
+  /* Close settings when clicking outside */
   useEffect(() => {
     if (!settingsOpen) return;
-    const handleClick = (e) => {
+    const handle = (e) => {
       if (!settingsRef.current?.contains(e.target)) setSettingsOpen(false);
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
   }, [settingsOpen]);
+
+  /* Close templates when clicking outside */
+  useEffect(() => {
+    if (!templatesOpen) return;
+    const handle = (e) => {
+      if (!templatesRef.current?.contains(e.target)) setTemplatesOpen(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [templatesOpen]);
+
+  /* Fetch demo list the first time the dropdown opens */
+  useEffect(() => {
+    if (!templatesOpen || templatesFetched.current) return;
+    templatesFetched.current = true;
+    setTemplatesLoading(true);
+    fetch('/api/demos')
+      .then(r => r.json())
+      .then(data => { setTemplates(data); setTemplatesLoading(false); })
+      .catch(()  => setTemplatesLoading(false));
+  }, [templatesOpen]);
 
   return (
     <header className={styles.header}>
 
-      {/* Left: logo + problem list button (flex:1 so centre stays centred) */}
+      {/* Left: logo + code templates dropdown */}
       <div className={styles.headerLeft}>
         <img src={logo} alt="ilcc" className={styles.logo} />
-        <button className={styles.menuBtn} onClick={onMenuOpen}>
-          <Menu size={25} />
-          Problem List
-        </button>
+
+        <div className={styles.templatesWrapper} ref={templatesRef}>
+          <button
+            className={styles.menuBtn}
+            onClick={() => setTemplatesOpen(o => !o)}
+          >
+            <FileCode2 size={17} />
+            Code Templates
+            <ChevronDown size={13} style={{ marginLeft: -2 }} />
+          </button>
+
+          {templatesOpen && (
+            <div className={styles.templateDropdown}>
+              {templatesLoading ? (
+                <div className={styles.templateEmpty}>Loading…</div>
+              ) : templates.map(t => (
+                <button
+                  key={t.name}
+                  className={styles.templateItem}
+                  onClick={() => {
+                    onImportTemplate(t.name, t.content);
+                    setTemplatesOpen(false);
+                  }}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Centre: run/debug/step controls */}

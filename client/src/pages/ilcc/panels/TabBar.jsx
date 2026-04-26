@@ -16,6 +16,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { Pencil } from 'lucide-react';
 import styles from './TabBar.module.css';
 
 export default function TabBar({ tabs, activeId, onSwitch, onNew, onClose, onRename }) {
@@ -76,13 +77,23 @@ export default function TabBar({ tabs, activeId, onSwitch, onNew, onClose, onRen
                   onClick={e => e.stopPropagation()}
                 />
               ) : (
-                <span
-                  className={styles.tabName}
-                  onDoubleClick={(e) => startRename(tab.id, tab.name, e)}
-                  title={tab.name}
-                >
-                  {tab.name}
-                </span>
+                <>
+                  <span
+                    className={styles.tabName}
+                    onDoubleClick={(e) => startRename(tab.id, tab.name, e)}
+                    title={tab.name}
+                  >
+                    {tab.name}
+                  </span>
+                  <button
+                    className={styles.renameBtn}
+                    onClick={e => startRename(tab.id, tab.name, e)}
+                    aria-label={`Rename ${tab.name}`}
+                    tabIndex={-1}
+                  >
+                    <Pencil size={10} />
+                  </button>
+                </>
               )}
 
               {tabs.length > 1 && (

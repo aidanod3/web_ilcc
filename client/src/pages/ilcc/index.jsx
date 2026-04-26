@@ -48,6 +48,8 @@ export default function Ilcc() {
 
   const handleSwitchTab = (id) => {
     if (id === activeTabId) return;
+    runner.reset();
+    debug_session.stop();
     flushActiveTab();
     setActiveTabId(id);
     const target = tabs.find(t => t.id === id);
@@ -83,6 +85,51 @@ export default function Ilcc() {
 
   /* ── Drawer (problems panel) state ── */
   const [menuOpen, setMenuOpen] = useState(false);
+
+  /* ── Import a template from the server: open as a new tab ── */
+  const handleImportTemplate = (name, content) => {
+    flushActiveTab();
+    const id = `tab-${Date.now()}`;
+    setTabs(prev => [...prev, { id, name, content }]);
+    setActiveTabId(id);
+    editorRef.current?.setCode(content);
+  };
+
+  /* ── Import: read selected .a files and open each as a new tab ── */
+  const handleImportFiles = async (files) => {
+    flushActiveTab();
+    const newTabs = await Promise.all(
+      files.map(async (file) => ({
+        id: `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name: file.name,
+        content: await file.text(),
+      }))
+    );
+    setTabs(prev => [...prev, ...newTabs]);
+    const first = newTabs[0];
+    setActiveTabId(first.id);
+    editorRef.current?.setCode(first.content);
+  };
+
+  /* ── Export: download every open tab as a .a file ── */
+  const handleExport = () => {
+    /* Snapshot active tab's live content before iterating */
+    const liveContent = editorRef.current?.getCode() ?? '';
+    const snapshot = tabs.map(t =>
+      t.id === activeTabId ? { ...t, content: liveContent } : t
+    );
+    snapshot.forEach(tab => {
+      const blob = new Blob([tab.content], { type: 'text/plain' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = tab.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  };
 
   /* Hook for the "Run" workflow: assemble + execute to completion */
   const runner = useRunProgram();
@@ -141,6 +188,7 @@ export default function Ilcc() {
         onStop={handleStop}
         canStepForward={debug_session.isDebugging && !debug_session.programDone && !debug_session.inputMode}
         onMenuOpen={() => setMenuOpen(true)}
+        onImportTemplate={handleImportTemplate}
       />
 
       {/* Workspace: editor, terminal, and debugger panels */}
@@ -159,6 +207,8 @@ export default function Ilcc() {
         onNewTab={handleNewTab}
         onCloseTab={handleCloseTab}
         onRenameTab={handleRenameTab}
+        onImportFiles={handleImportFiles}
+        onExport={handleExport}
       />
 
     </div>

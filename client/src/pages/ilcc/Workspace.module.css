@@ -161,9 +161,10 @@
 .paneHeader {
   flex-shrink: 0;
   height: 40px;
-  padding: 0 16px;
+  padding: 0 6px 0 16px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   font-size: 15px;
   font-weight: 500;
@@ -172,14 +173,19 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Toggle button — opens/closes the side or debug panel */
-.panelToggle {
-  flex-shrink: 0;
+/* Right-side icon buttons inside the pane header */
+.paneHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.paneActionBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: none;
   border-radius: 4px;
@@ -189,10 +195,11 @@
   transition: background 0.1s, color 0.1s;
 }
 
-.panelToggle:hover {
+.paneActionBtn:hover {
   background: var(--bg3);
   color: var(--text);
 }
+
 
 /* ── Shared ── */
 
