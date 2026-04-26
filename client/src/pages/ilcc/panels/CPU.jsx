@@ -44,14 +44,27 @@ function Row({ label, entry }) {
   );
 }
 
+/* ── step counter row ────────────────────────────────────────────────────── */
+
+function StepRow({ iteration }) {
+  return (
+    <div className={styles.stepRow}>
+      <span className={styles.stepLabel}>Step</span>
+      <span className={styles.stepValue}>{iteration ?? 0}</span>
+    </div>
+  );
+}
+
 /* ── empty state (before first step) ────────────────────────────────────── */
 
 const ZERO = { old: 0, new: 0 };
 const ZERO_FLAG = { old: 0, new: 0 };
 
-function EmptyState() {
+function EmptyState({ iteration }) {
   return (
     <div className={styles.content}>
+
+      <StepRow iteration={iteration} />
 
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Registers</div>
@@ -82,8 +95,8 @@ function EmptyState() {
 
 /* ── main component ───────────────────────────────────────────────────────── */
 
-export default function CPU({ debugState }) {
-  if (!debugState) return <EmptyState />;
+export default function CPU({ debugState, iteration }) {
+  if (!debugState) return <EmptyState iteration={iteration} />;
 
   const { registers, flags, pc, ir } = debugState;
 
@@ -97,6 +110,8 @@ export default function CPU({ debugState }) {
 
   return (
     <div className={styles.content}>
+
+      <StepRow iteration={iteration} />
 
       {/* ── Registers: r0–r7 then named aliases + pc/ir ── */}
       <div className={styles.section}>

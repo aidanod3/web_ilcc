@@ -9,6 +9,15 @@
   padding: 8px 8px 0;
 }
 
+/* ── Left section (logo + menu button) ── */
+
+.headerLeft {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .logo {
   height: 36px;
   width: auto;
@@ -17,16 +26,87 @@
   padding-left: 5px;
 }
 
+/* Menu button — icon + label, no border, hover highlight */
+.menuBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px 0 6px;
+  margin-left: 20px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+
+.menuBtn:hover {
+  background: var(--bg3);
+}
+
+/* ── Centre section (action buttons) ── */
+
 .actions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.meta {
-  color: var(--text2);
-  font-size: 0.85rem;
+/* ── Right section (settings) ── */
+
+.headerRight {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
+
+/* Wrapper gives the dropdown an anchor for absolute positioning */
+.settingsWrapper {
+  position: relative;
+}
+
+.cogBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.cogBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+/* Dropdown panel anchored below the cog button */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  min-height: 48px;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  padding: 4px;
+}
+
+/* ── Toolbar buttons ── */
 
 .btn {
   display: flex;
@@ -70,14 +150,7 @@
   background: rgb(228, 49, 49);
 }
 
-.right {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Step-count number input — sits to the left of the StepForward button */
+/* Step-count number input */
 .stepInput {
   width: 48px;
   height: 30.5px;
@@ -89,7 +162,6 @@
   text-align: center;
   padding: 0;
   outline: none;
-  /* Remove browser spin arrows — the value is edited directly */
   -moz-appearance: textfield;
 }
 
@@ -111,8 +183,6 @@
   align-items: center;
 }
 
-/* Border-radius and border overrides for each position.
-   !important is required to override the base .btn border-radius. */
 .btnGroupLeft {
   border-radius: 6px 0 0 6px !important;
   border-right: none !important;

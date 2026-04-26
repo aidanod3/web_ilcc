@@ -33,7 +33,7 @@ import Memory from './panels/Memory';
 export default function Workspace({
   editorRef,
   output, inputMode, onSendInput,
-  debugState, memoryMap, isDebugging,
+  debugState, memoryMap, isDebugging, iteration,
   tabs, activeTabId, onSwitchTab, onNewTab, onCloseTab, onRenameTab,
 }) {
   const sidePanelRef = useRef(null);
@@ -111,7 +111,7 @@ export default function Workspace({
                     {/* CPU State — left column */}
                     <div className={styles.cpuColumn}>
                       <div className={styles.sectionHeader}>CPU State</div>
-                      <CPU debugState={debugState} />
+                      <CPU debugState={debugState} iteration={iteration} />
                     </div>
 
                     {/* Memory + Stack — right column, vertically resizable */}

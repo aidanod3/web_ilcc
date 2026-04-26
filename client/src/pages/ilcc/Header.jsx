@@ -1,16 +1,6 @@
 /*
  * Header.jsx — Top toolbar with run/debug/step controls.
  *
- * This is a mostly-presentational component. It owns one piece of local
- * state: the step-count input, which controls how many instructions are
- * executed per click of the Step Forward button.
- *
- * Button visibility is conditional on the current mode:
- *   - Idle:      Run button + Debug button visible.
- *   - Running:   Run button shows a spinner, Debug is disabled.
- *   - Debugging: Run button hidden, Debug becomes a restart button,
- *                a step-count input + StepForward appear, Stop button appears.
- *
  * Props:
  *   isRunning      — true while a /api/run request is in flight.
  *   isDebugging    — true when an active debug session exists.
@@ -19,12 +9,12 @@
  *   onStep(n)      — callback: step forward n instructions.
  *   onStop         — callback: end the current run or debug session.
  *   canStepForward — whether stepping forward is possible (program hasn't halted).
- *   iteration      — current step number displayed during debugging.
+ *   onMenuOpen     — callback: open the problems drawer.
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import styles from './Header.module.css';
-import { Play, Loader, BugPlay, RotateCcw, Square, StepForward } from 'lucide-react';
+import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, Menu, Settings } from 'lucide-react';
 import logo from '../../assets/ilcc_wht.PNG';
 
 export default function Header({
@@ -35,38 +25,43 @@ export default function Header({
   onStep,
   onStop,
   canStepForward,
-  iteration,
+  onMenuOpen,
 }) {
-  /* Step count — how many instructions to execute per click.
-     Stored as a string so the field can be freely edited (e.g. cleared
-     before typing a new number) without the value snapping back to 1. */
   const [stepCountStr, setStepCountStr] = useState('1');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef(null);
 
-  /* Parse and clamp — used at click time and on blur. */
   const parseStepCount = (str) => {
     const v = parseInt(str, 10);
     return (isNaN(v) || v < 1) ? 1 : v;
   };
 
+  /* Close the settings dropdown when clicking outside it */
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const handleClick = (e) => {
+      if (!settingsRef.current?.contains(e.target)) setSettingsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [settingsOpen]);
+
   return (
     <header className={styles.header}>
 
-      {/* Left: logo */}
-      <div>
+      {/* Left: logo + problem list button (flex:1 so centre stays centred) */}
+      <div className={styles.headerLeft}>
         <img src={logo} alt="ilcc" className={styles.logo} />
+        <button className={styles.menuBtn} onClick={onMenuOpen}>
+          <Menu size={25} />
+          Problem List
+        </button>
       </div>
 
-      {/* Center: action buttons */}
+      {/* Centre: run/debug/step controls */}
       <div className={styles.actions}>
 
-        {/* ── Button group: Run/Restart · Debug · Stop ──
-            Always visible; colours and icons change with mode.
-              Idle:      Play   | BugPlay       | Stop (muted)
-              Running:   Loader | BugPlay (off) | Stop (red)
-              Debugging: Restart(green) | BugPlay (off) | Stop (red) */}
         <div className={styles.btnGroup}>
-
-          {/* Left — Play (idle) · Spinner (running) · Restart (debugging) */}
           <button
             className={`${isDebugging ? styles.btnGreen : styles.btn} ${styles.btnGroupLeft}`}
             type="button"
@@ -80,7 +75,6 @@ export default function Header({
                 : <Play size={16} fill="currentColor" />}
           </button>
 
-          {/* Middle — BugPlay: starts debug when idle, disabled when active */}
           <button
             className={`${styles.btn} ${styles.btnGroupMid}`}
             type="button"
@@ -90,7 +84,6 @@ export default function Header({
             <BugPlay size={16} />
           </button>
 
-          {/* Right — Stop: red when active, muted when idle */}
           <button
             className={`${isRunning || isDebugging ? styles.btnRed : styles.btn} ${styles.btnGroupRight}`}
             type="button"
@@ -99,10 +92,8 @@ export default function Header({
           >
             <Square size={16} />
           </button>
-
         </div>
 
-        {/* Step controls: count input + forward button, debug mode only */}
         {isDebugging && (
           <>
             <input
@@ -128,11 +119,23 @@ export default function Header({
 
       </div>
 
-      {/* Right: step counter during debugging */}
-      <div className={styles.right}>
-        {isDebugging && (
-          <div className={styles.meta}>Step: {iteration || 0}</div>
-        )}
+      {/* Right: settings cog + dropdown (flex:1 keeps centre centred) */}
+      <div className={styles.headerRight}>
+        <div className={styles.settingsWrapper} ref={settingsRef}>
+          <button
+            className={styles.cogBtn}
+            onClick={() => setSettingsOpen(o => !o)}
+            title="Settings"
+          >
+            <Settings size={18} />
+          </button>
+
+          {settingsOpen && (
+            <div className={styles.dropdown}>
+              {/* Settings items will go here */}
+            </div>
+          )}
+        </div>
       </div>
 
     </header>

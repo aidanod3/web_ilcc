@@ -20,6 +20,7 @@
 import { useRef, useEffect, useState } from 'react';
 import Header from './Header';
 import Workspace from './Workspace';
+import Drawer from './Drawer';
 import useRunProgram from '../../hooks/useRunProgram';
 import useDebugSession from '../../hooks/useDebugSession';
 
@@ -80,6 +81,9 @@ export default function Ilcc() {
     setTabs(prev => prev.map(t => t.id === id ? { ...t, name } : t));
   };
 
+  /* ── Drawer (problems panel) state ── */
+  const [menuOpen, setMenuOpen] = useState(false);
+
   /* Hook for the "Run" workflow: assemble + execute to completion */
   const runner = useRunProgram();
 
@@ -124,6 +128,9 @@ export default function Ilcc() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
+      {/* Full-height slide-in problems drawer */}
+      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+
       {/* Top toolbar: run/debug/step/stop buttons */}
       <Header
         isRunning={runner.isRunning}
@@ -133,7 +140,7 @@ export default function Ilcc() {
         onStep={(n) => debug_session.step(n)}
         onStop={handleStop}
         canStepForward={debug_session.isDebugging && !debug_session.programDone && !debug_session.inputMode}
-        iteration={debug_session.iteration}
+        onMenuOpen={() => setMenuOpen(true)}
       />
 
       {/* Workspace: editor, terminal, and debugger panels */}
@@ -145,6 +152,7 @@ export default function Ilcc() {
         debugState={debug_session.debugState}
         memoryMap={debug_session.memoryMap}
         isDebugging={debug_session.isDebugging}
+        iteration={debug_session.iteration}
         tabs={tabs}
         activeTabId={activeTabId}
         onSwitchTab={handleSwitchTab}
