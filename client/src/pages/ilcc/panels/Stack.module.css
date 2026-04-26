@@ -55,7 +55,46 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 0;
+  padding-bottom: 6px;
+}
+
+/* Sticky column header row — mirrors Memory's header */
+.tableHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  position: sticky;
+  top: 0;
+  background-color: var(--bg2);
+  border-bottom: 2px solid var(--bg3);
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.tagSpacer {
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.colAddr {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text2);
+}
+
+.colValue {
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text2);
 }
 
 /* Single stack row */
@@ -83,11 +122,9 @@
   font-size: 12px;
   font-family: "JetBrains Mono", monospace;
   color: var(--text);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 4px;
-  border-radius: 4px;
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 /* ── Changed-row highlight (flash → settle) ── */

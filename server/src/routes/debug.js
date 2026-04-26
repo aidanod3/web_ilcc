@@ -57,10 +57,16 @@ function handleDebugSocket(ws) {
         iteration = 0;
 
         /* Send the initial program-area memory so the Memory panel is
-           pre-populated with the loaded executable's contents. */
+           pre-populated with the loaded executable's contents.
+           Also send the address→line map so the editor can highlight
+           the current instruction, and the initial PC so the first
+           line is highlighted before any step is taken. */
         if (session) {
-          const cells = session.getInitialMemory();
+          const cells     = session.getInitialMemory();
+          const map       = session.getLineMap();
+          const initialPc = session.getInitialPc();
           send({ type: 'memory_init', cells });
+          send({ type: 'line_map', map, initialPc });
         }
         break;
       }

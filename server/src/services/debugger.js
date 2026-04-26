@@ -181,6 +181,30 @@ function createDebugSession(sourceCode, callbacks) {
       return cells;
     },
 
+    /* Build a { [address]: lineNumber } map from the assembler's listing.
+       Only instructions that generated machine code are included — blank
+       lines and comment-only lines share a locCtr with the next real
+       instruction and would produce wrong mappings if included. */
+    getLineMap() {
+      const map = {};
+      for (const entry of assembler.listing) {
+        if (entry.codeWords?.length > 0 && entry.locCtr != null && entry.lineNum != null) {
+          /* First instruction at each address wins (handles multi-pass quirks). */
+          if (!(entry.locCtr in map)) {
+            map[entry.locCtr] = entry.lineNum;
+          }
+        }
+      }
+      return map;
+    },
+
+    /* The PC immediately after loading — the address of the first instruction
+       the program will execute. Used to highlight the entry line at session
+       start before any step has been taken. */
+    getInitialPc() {
+      return interp.pc;
+    },
+
     cleanup,
   };
 }

@@ -1,0 +1,140 @@
+/* TabBar — editor tab strip */
+
+.tabBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  height: 30px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Scrollable tab list — scrollbar hidden */
+.tabs {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Single tab */
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 10px;
+  min-width: 70px;
+  max-width: 160px;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+  user-select: none;
+  position: relative;
+  transition: background 0.1s;
+}
+
+.tab:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+/* Active tab — lighter background + top accent bar */
+.tab.active {
+  background: var(--bg1);
+  color: var(--text);
+  border-bottom: 1px solid var(--bg1); /* hides the tabBar border-bottom underneath */
+}
+
+.tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #4ade80;
+}
+
+/* Tab filename label — truncates with ellipsis */
+.tabName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+/* Inline rename input */
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  outline: none;
+}
+
+/* Close (×) button */
+.closeBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+}
+
+.tab:hover .closeBtn,
+.tab.active .closeBtn {
+  opacity: 1;
+}
+
+.closeBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+/* "+" new-tab button */
+.newTabBtn {
+  flex-shrink: 0;
+  width: 32px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.newTabBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+}

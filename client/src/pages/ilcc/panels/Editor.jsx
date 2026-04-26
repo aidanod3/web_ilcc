@@ -13,16 +13,77 @@
 
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
-import { keymap } from '@codemirror/view';
+import { keymap, Decoration } from '@codemirror/view';
+import { StateEffect, StateField } from '@codemirror/state';
 import styles from './Editor.module.css';
+
+/* ── Debug-line highlight ───────────────────────────────────────────────────
+   A StateEffect carries a 1-based line number (or null to clear).
+   A StateField maintains the corresponding line decoration.
+   Both are defined at module scope so they're stable references. */
+
+const setDebugLine = StateEffect.define();
+
+const debugLineField = StateField.define({
+  create: () => Decoration.none,
+
+  update(deco, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setDebugLine)) {
+        if (effect.value == null) return Decoration.none;
+        try {
+          const line = tr.state.doc.line(effect.value);
+          return Decoration.set([
+            Decoration.line({ class: 'cm-debug-line' }).range(line.from),
+          ]);
+        } catch {
+          return Decoration.none;
+        }
+      }
+    }
+    /* Remap positions after document edits so the highlight follows the line. */
+    return deco.map(tr.changes);
+  },
+
+  provide: f => EditorView.decorations.from(f),
+});
 
 const Editor = forwardRef(function Editor(props, ref) {
   const hostRef = useRef(null);   /* DOM element CodeMirror attaches to */
   const viewRef = useRef(null);   /* EditorView instance */
 
-  /* Expose getCode() to the parent via ref */
+  /* Expose methods to the parent via ref */
   useImperativeHandle(ref, () => ({
     getCode: () => viewRef.current?.state.doc.toString() ?? '',
+
+    /* Replace the entire editor document — used when switching tabs. */
+    setCode: (content) => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: content ?? '' },
+      });
+    },
+
+    /* Highlight the given 1-based line number and scroll it into view. */
+    highlightLine: (lineNum) => {
+      const view = viewRef.current;
+      if (!view || lineNum == null) return;
+      try {
+        const line = view.state.doc.line(lineNum);
+        view.dispatch({
+          effects: [
+            setDebugLine.of(lineNum),
+            EditorView.scrollIntoView(line.from, { y: 'center' }),
+          ],
+        });
+      } catch { /* line number out of range — ignore */ }
+    },
+
+    /* Remove the debug-line highlight. */
+    clearHighlight: () => {
+      viewRef.current?.dispatch({ effects: setDebugLine.of(null) });
+    },
   }));
 
   useEffect(() => {
@@ -31,6 +92,7 @@ const Editor = forwardRef(function Editor(props, ref) {
       doc: '',
       extensions: [
         basicSetup,
+        debugLineField,
         keymap.of([{
           key: 'Tab',
           run: (view) => {
@@ -53,9 +115,16 @@ const Editor = forwardRef(function Editor(props, ref) {
             borderRight: '2px solid var(--border2)',
             color: 'var(--text3)',
           },
-          /* Subtle highlight on the active line */
+          /* Subtle highlight on the active (cursor) line */
           '.cm-activeLineGutter, .cm-activeLine': {
             background: 'rgba(255, 255, 255, 0.02)',
+          },
+          /* Debug execution pointer — the next line to execute */
+          '.cm-debug-line': {
+            background: 'rgba(255, 220, 0, 0.13)',
+          },
+          '.cm-debug-line.cm-activeLine': {
+            background: 'rgba(255, 220, 0, 0.13)',
           },
         }),
       ],

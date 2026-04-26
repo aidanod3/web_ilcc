@@ -36,11 +36,11 @@ const ROWS_ABOVE_SP = 16;
 function DiffVal({ change, plain }) {
   if (change && change.old !== change.new) {
     return (
-      <span className={styles.value}>
+      <>
         <span className={styles.old}>{hex4(change.old)}</span>
         <span className={styles.sep}>&gt;</span>
-        <span className={styles.new}>{hex4(change.new)}</span>
-      </span>
+        <span className={`${styles.value} ${styles.new}`}>{hex4(change.new)}</span>
+      </>
     );
   }
   return <span className={styles.value}>{hex4(plain)}</span>;
@@ -94,7 +94,11 @@ export default function Stack({ debugState, memoryMap = {}, isDebugging = false 
   }
 
   if (!isDebugging) {
-    return <div className={styles.panel} />;
+    return (
+      <div className={styles.panel}>
+        <span className={styles.empty}>No stack data yet</span>
+      </div>
+    );
   }
 
   return (
@@ -117,6 +121,14 @@ export default function Stack({ debugState, memoryMap = {}, isDebugging = false 
 
       {/* Scrollable rows — always rendered; all zeros before first step */}
       <div className={styles.content}>
+
+        {/* Sticky column header */}
+        <div className={styles.tableHeader}>
+          <span className={styles.tagSpacer} />
+          <span className={styles.colAddr}>addr</span>
+          <span className={styles.colValue}>value</span>
+        </div>
+
         {rows.map(addr => {
           const isSp    = sp    !== 0 && addr === sp;
           const isFp    = fp    !== 0 && addr === fp;

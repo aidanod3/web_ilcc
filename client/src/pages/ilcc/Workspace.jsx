@@ -21,12 +21,18 @@
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import styles from './Workspace.module.css';
 import Editor from './panels/Editor';
+import TabBar from './panels/TabBar';
 import Terminal from './panels/Terminal';
 import CPU from './panels/CPU';
 import Stack from './panels/Stack';
 import Memory from './panels/Memory';
 
-export default function Workspace({ editorRef, output, inputMode, onSendInput, debugState, memoryMap, isDebugging }) {
+export default function Workspace({
+  editorRef,
+  output, inputMode, onSendInput,
+  debugState, memoryMap, isDebugging,
+  tabs, activeTabId, onSwitchTab, onNewTab, onCloseTab, onRenameTab,
+}) {
   return (
     <div className={styles.layout}>
 
@@ -37,6 +43,14 @@ export default function Workspace({ editorRef, output, inputMode, onSendInput, d
           <Panel defaultSize={88.5} minSize={20}>
             <div className={styles.pane}>
               <div className={styles.paneHeader}>Code Editor</div>
+              <TabBar
+                tabs={tabs}
+                activeId={activeTabId}
+                onSwitch={onSwitchTab}
+                onNew={onNewTab}
+                onClose={onCloseTab}
+                onRename={onRenameTab}
+              />
               <Editor ref={editorRef} />
             </div>
           </Panel>
@@ -53,46 +67,40 @@ export default function Workspace({ editorRef, output, inputMode, onSendInput, d
         </Group>
       </div>
 
-      {/* ── Right column: CPU State (left) + Stack/Memory (right) ── */}
+      {/* ── Right column: CPU State (left, fixed) + Stack/Memory (right, fixed) ── */}
       <div className={styles.rightColumn}>
-        <Group orientation="horizontal" className={styles.rightGroup}>
+        <div className={styles.rightGroup}>
 
-          {/* CPU State card */}
-          <Panel defaultSize={40} minSize={20}>
-            <div className={styles.debugCard}>
-              <div className={styles.sectionHeader}>CPU State</div>
-              <CPU debugState={debugState} />
-            </div>
-          </Panel>
+          {/* CPU State card — fixed width */}
+          <div className={`${styles.debugCard} ${styles.cpuCard}`}>
+            <div className={styles.sectionHeader}>CPU State</div>
+            <CPU debugState={debugState} />
+          </div>
 
-          <Separator className={styles.resizeHandleV} />
+          {/* Stack / Memory card — fills remaining space, Memory on top */}
+          <div className={`${styles.debugCard} ${styles.stackMemCard}`}>
+            <Group orientation="vertical" className={styles.innerGroup}>
 
-          {/* Stack / Memory card — internally split into two sub-panels */}
-          <Panel defaultSize={60} minSize={25}>
-            <div className={styles.debugCard}>
-              <Group orientation="vertical" className={styles.innerGroup}>
+              <Panel defaultSize={50} minSize={15}>
+                <div className={styles.debugSection}>
+                  <div className={styles.sectionHeader}>Memory</div>
+                  <Memory debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
+                </div>
+              </Panel>
 
-                <Panel defaultSize={50} minSize={15}>
-                  <div className={styles.debugSection}>
-                    <div className={styles.sectionHeader}>Stack</div>
-                    <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
-                  </div>
-                </Panel>
+              <Separator className={styles.resizeHandle} />
 
-                <Separator className={styles.resizeHandle} />
+              <Panel defaultSize={50} minSize={15}>
+                <div className={styles.debugSection}>
+                  <div className={styles.sectionHeader}>Stack</div>
+                  <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
+                </div>
+              </Panel>
 
-                <Panel defaultSize={50} minSize={15}>
-                  <div className={styles.debugSection}>
-                    <div className={styles.sectionHeader}>Memory</div>
-                    <Memory debugState={debugState} memoryMap={memoryMap} />
-                  </div>
-                </Panel>
+            </Group>
+          </div>
 
-              </Group>
-            </div>
-          </Panel>
-
-        </Group>
+        </div>
       </div>
 
     </div>

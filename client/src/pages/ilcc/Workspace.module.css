@@ -56,30 +56,6 @@
   width: 100%;
 }
 
-/* Vertical bar — separates horizontally-adjacent panels (CPU State / Stack+Memory) */
-.resizeHandleV {
-  width: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: ew-resize;
-  flex-shrink: 0;
-}
-
-.resizeHandleV::after {
-  content: "";
-  width: 2px;
-  height: 30px;
-  background: var(--bg3);
-  border-radius: 8px;
-  transition: background 0.15s, height 0.15s;
-}
-
-.resizeHandleV:hover::after,
-.resizeHandleV[data-resize-handle-active]::after {
-  background: var(--text2);
-  height: 100%;
-}
 
 /* ── Right column: two vertically-stacked debugger panels ── */
 
@@ -89,9 +65,24 @@
   /* No display:flex here — the PanelGroup (.rightGroup) fills it via height:100% */
 }
 
-/* Stretches the outer PanelGroup to fill .rightColumn */
+/* Fills .rightColumn as a fixed horizontal split (no draggable divider) */
 .rightGroup {
   height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+/* CPU State — fixed 40% of the right column */
+.cpuCard {
+  flex: 0 0 40%;
+  min-width: 0;
+}
+
+/* Stack/Memory — fills the remaining space */
+.stackMemCard {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /* Individual debug card (CPU State or Stack/Memory) */

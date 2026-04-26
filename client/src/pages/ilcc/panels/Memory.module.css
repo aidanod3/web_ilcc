@@ -59,8 +59,9 @@
 /* Sticky column header row */
 .tableHeader {
   display: flex;
+  align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   position: sticky;
   top: 0;
   background-color: var(--bg2);
@@ -68,7 +69,14 @@
   flex-shrink: 0;
 }
 
-.colLabel {
+/* Spacer that matches Stack's pointer-tag column width */
+.tagSpacer {
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.colAddr {
+  flex: 1;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -76,14 +84,15 @@
   color: var(--text2);
 }
 
-/* First column (address) stretches, value column is fixed width */
-.colLabel:first-child {
-  flex: 1;
-}
-
-.colLabel:not(:first-child) {
-  width: 74px;
-  text-align: left;
+.colValue {
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text2);
 }
 
 /* Single memory row */
@@ -91,12 +100,18 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 12px;
+  padding: 3px 10px;
   flex-shrink: 0;
 }
 
 .row:hover {
   background-color: var(--bg3);
+}
+
+/* Spacer matching Stack's pointer-tag column (no visible content) */
+.tag {
+  min-width: 52px;
+  flex-shrink: 0;
 }
 
 .address {
@@ -110,12 +125,9 @@
   font-size: 12px;
   font-family: "JetBrains Mono", monospace;
   color: var(--text);
-  width: 74px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 4px;
-  border-radius: 4px;
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 /* ── Changed-row highlight (flash → settle) ── */

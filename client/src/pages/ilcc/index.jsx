@@ -17,7 +17,7 @@
  * natural height and Main fills the remaining viewport space.
  */
 
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Header from './Header';
 import Workspace from './Workspace';
 import useRunProgram from '../../hooks/useRunProgram';
@@ -28,6 +28,58 @@ export default function Ilcc() {
      to read the document contents on demand (run/debug). */
   const editorRef = useRef(null);
 
+  /* ── Tab state ──────────────────────────────────────────────────────────
+     Each tab:  { id: string, name: string, content: string }
+     content is the last-saved snapshot; the live text lives in CodeMirror
+     and is flushed into the tab record on every switch / close. */
+  const tabCounterRef = useRef(1);
+  const initialTabId  = useRef(`tab-${Date.now()}`).current;
+
+  const [tabs,        setTabs]        = useState([{ id: initialTabId, name: 'untitled-1.a', content: '' }]);
+  const [activeTabId, setActiveTabId] = useState(initialTabId);
+
+  /* Flush the current CodeMirror content back into the active tab record. */
+  const flushActiveTab = () => {
+    const content = editorRef.current?.getCode() ?? '';
+    setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, content } : t));
+    return content;
+  };
+
+  const handleSwitchTab = (id) => {
+    if (id === activeTabId) return;
+    flushActiveTab();
+    setActiveTabId(id);
+    const target = tabs.find(t => t.id === id);
+    editorRef.current?.setCode(target?.content ?? '');
+  };
+
+  const handleNewTab = () => {
+    flushActiveTab();
+    tabCounterRef.current += 1;
+    const id   = `tab-${Date.now()}`;
+    const name = `untitled-${tabCounterRef.current}.a`;
+    setTabs(prev => [...prev, { id, name, content: '' }]);
+    setActiveTabId(id);
+    editorRef.current?.setCode('');
+  };
+
+  const handleCloseTab = (id) => {
+    if (tabs.length <= 1) return;
+    const idx       = tabs.findIndex(t => t.id === id);
+    const remaining = tabs.filter(t => t.id !== id);
+    if (id === activeTabId) {
+      /* Activate the nearest surviving tab without flushing (we're discarding this one). */
+      const next = remaining[Math.min(idx, remaining.length - 1)];
+      setActiveTabId(next.id);
+      editorRef.current?.setCode(next.content ?? '');
+    }
+    setTabs(remaining);
+  };
+
+  const handleRenameTab = (id, name) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, name } : t));
+  };
+
   /* Hook for the "Run" workflow: assemble + execute to completion */
   const runner = useRunProgram();
 
@@ -36,6 +88,17 @@ export default function Ilcc() {
 
   /* Helper to read the editor contents at the moment of action */
   const getCode = () => editorRef.current?.getCode() ?? '';
+
+  /* Keep the editor's debug-line highlight in sync with the current PC.
+     When currentLine is null (session stopped / halted / error) the
+     highlight is cleared. */
+  useEffect(() => {
+    if (debug_session.currentLine != null) {
+      editorRef.current?.highlightLine(debug_session.currentLine);
+    } else {
+      editorRef.current?.clearHighlight();
+    }
+  }, [debug_session.currentLine]);
 
   /* ── Handler: Run button ──
      Reads the editor and sends to POST /api/run. */
@@ -82,6 +145,12 @@ export default function Ilcc() {
         debugState={debug_session.debugState}
         memoryMap={debug_session.memoryMap}
         isDebugging={debug_session.isDebugging}
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onSwitchTab={handleSwitchTab}
+        onNewTab={handleNewTab}
+        onCloseTab={handleCloseTab}
+        onRenameTab={handleRenameTab}
       />
 
     </div>

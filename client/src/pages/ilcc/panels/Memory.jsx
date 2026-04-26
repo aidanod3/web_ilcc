@@ -35,11 +35,11 @@ function parseHex(s) {
 function DiffVal({ change, plain }) {
   if (change && change.old !== change.new) {
     return (
-      <span className={styles.value}>
+      <>
         <span className={styles.old}>{hex4(change.old)}</span>
         <span className={styles.sep}>&gt;</span>
-        <span className={styles.new}>{hex4(change.new)}</span>
-      </span>
+        <span className={`${styles.value} ${styles.new}`}>{hex4(change.new)}</span>
+      </>
     );
   }
   return <span className={styles.value}>{hex4(plain)}</span>;
@@ -47,7 +47,7 @@ function DiffVal({ change, plain }) {
 
 /* ── component ───────────────────────────────────────────────────────────── */
 
-export default function Memory({ debugState, memoryMap = {} }) {
+export default function Memory({ debugState, memoryMap = {}, isDebugging = false }) {
   const [jumpInput, setJumpInput] = useState('');
   const rowRefs = useRef({});
 
@@ -96,6 +96,14 @@ export default function Memory({ debugState, memoryMap = {} }) {
     rowRefs.current[dest]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
+  if (!isDebugging) {
+    return (
+      <div className={styles.panel}>
+        <span className={styles.empty}>No memory writes yet</span>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.panel}>
 
@@ -119,8 +127,9 @@ export default function Memory({ debugState, memoryMap = {} }) {
 
         {/* Sticky column header */}
         <div className={styles.tableHeader}>
-          <span className={styles.colLabel}>Addr</span>
-          <span className={styles.colLabel}>Value</span>
+          <span className={styles.tagSpacer} />
+          <span className={styles.colAddr}>addr</span>
+          <span className={styles.colValue}>value</span>
         </div>
 
         {addrs.length === 0 ? (
@@ -135,6 +144,7 @@ export default function Memory({ debugState, memoryMap = {} }) {
                 ref={el => { rowRefs.current[addr] = el; }}
                 className={`${styles.row} ${change ? styles.changed : ''}`}
               >
+                <span className={styles.tag} />
                 <span className={styles.address}>{hex4(addr)}</span>
                 <DiffVal change={change} plain={val} />
               </div>

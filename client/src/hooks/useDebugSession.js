@@ -48,8 +48,9 @@ export default function useDebugSession() {
   const [output,       setOutput]       = useState('');
   const [inputMode,    setInputMode]    = useState(false);
   const [debugState,   setDebugState]   = useState(null);
-  const [iteration,   setIteration]   = useState(0);
-  const [programDone, setProgramDone] = useState(false);
+  const [iteration,    setIteration]   = useState(0);
+  const [programDone,  setProgramDone] = useState(false);
+  const [currentLine,  setCurrentLine] = useState(null);
 
   /* Sparse map of every memory cell written since the session started.
      Key: address (number), Value: current cell value (number).
@@ -58,6 +59,10 @@ export default function useDebugSession() {
 
   /* Live WebSocket — ref so changes don't trigger re-renders. */
   const wsRef = useRef(null);
+
+  /* address → 1-based line number map received from the server at session
+     start.  Stored in a ref so lookups don't trigger re-renders. */
+  const lineMapRef = useRef({});
 
   /* Close socket on unmount. */
   useEffect(() => {
@@ -83,6 +88,7 @@ export default function useDebugSession() {
     }
 
     /* Reset all state for a fresh session. */
+    lineMapRef.current = {};
     setIsDebugging(true);
     setOutput('');
     setInputMode(false);
@@ -90,6 +96,7 @@ export default function useDebugSession() {
     setIteration(0);
     setProgramDone(false);
     setMemoryMap({});
+    setCurrentLine(null);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/api/debug`);
@@ -123,10 +130,19 @@ export default function useDebugSession() {
           break;
         }
 
+        /* Address→line map + initial PC — highlights the entry line before
+           the first step is taken. */
+        case 'line_map':
+          lineMapRef.current = msg.map ?? {};
+          setCurrentLine(lineMapRef.current[msg.initialPc] ?? null);
+          break;
+
         /* Server executed a step and returned the state diff. */
         case 'step_result':
           setDebugState(msg.diff);
           setIteration(msg.iteration);
+          /* pc.new is the next instruction to execute — highlight that line. */
+          setCurrentLine(lineMapRef.current[msg.diff.pc.new] ?? null);
           /* Merge any memory writes from this step into the running map. */
           if (msg.diff.memory?.length) {
             setMemoryMap(prev => {
@@ -142,11 +158,13 @@ export default function useDebugSession() {
         /* Program reached HALT — no more forward steps possible. */
         case 'done':
           setProgramDone(true);
+          setCurrentLine(null);
           break;
 
         /* Assembly or runtime error. */
         case 'error':
           setOutput(prev => prev + `\nError: ${msg.message}`);
+          setCurrentLine(null);
           break;
       }
     };
@@ -187,6 +205,7 @@ export default function useDebugSession() {
       wsRef.current.close();
       wsRef.current = null;
     }
+    lineMapRef.current = {};
     setIsDebugging(false);
     setOutput('');
     setInputMode(false);
@@ -194,6 +213,7 @@ export default function useDebugSession() {
     setIteration(0);
     setProgramDone(false);
     setMemoryMap({});
+    setCurrentLine(null);
   }, []);
 
   return {
@@ -204,6 +224,7 @@ export default function useDebugSession() {
     iteration,
     programDone,
     memoryMap,
+    currentLine,
     start,
     step,
     sendInput,
