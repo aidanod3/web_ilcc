@@ -27,6 +27,9 @@ export default function Header({
   canStepForward,
   onMenuOpen,
   onImportTemplate,
+  theme,
+  setTheme,
+  themes,
 }) {
   const [stepCountStr, setStepCountStr] = useState('1');
 
@@ -189,7 +192,16 @@ export default function Header({
 
           {settingsOpen && (
             <div className={styles.dropdown}>
-              {/* Settings items will go here */}
+              <div className={styles.dropdownLabel}>Theme</div>
+              {(themes || []).map(t => (
+                <button
+                  key={t.id}
+                  className={`${styles.themeItem} ${t.id === theme ? styles.themeItemActive : ''}`}
+                  onClick={() => { setTheme(t.id); setSettingsOpen(false); }}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
           )}
         </div>

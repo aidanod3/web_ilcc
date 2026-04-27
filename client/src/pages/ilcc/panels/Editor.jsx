@@ -121,10 +121,10 @@ const Editor = forwardRef(function Editor(props, ref) {
           },
           /* Debug execution pointer — the next line to execute */
           '.cm-debug-line': {
-            background: 'rgba(255, 220, 0, 0.13)',
+            background: 'var(--debug-line)',
           },
           '.cm-debug-line.cm-activeLine': {
-            background: 'rgba(255, 220, 0, 0.13)',
+            background: 'var(--debug-line)',
           },
         }),
       ],

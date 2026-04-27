@@ -252,3 +252,39 @@
   border-radius: 0 6px 6px 0 !important;
   border-left: none !important;
 }
+
+/* ── Theme picker in settings dropdown ── */
+
+.dropdownLabel {
+  padding: 6px 10px 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+
+.themeItem {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.themeItem:hover {
+  background: var(--bg3);
+}
+
+.themeItemActive {
+  color: var(--gold);
+  font-weight: 600;
+}

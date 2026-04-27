@@ -8,37 +8,98 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #111111;
-  --bg1: #262626;
-  --bg2: #2e2e2e;
-  --bg3: #383838;
-  --border: #404040;
-  --border2: #3a3a3a;
-  --text: #e2e2e5;
-  --text2: #8a8a96;
-  --text3: #4a4a55;
+  --bg: #13151a;
+  --bg1: #1a1c23;
+  --bg2: #1e2028;
+  --bg3: #252830;
+  --border: #252830;
+  --border2: #2d303a;
+  --text: #e0e0e8;
+  --text2: #9a9ab0;
+  --text3: #4a4a60;
   --gold: #f7a800;
-  --gold-dim: rgba(247, 168, 0, 0.1);
+  --gold-dim: rgba(247, 168, 0, 0.10);
   --gold-glow: rgba(247, 168, 0, 0.05);
-  --success: #4ade80;
-  --error: #f87171;
+  --accent: #f7a800;
+  --success: #3ddc84;
+  --error: #ff5f5f;
+  --debug-line: rgba(247, 168, 0, 0.13);
 }
 
 :root[data-theme='light'] {
-  --bg: #F0F0F0;
-  --bg1: #FAFAFA;
-  --bg2: #FFFFFF;
-  --bg3: #FAFAFA;
-  --border: #FAFAFA;
-  --border2: #FAFAFA;
-  --text: #0e0e0f;
-  --text2: #8a8a96;
-  --text3: #4a4a55;
-  --gold: #f7a800;
-  --gold-dim: rgba(247, 168, 0, 0.1);
-  --gold-glow: rgba(247, 168, 0, 0.05);
-  --success: #4ade80;
-  --error: #f87171;
+  --bg: #f7f7f8;
+  --bg1: #ffffff;
+  --bg2: #f2f2f5;
+  --bg3: #e8e8ef;
+  --border: #dadbe2;
+  --border2: #e0e0e8;
+  --text: #1d1e23;
+  --text2: #5b5f6a;
+  --text3: #9a9aaa;
+  --gold: #c98700;
+  --gold-dim: rgba(201, 135, 0, 0.10);
+  --gold-glow: rgba(201, 135, 0, 0.05);
+  --accent: #c98700;
+  --success: #1a9e5c;
+  --error: #e03434;
+  --debug-line: rgba(58, 99, 232, 0.12);
+}
+
+:root[data-theme='midnight'] {
+  --bg: #011627;
+  --bg1: #022140;
+  --bg2: #01283a;
+  --bg3: #0a3b5c;
+  --border: #0a3b5c;
+  --border2: #0d4a70;
+  --text: #d6deeb;
+  --text2: #5f7e97;
+  --text3: #3a5570;
+  --gold: #ffcb6b;
+  --gold-dim: rgba(255, 203, 107, 0.10);
+  --gold-glow: rgba(255, 203, 107, 0.05);
+  --accent: #ffcb6b;
+  --success: #addb67;
+  --error: #ef5350;
+  --debug-line: rgba(0, 119, 186, 0.25);
+}
+
+:root[data-theme='dracula'] {
+  --bg: #282a36;
+  --bg1: #21222c;
+  --bg2: #1e1f29;
+  --bg3: #383b4d;
+  --border: #44475a;
+  --border2: #414358;
+  --text: #f8f8f2;
+  --text2: #6272a4;
+  --text3: #4a5278;
+  --gold: #bd93f9;
+  --gold-dim: rgba(189, 147, 249, 0.12);
+  --gold-glow: rgba(189, 147, 249, 0.05);
+  --accent: #bd93f9;
+  --success: #50fa7b;
+  --error: #ff5555;
+  --debug-line: rgba(189, 147, 249, 0.15);
+}
+
+:root[data-theme='monokai'] {
+  --bg: #272822;
+  --bg1: #1e1f1a;
+  --bg2: #191a16;
+  --bg3: #35362e;
+  --border: #3d3d32;
+  --border2: #48473e;
+  --text: #f8f8f2;
+  --text2: #75715e;
+  --text3: #5c5c52;
+  --gold: #a6e22e;
+  --gold-dim: rgba(166, 226, 46, 0.10);
+  --gold-glow: rgba(166, 226, 46, 0.05);
+  --accent: #a6e22e;
+  --success: #a6e22e;
+  --error: #f92672;
+  --debug-line: rgba(166, 226, 46, 0.12);
 }
 
 html, body {

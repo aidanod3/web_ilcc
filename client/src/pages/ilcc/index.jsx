@@ -23,8 +23,11 @@ import Workspace from './Workspace';
 import Drawer from './Drawer';
 import useRunProgram from '../../hooks/useRunProgram';
 import useDebugSession from '../../hooks/useDebugSession';
+import useTheme from '../../hooks/useTheme';
 
 export default function Ilcc() {
+  const { theme, setTheme, themes } = useTheme();
+
   /* Ref to the CodeMirror editor — call editorRef.current.getCode()
      to read the document contents on demand (run/debug). */
   const editorRef = useRef(null);
@@ -189,6 +192,9 @@ export default function Ilcc() {
         canStepForward={debug_session.isDebugging && !debug_session.programDone && !debug_session.inputMode}
         onMenuOpen={() => setMenuOpen(true)}
         onImportTemplate={handleImportTemplate}
+        theme={theme}
+        setTheme={setTheme}
+        themes={themes}
       />
 
       {/* Workspace: editor, terminal, and debugger panels */}
