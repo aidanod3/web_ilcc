@@ -1,21 +1,23 @@
 /* Editor panel styles */
 
 .wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 0%, rgba(70, 18, 18, 0.028), transparent 62%), linear-gradient(180deg, rgba(70, 18, 18, 0.01), transparent 45%);
 }
 
 /* CodeMirror mount point — fills the available space */
 .editorHost {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
 }
 
-/* Make the CodeMirror editor fill its container */
-.editorHost :global(.cm-editor) {
-  height: 100%;
-}
+    /* Make the CodeMirror editor fill its container */
+    .editorHost :global(.cm-editor) {
+        height: 100%;
+        background: transparent;
+    }

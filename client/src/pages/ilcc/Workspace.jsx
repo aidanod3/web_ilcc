@@ -66,94 +66,117 @@ export default function Workspace({
           <Group orientation="vertical" className={styles.mainVGroup}>
 
             {/* ── Top row: editor + debug card (plain flex, no PanelGroup) ── */}
-            <Panel defaultSize={72} minSize={30}>
-              <div className={styles.editorDebugRow}>
+            {/* ── Top row: editor | resizable debug panels ── */}
+<Panel defaultSize={72} minSize={30}>
+  <Group orientation="horizontal" className={styles.editorDebugGroup}>
 
-                {/* Code Editor — absorbs all available width */}
-                <div className={styles.editorWrapper}>
-                  <div className={styles.pane}>
-                    {/* Hidden file input for importing .a files */}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept=".a"
-                      style={{ display: 'none' }}
-                      onChange={e => {
-                        const files = Array.from(e.target.files);
-                        if (files.length) onImportFiles(files);
-                        e.target.value = '';
-                      }}
-                    />
-                    <div className={styles.paneHeader}>
-                      <span>Code</span>
-                      <div className={styles.paneHeaderActions}>
-                        <button
-                          className={styles.paneActionBtn}
-                          onClick={() => fileInputRef.current.click()}
-                          title="Import .a files"
-                        >
-                          <Upload size={14} />
-                        </button>
-                        <button
-                          className={styles.paneActionBtn}
-                          onClick={onExport}
-                          title="Export all tabs"
-                        >
-                          <Download size={14} />
-                        </button>
-                      </div>
-                    </div>
-                    <TabBar
-                      tabs={tabs}
-                      activeId={activeTabId}
-                      onSwitch={onSwitchTab}
-                      onNew={onNewTab}
-                      onClose={onCloseTab}
-                      onRename={onRenameTab}
-                    />
-                    <Editor ref={editorRef} />
-                  </div>
-                </div>
+    {/* Code Editor — resizable against debug panel */}
+    <Panel defaultSize={isDebugging ? 62 : 100} minSize={35}>
+      <div className={styles.editorWrapper}>
+        <div className={styles.pane}>
+          {/* Hidden file input for importing .a files */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".a"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const files = Array.from(e.target.files);
+              if (files.length) onImportFiles(files);
+              e.target.value = '';
+            }}
+          />
 
-                {/* Debug card — only visible during an active debug session */}
-                {isDebugging && (
-                  <div className={styles.debugCard}>
+          <div className={styles.paneHeader}>
+            <span>Code</span>
+            <div className={styles.paneHeaderActions}>
+              <button
+                className={styles.paneActionBtn}
+                onClick={() => fileInputRef.current.click()}
+                title="Import .a files"
+              >
+                <Upload size={14} />
+              </button>
+              <button
+                className={styles.paneActionBtn}
+                onClick={onExport}
+                title="Export all tabs"
+              >
+                <Download size={14} />
+              </button>
+            </div>
+          </div>
 
-                    {/* CPU State — left column */}
-                    <div className={styles.cpuColumn}>
-                      <div className={styles.sectionHeader}>CPU State</div>
-                      <CPU debugState={debugState} iteration={iteration} />
-                    </div>
+          <TabBar
+            tabs={tabs}
+            activeId={activeTabId}
+            onSwitch={onSwitchTab}
+            onNew={onNewTab}
+            onClose={onCloseTab}
+            onRename={onRenameTab}
+          />
 
-                    {/* Memory + Stack — right column, vertically resizable */}
-                    <div className={styles.memStackColumn}>
-                      <Group orientation="vertical" className={styles.memStackGroup}>
+          <Editor ref={editorRef} />
+        </div>
+      </div>
+    </Panel>
 
-                        <Panel defaultSize={50} minSize={15}>
-                          <div className={styles.debugSection}>
-                            <div className={styles.sectionHeader}>Memory</div>
-                            <Memory debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
-                          </div>
-                        </Panel>
+    {/* Resizable boundary between editor and debug panels */}
+    {isDebugging && <Separator className={styles.resizeHandleV} />}
 
-                        <Separator className={styles.resizeHandle} />
+    {/* Debug panels — vertical side-by-side, scrollable, and resizable */}
+{isDebugging && (
+  <Panel defaultSize={45} minSize={35}>
+    <div className={styles.debugCard}>
+      <Group orientation="horizontal" className={styles.debugHGroup}>
 
-                        <Panel defaultSize={50} minSize={10}>
-                          <div className={styles.debugSection}>
-                            <div className={styles.sectionHeader}>Stack</div>
-                            <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
-                          </div>
-                        </Panel>
+        <Panel defaultSize={34} minSize={20}>
+          <div className={styles.debugSection}>
+            <div className={styles.sectionHeader}>CPU State</div>
+            <div className={styles.debugScroll}>
+              <CPU debugState={debugState} iteration={iteration} />
+            </div>
+          </div>
+        </Panel>
 
-                      </Group>
-                    </div>
+        <Separator className={styles.resizeHandleV} />
 
-                  </div>
-                )}
+        <Panel defaultSize={33} minSize={20}>
+          <div className={styles.debugSection}>
+            <div className={styles.sectionHeader}>Memory</div>
+            <div className={styles.debugScroll}>
+              <Memory
+                debugState={debugState}
+                memoryMap={memoryMap}
+                isDebugging={isDebugging}
+              />
+            </div>
+          </div>
+        </Panel>
 
-              </div>
-            </Panel>
+        <Separator className={styles.resizeHandleV} />
+
+        <Panel defaultSize={33} minSize={20}>
+          <div className={styles.debugSection}>
+            <div className={styles.sectionHeader}>Stack</div>
+            <div className={styles.debugScroll}>
+              <Stack
+                debugState={debugState}
+                memoryMap={memoryMap}
+                isDebugging={isDebugging}
+              />
+            </div>
+          </div>
+        </Panel>
+
+      </Group>
+    </div>
+  </Panel>
+)}
+
+  </Group>
+</Panel>
 
             <Separator className={styles.resizeHandle} />
 
