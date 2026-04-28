@@ -1,0 +1,32 @@
+; Fibonacci — print first N terms of the Fibonacci sequence
+startup:    bl main
+            halt
+
+main:       push lr
+            push fp
+            mov fp, sp
+
+            lea r0, prompt
+            sout r0
+            din r4
+            mov r0, 0
+            mov r1, 1
+            mov r3, 0
+
+fibLoop:    cmp r3, r4
+            brp fibDone
+            brz fibDone
+            dout r0
+            nl
+            add r2, r0, r1
+            mov r0, r1
+            mov r1, r2
+            add r3, r3, 1
+            br fibLoop
+
+fibDone:    mov sp, fp
+            pop fp
+            pop lr
+            ret
+
+prompt:     .string "How many Fibonacci terms? "

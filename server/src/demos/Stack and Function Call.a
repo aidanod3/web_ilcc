@@ -1,0 +1,35 @@
+; Stack and Function Call — compute square of input using a function
+startup:    bl main
+            halt
+
+; square(r0) -> r0 = r0 * r0
+square:     push lr
+            push fp
+            mov fp, sp
+            mul r0, r0, r0
+            mov sp, fp
+            pop fp
+            pop lr
+            ret
+
+main:       push lr
+            push fp
+            mov fp, sp
+
+            lea r0, prompt
+            sout r0
+            din r0
+            bl square
+
+            lea r1, result
+            sout r1
+            dout r0
+            nl
+
+            mov sp, fp
+            pop fp
+            pop lr
+            ret
+
+prompt:     .string "Enter a number: "
+result:     .string "Square: "

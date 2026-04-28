@@ -19,8 +19,8 @@
  * The side panel is toggled by the chevron on the left of the editor header.
  */
 
-import { useRef } from 'react';
-import { Upload, Download } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Upload, Download, Link2 } from 'lucide-react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import styles from './Workspace.module.css';
 import Editor from './panels/Editor';
@@ -39,6 +39,17 @@ export default function Workspace({
 }) {
   const sidePanelRef  = useRef(null);
   const fileInputRef  = useRef(null);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShare = () => {
+    const code = editorRef.current?.getCode() ?? '';
+    const encoded = btoa(encodeURIComponent(code)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const url = `${window.location.origin}${window.location.pathname}?code=${encoded}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    });
+  };
 
   return (
     <div className={styles.workspaceOuter}>
@@ -93,6 +104,13 @@ export default function Workspace({
             <div className={styles.paneHeaderActions}>
               <button
                 className={styles.paneActionBtn}
+                onClick={handleShare}
+                title="Share code via URL"
+              >
+                <Link2 size={14} />
+              </button>
+              <button
+                className={styles.paneActionBtn}
                 onClick={() => fileInputRef.current.click()}
                 title="Import .a files"
               >
@@ -107,6 +125,12 @@ export default function Workspace({
               </button>
             </div>
           </div>
+
+          {shareCopied && (
+            <div className={styles.shareBanner}>
+              Link copied to clipboard!
+            </div>
+          )}
 
           <TabBar
             tabs={tabs}

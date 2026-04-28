@@ -1,0 +1,32 @@
+; While Loop — sum integers from 1 to N
+startup:    bl main
+            halt
+
+main:       push lr
+            push fp
+            mov fp, sp
+
+            lea r0, prompt
+            sout r0
+            din r1
+            mov r2, 0
+            mov r3, 1
+
+whileTop:   cmp r3, r1
+            brp done
+            add r2, r2, r3
+            add r3, r3, 1
+            br whileTop
+
+done:       lea r0, result
+            sout r0
+            dout r2
+            nl
+
+            mov sp, fp
+            pop fp
+            pop lr
+            ret
+
+prompt:     .string "Enter N: "
+result:     .string "Sum 1..N = "

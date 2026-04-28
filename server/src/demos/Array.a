@@ -1,0 +1,40 @@
+; Array — store 5 values then print them back
+startup:    bl main
+            halt
+
+main:       push lr
+            push fp
+            mov fp, sp
+
+            lea r4, arr
+            mov r3, 0
+fill:       cmp r3, 5
+            brp printStart
+            brz printStart
+            lea r0, inpMsg
+            sout r0
+            din r1
+            st  r1, r4
+            add r4, r4, 1
+            add r3, r3, 1
+            br fill
+
+printStart: lea r4, arr
+            mov r3, 0
+printLoop:  cmp r3, 5
+            brp printDone
+            brz printDone
+            ld  r0, r4
+            dout r0
+            nl
+            add r4, r4, 1
+            add r3, r3, 1
+            br printLoop
+
+printDone:  mov sp, fp
+            pop fp
+            pop lr
+            ret
+
+inpMsg:     .string "Value: "
+arr:        .blkw 5

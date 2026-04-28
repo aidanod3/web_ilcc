@@ -1,85 +1,49 @@
 /* Terminal panel styles */
 
 .terminal {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    background: transparent;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-/* Terminal output area */
 .output {
-    margin: 0;
-    padding: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--text);
-    overflow: auto;
-    flex: 1;
-    min-height: 0;
-    scroll-behavior: smooth;
-    overscroll-behavior: contain;
+  margin: 0;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text);
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
-
-    /* Terminal scrollbars */
-    .output::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-
-    .output::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .output::-webkit-scrollbar-thumb {
-        background: rgba(255, 70, 70, 0.36);
-        border-radius: 999px;
-    }
-
-        .output::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 95, 95, 0.72);
-        }
 
 /* Input row — appears at the bottom when the program requests input */
 .inputRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 10px;
-    border-top: 1px solid rgba(255, 80, 80, 0.42);
-    background: linear-gradient(90deg, rgba(255, 45, 45, 0.12), transparent 75%), var(--bg2);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 -4px 14px rgba(255, 35, 35, 0.05);
-    flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .prompt {
-    font-family: "JetBrains Mono", monospace;
-    font-size: 12px;
-    color: #ff8a8a;
-    user-select: none;
-    text-shadow: 0 0 8px rgba(255, 65, 65, 0.28);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text2);
+  user-select: none;
 }
 
 .input {
-    flex: 1;
-    background: linear-gradient(180deg, rgba(255, 70, 70, 0.05), transparent), transparent;
-    border: 1px solid rgba(255, 80, 80, 0.22);
-    border-radius: 6px;
-    outline: none;
-    padding: 4px 7px;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 12px;
-    color: var(--text);
-    caret-color: #ff8a8a;
-    transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--text);
+  caret-color: var(--text);
 }
-
-    .input:focus {
-        border-color: rgba(255, 95, 95, 0.78);
-        background: linear-gradient(180deg, rgba(255, 70, 70, 0.09), transparent), transparent;
-        box-shadow: 0 0 0 2px rgba(255, 70, 70, 0.13), 0 0 12px rgba(255, 50, 50, 0.16);
-    }

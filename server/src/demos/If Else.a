@@ -1,0 +1,41 @@
+; If / Else — compare two inputs and print which is greater
+startup:    bl main
+            halt
+
+main:       push lr
+            push fp
+            mov fp, sp
+
+            lea r0, msgA
+            sout r0
+            din r1
+            lea r0, msgB
+            sout r0
+            din r2
+
+            cmp r1, r2
+            brp aGreater
+            brz aEqual
+
+            lea r0, msgLess
+            sout r0
+            br done
+
+aGreater:   lea r0, msgGreater
+            sout r0
+            br done
+
+aEqual:     lea r0, msgEqual
+            sout r0
+
+done:       nl
+            mov sp, fp
+            pop fp
+            pop lr
+            ret
+
+msgA:       .string "Enter A: "
+msgB:       .string "Enter B: "
+msgGreater: .string "A is greater"
+msgLess:    .string "A is less"
+msgEqual:   .string "A equals B"

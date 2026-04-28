@@ -32,6 +32,22 @@ export default function Ilcc() {
      to read the document contents on demand (run/debug). */
   const editorRef = useRef(null);
 
+  // Load shared code from URL ?code= param on first mount
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('code');
+      if (encoded) {
+        const source = decodeURIComponent(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')));
+        // Wait a tick for the editor to mount before setting code
+        setTimeout(() => {
+          editorRef.current?.setCode(source);
+          window.history.replaceState({}, '', window.location.pathname);
+        }, 50);
+      }
+    } catch (_) { /* ignore malformed codes */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ── Tab state ──────────────────────────────────────────────────────────
      Each tab:  { id: string, name: string, content: string }
      content is the last-saved snapshot; the live text lives in CodeMirror

@@ -1,0 +1,12 @@
+; Count Loop — count from 1 to 5 and print each value
+startup:    bl main
+            halt
+
+main:       mov r0, 1
+loopTop:    dout r0
+            nl
+            add r0, r0, 1
+            cmp r0, 6
+            brn loopTop
+            brz loopTop
+            ret

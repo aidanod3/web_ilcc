@@ -1,0 +1,30 @@
+; Add Two Numbers — prompt for two integers and print their sum
+startup:    bl main
+            halt
+
+main:       push lr
+            push fp
+            mov fp, sp
+
+            lea r0, promptA
+            sout r0
+            din r1
+
+            lea r0, promptB
+            sout r0
+            din r2
+
+            add r3, r1, r2
+            lea r0, sumMsg
+            sout r0
+            dout r3
+            nl
+
+            mov sp, fp
+            pop fp
+            pop lr
+            ret
+
+promptA:    .string "Enter first number: "
+promptB:    .string "Enter second number: "
+sumMsg:     .string "Sum: "
