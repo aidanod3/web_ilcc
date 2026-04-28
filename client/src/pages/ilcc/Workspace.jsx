@@ -78,10 +78,13 @@ export default function Workspace({
   const sidePanelRef  = useRef(null);
   const fileInputRef  = useRef(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [formatDone, setFormatDone] = useState(false);
 
   const handleFormat = () => {
     const code = editorRef.current?.getCode() ?? '';
     editorRef.current?.setCode(formatLCCAssembly(code));
+    setFormatDone(true);
+    setTimeout(() => setFormatDone(false), 2500);
   };
 
   const handleShare = () => {
@@ -179,6 +182,11 @@ export default function Workspace({
           {shareCopied && (
             <div className={styles.shareBanner}>
               Link copied to clipboard!
+            </div>
+          )}
+          {formatDone && (
+            <div className={styles.shareBanner}>
+              Code formatted!
             </div>
           )}
 
