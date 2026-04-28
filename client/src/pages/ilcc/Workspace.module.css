@@ -32,25 +32,17 @@
   overflow: hidden;
 }
 
-/* ── Top row: editor + debug card ── */
+/* ── Top row: editor | debug card (horizontal PanelGroup) ── */
 
-/* Plain flex row — no PanelGroup, so no resize handle between editor and debug */
-.editorDebugRow {
+/* Horizontal PanelGroup — fills the top Panel of mainVGroup */
+.editorDebugGroup {
   height: 100%;
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-}
-
-/* Editor pane wrapper — stretches to fill all remaining width */
-.editorWrapper {
-  flex: 1;
-  min-width: 0;
 }
 
 /* Shared pane wrapper — editor and terminal */
 .pane {
   height: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -60,10 +52,11 @@
   overflow: hidden;
 }
 
-/* ── Debug card — fixed width, flex row (CPU | Memory+Stack) ── */
+/* ── Debug card — fills its Panel, flex row (CPU | Memory+Stack) ── */
 
 .debugCard {
-  flex: 0 0 440px;
+  height: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: row;
   overflow: hidden;
@@ -72,27 +65,48 @@
   border-radius: 8px;
 }
 
-/* CPU State column — fixed proportion, right border acts as divider */
+/* Debugger Panel — minSize is set dynamically via the prop; no CSS override needed */
+.debuggerPanel {}
+
+/* CPU State column */
 .cpuColumn {
-  flex: 0 0 200px;
+  flex: 1;
+  min-width: 190px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow-x: hidden;
   border-right: 1px solid var(--border);
 }
 
-/* Memory + Stack column — takes remaining width */
+/* Memory + Stack column (Compact mode) */
 .memStackColumn {
   flex: 1;
-  min-width: 0;
+  min-width: 190px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* Vertical PanelGroup for Memory / Stack (still resizable between each other) */
 .memStackGroup {
   height: 100%;
+}
+
+/* Classic layout: each of Memory and Stack gets its own equal-width column */
+.classicColumn {
+  flex: 1;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overflow-x: hidden;
+}
+
+/* Adds a CSS border on the left — used on the Stack column in Classic mode */
+.classicDivider {
+  border-left: 1px solid var(--border);
 }
 
 /* Individual section inside the debug card (Memory or Stack) */
@@ -101,6 +115,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* ── Resize handles ── */

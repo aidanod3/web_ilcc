@@ -36,11 +36,11 @@ const ROWS_ABOVE_SP = 16;
 function DiffVal({ change, plain }) {
   if (change && change.old !== change.new) {
     return (
-      <>
+      <span className={styles.diffGroup}>
         <span className={styles.old}>{hex4(change.old)}</span>
         <span className={styles.sep}>&gt;</span>
-        <span className={`${styles.value} ${styles.new}`}>{hex4(change.new)}</span>
-      </>
+        <span className={styles.new}>{hex4(change.new)}</span>
+      </span>
     );
   }
   return <span className={styles.value}>{hex4(plain)}</span>;

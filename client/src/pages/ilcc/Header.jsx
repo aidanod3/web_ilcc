@@ -17,6 +17,11 @@ import styles from './Header.module.css';
 import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, Menu, Settings, FileCode2, ChevronDown } from 'lucide-react';
 import logo from '../../assets/ilcc_wht.PNG';
 
+const DEBUGGER_LAYOUTS = [
+  { id: 'compact', label: 'Compact' },
+  { id: 'classic', label: 'Classic' },
+];
+
 export default function Header({
   isRunning,
   isDebugging,
@@ -30,11 +35,15 @@ export default function Header({
   theme,
   setTheme,
   themes,
+  debuggerLayout,
+  setDebuggerLayout,
 }) {
   const [stepCountStr, setStepCountStr] = useState('1');
 
   /* Settings dropdown */
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [themesOpen,   setThemesOpen]   = useState(false);
+  const [layoutOpen,   setLayoutOpen]   = useState(false);
   const settingsRef = useRef(null);
 
   /* Code Templates dropdown */
@@ -49,11 +58,15 @@ export default function Header({
     return (isNaN(v) || v < 1) ? 1 : v;
   };
 
-  /* Close settings when clicking outside */
+  /* Close settings (and reset sub-menus) when clicking outside */
   useEffect(() => {
     if (!settingsOpen) return;
     const handle = (e) => {
-      if (!settingsRef.current?.contains(e.target)) setSettingsOpen(false);
+      if (!settingsRef.current?.contains(e.target)) {
+        setSettingsOpen(false);
+        setThemesOpen(false);
+        setLayoutOpen(false);
+      }
     };
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
@@ -192,16 +205,61 @@ export default function Header({
 
           {settingsOpen && (
             <div className={styles.dropdown}>
-              <div className={styles.dropdownLabel}>Theme</div>
-              {(themes || []).map(t => (
+
+              {/* Theme sub-section */}
+              <button
+                className={styles.settingsRow}
+                onClick={() => setThemesOpen(o => !o)}
+              >
+                <span>Theme</span>
+                <ChevronDown
+                  size={12}
+                  style={{
+                    transform: themesOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    transition: 'transform 0.15s',
+                    flexShrink: 0,
+                  }}
+                />
+              </button>
+
+              {themesOpen && (themes || []).map(t => (
                 <button
                   key={t.id}
                   className={`${styles.themeItem} ${t.id === theme ? styles.themeItemActive : ''}`}
-                  onClick={() => { setTheme(t.id); setSettingsOpen(false); }}
+                  onClick={() => { setTheme(t.id); setSettingsOpen(false); setThemesOpen(false); }}
                 >
                   {t.label}
                 </button>
               ))}
+
+              <div className={styles.dropdownDivider} />
+
+              {/* Debugger Layout sub-section */}
+              <button
+                className={styles.settingsRow}
+                onClick={() => setLayoutOpen(o => !o)}
+              >
+                <span>Debugger Layout</span>
+                <ChevronDown
+                  size={12}
+                  style={{
+                    transform: layoutOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    transition: 'transform 0.15s',
+                    flexShrink: 0,
+                  }}
+                />
+              </button>
+
+              {layoutOpen && DEBUGGER_LAYOUTS.map(l => (
+                <button
+                  key={l.id}
+                  className={`${styles.themeItem} ${l.id === debuggerLayout ? styles.themeItemActive : ''}`}
+                  onClick={() => { setDebuggerLayout(l.id); setSettingsOpen(false); setLayoutOpen(false); }}
+                >
+                  {l.label}
+                </button>
+              ))}
+
             </div>
           )}
         </div>

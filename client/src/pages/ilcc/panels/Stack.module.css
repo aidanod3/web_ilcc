@@ -172,6 +172,13 @@
 }
 
 /* ── Old/new diff display ── */
+.diffGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .old { color: #f87171; font-family: "JetBrains Mono", monospace; font-size: 12px; }
-.sep { color: var(--text3); font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 0 2px; }
+.sep { color: var(--text3); font-family: "JetBrains Mono", monospace; font-size: 12px; }
 .new { color: #4ade80; font-family: "JetBrains Mono", monospace; font-size: 12px; }

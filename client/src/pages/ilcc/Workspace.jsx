@@ -19,7 +19,7 @@
  * The side panel is toggled by the chevron on the left of the editor header.
  */
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { Upload, Download } from 'lucide-react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import styles from './Workspace.module.css';
@@ -36,9 +36,35 @@ export default function Workspace({
   debugState, memoryMap, isDebugging, iteration,
   tabs, activeTabId, onSwitchTab, onNewTab, onCloseTab, onRenameTab,
   onImportFiles, onExport,
+  debuggerLayout = 'compact',
 }) {
-  const sidePanelRef  = useRef(null);
-  const fileInputRef  = useRef(null);
+  const sidePanelRef     = useRef(null);
+  const fileInputRef     = useRef(null);
+  const debuggerPanelRef = useRef(null);
+  const prevLayoutRef    = useRef(debuggerLayout);
+  const pendingResizeRef = useRef(null);
+
+  /* Capture the resize target DURING render, before React commits the new
+     props.  At this point the Panel library hasn't yet enforced the updated
+     minSize, so getSize() still returns the genuine pre-change pixel width.
+     The effect below applies the stored value after the commit. */
+  if (debuggerLayout !== prevLayoutRef.current && debuggerPanelRef.current) {
+    const { inPixels } = debuggerPanelRef.current.getSize();
+    const prev = prevLayoutRef.current;
+    if (debuggerLayout === 'compact' && prev === 'classic') {
+      pendingResizeRef.current = Math.round(inPixels * 2 / 3);
+    } else if (debuggerLayout === 'classic' && prev === 'compact') {
+      pendingResizeRef.current = Math.round(inPixels * 3 / 2);
+    }
+  }
+
+  useEffect(() => {
+    prevLayoutRef.current = debuggerLayout;
+    if (pendingResizeRef.current === null || !debuggerPanelRef.current) return;
+    const target = pendingResizeRef.current;
+    pendingResizeRef.current = null;
+    debuggerPanelRef.current.resize(target);
+  }, [debuggerLayout]);
 
   return (
     <div className={styles.workspaceOuter}>
@@ -65,12 +91,12 @@ export default function Workspace({
         <Panel minSize={30}>
           <Group orientation="vertical" className={styles.mainVGroup}>
 
-            {/* ── Top row: editor + debug card (plain flex, no PanelGroup) ── */}
+            {/* ── Top row: editor | debug card (resizable horizontal split) ── */}
             <Panel defaultSize={72} minSize={30}>
-              <div className={styles.editorDebugRow}>
+              <Group orientation="horizontal" className={styles.editorDebugGroup}>
 
-                {/* Code Editor — absorbs all available width */}
-                <div className={styles.editorWrapper}>
+                {/* Code Editor */}
+                <Panel id="editor" minSize={300}>
                   <div className={styles.pane}>
                     {/* Hidden file input for importing .a files */}
                     <input
@@ -114,45 +140,66 @@ export default function Workspace({
                     />
                     <Editor ref={editorRef} />
                   </div>
-                </div>
+                </Panel>
 
                 {/* Debug card — only visible during an active debug session */}
-                {isDebugging && (
-                  <div className={styles.debugCard}>
+                {isDebugging && <>
+                  <Separator className={styles.resizeHandleV} />
+                  <Panel id="debugger" defaultSize={35} minSize={debuggerLayout === 'classic' ? 570 : 380} panelRef={debuggerPanelRef} className={styles.debuggerPanel}>
+                    <div className={styles.debugCard}>
 
-                    {/* CPU State — left column */}
-                    <div className={styles.cpuColumn}>
-                      <div className={styles.sectionHeader}>CPU State</div>
-                      <CPU debugState={debugState} iteration={iteration} />
-                    </div>
+                      {/* CPU State — left column */}
+                      <div className={styles.cpuColumn}>
+                        <div className={styles.sectionHeader}>CPU State</div>
+                        <CPU debugState={debugState} iteration={iteration} />
+                      </div>
 
-                    {/* Memory + Stack — right column, vertically resizable */}
-                    <div className={styles.memStackColumn}>
-                      <Group orientation="vertical" className={styles.memStackGroup}>
+                      {debuggerLayout === 'classic' ? (
 
-                        <Panel defaultSize={50} minSize={15}>
-                          <div className={styles.debugSection}>
+                        /* Classic: three equal-width columns, CSS borders only */
+                        <>
+                          <div className={styles.classicColumn}>
                             <div className={styles.sectionHeader}>Memory</div>
                             <Memory debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
                           </div>
-                        </Panel>
-
-                        <Separator className={styles.resizeHandle} />
-
-                        <Panel defaultSize={50} minSize={10}>
-                          <div className={styles.debugSection}>
+                          <div className={`${styles.classicColumn} ${styles.classicDivider}`}>
                             <div className={styles.sectionHeader}>Stack</div>
                             <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
                           </div>
-                        </Panel>
+                        </>
 
-                      </Group>
+                      ) : (
+
+                        /* Compact (default): Memory over Stack in a resizable right column */
+                        <div className={styles.memStackColumn}>
+                          <Group orientation="vertical" className={styles.memStackGroup}>
+
+                            <Panel defaultSize={50} minSize={15}>
+                              <div className={styles.debugSection}>
+                                <div className={styles.sectionHeader}>Memory</div>
+                                <Memory debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
+                              </div>
+                            </Panel>
+
+                            <Separator className={styles.resizeHandle} />
+
+                            <Panel defaultSize={50} minSize={10}>
+                              <div className={styles.debugSection}>
+                                <div className={styles.sectionHeader}>Stack</div>
+                                <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
+                              </div>
+                            </Panel>
+
+                          </Group>
+                        </div>
+
+                      )}
+
                     </div>
+                  </Panel>
+                </>}
 
-                  </div>
-                )}
-
-              </div>
+              </Group>
             </Panel>
 
             <Separator className={styles.resizeHandle} />

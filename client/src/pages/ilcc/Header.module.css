@@ -253,23 +253,22 @@
   border-left: none !important;
 }
 
-/* ── Theme picker in settings dropdown ── */
+/* ── Settings dropdown rows ── */
 
-.dropdownLabel {
-  padding: 6px 10px 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  user-select: none;
+/* Thin rule between settings sections */
+.dropdownDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
 }
 
-.themeItem {
-  display: block;
+/* Top-level clickable row (e.g. "Theme ›") */
+.settingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
   padding: 6px 10px;
-  text-align: left;
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -280,11 +279,32 @@
   transition: background 0.1s;
 }
 
-.themeItem:hover {
+.settingsRow:hover {
   background: var(--bg3);
 }
 
+/* Indented option rows inside a settings sub-section */
+.themeItem {
+  display: block;
+  width: 100%;
+  padding: 5px 10px 5px 22px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text2);
+  font-size: 0.83rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.themeItem:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
 .themeItemActive {
-  color: var(--gold);
+  color: var(--gold) !important;
   font-weight: 600;
 }

@@ -27,6 +27,7 @@ import useTheme from '../../hooks/useTheme';
 
 export default function Ilcc() {
   const { theme, setTheme, themes } = useTheme();
+  const [debuggerLayout, setDebuggerLayout] = useState('compact');
 
   /* Ref to the CodeMirror editor — call editorRef.current.getCode()
      to read the document contents on demand (run/debug). */
@@ -195,6 +196,8 @@ export default function Ilcc() {
         theme={theme}
         setTheme={setTheme}
         themes={themes}
+        debuggerLayout={debuggerLayout}
+        setDebuggerLayout={setDebuggerLayout}
       />
 
       {/* Workspace: editor, terminal, and debugger panels */}
@@ -215,6 +218,7 @@ export default function Ilcc() {
         onRenameTab={handleRenameTab}
         onImportFiles={handleImportFiles}
         onExport={handleExport}
+        debuggerLayout={debuggerLayout}
       />
 
     </div>
