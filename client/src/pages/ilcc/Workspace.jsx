@@ -38,11 +38,13 @@ export default function Workspace({
   onImportFiles, onExport,
   debuggerLayout = 'compact',
 }) {
-  const sidePanelRef     = useRef(null);
-  const fileInputRef     = useRef(null);
-  const debuggerPanelRef = useRef(null);
-  const prevLayoutRef    = useRef(debuggerLayout);
-  const pendingResizeRef = useRef(null);
+  const sidePanelRef       = useRef(null);
+  const fileInputRef       = useRef(null);
+  const debuggerPanelRef   = useRef(null);
+  const debugCardRef       = useRef(null);
+  const prevLayoutRef      = useRef(debuggerLayout);
+  const pendingResizeRef   = useRef(null);
+  const savedDebuggerPxRef = useRef(null); // last user-set debugger pixel width
 
   /* Capture the resize target DURING render, before React commits the new
      props.  At this point the Panel library hasn't yet enforced the updated
@@ -68,8 +70,65 @@ export default function Workspace({
     // constraints from the new minSize before we call resize().  Without this,
     // resize(380) can be silently clamped by the stale minSize=570 that was
     // still in effect at the time the useEffect ran.
-    requestAnimationFrame(() => ref.resize(target));
+    requestAnimationFrame(() => {
+      ref.resize(target);
+      savedDebuggerPxRef.current = target;
+    });
   }, [debuggerLayout]);
+
+  /* Capture the debugger's pixel width on open; clear it on close. */
+  useEffect(() => {
+    if (!isDebugging) {
+      savedDebuggerPxRef.current = null;
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (debuggerPanelRef.current) {
+        savedDebuggerPxRef.current = debuggerPanelRef.current.getSize().inPixels;
+      }
+    });
+  }, [isDebugging]);
+
+  /* When the window grows wider, pin the debugger back to its saved width so
+     the editor absorbs all extra space instead of the debugger expanding. */
+  useEffect(() => {
+    if (!isDebugging) return;
+    let lastWidth = window.innerWidth;
+
+    function handleResize() {
+      const newWidth = window.innerWidth;
+      const grew = newWidth > lastWidth;
+      lastWidth = newWidth;
+      if (grew && savedDebuggerPxRef.current !== null && debuggerPanelRef.current) {
+        requestAnimationFrame(() => {
+          debuggerPanelRef.current?.resize(savedDebuggerPxRef.current);
+        });
+      }
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isDebugging]);
+
+  /* Horizontal trackpad scroll on the debug card.
+     Inner elements (Panel divs, overflow containers) absorb wheel events
+     before they naturally bubble up to .debugCard.  Listening in the CAPTURE
+     phase guarantees we see every wheel event first.  We only steal it when
+     the card actually has horizontal overflow to scroll; otherwise the event
+     falls through untouched so vertical scrolling inside columns still works. */
+  useEffect(() => {
+    if (!isDebugging) return;
+    const el = debugCardRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      if (e.deltaX === 0) return;
+      if (el.scrollWidth <= el.clientWidth) return; // nothing to scroll — don't interfere
+      el.scrollLeft += e.deltaX;
+      e.preventDefault();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    return () => el.removeEventListener('wheel', onWheel, { capture: true });
+  }, [isDebugging]);
 
   return (
     <div className={styles.workspaceOuter}>
@@ -149,9 +208,16 @@ export default function Workspace({
 
                 {/* Debug card — only visible during an active debug session */}
                 {isDebugging && <>
-                  <Separator className={styles.resizeHandleV} />
-                  <Panel id="debugger" defaultSize={35} minSize={debuggerLayout === 'classic' ? 570 : 380} panelRef={debuggerPanelRef} className={styles.debuggerPanel}>
-                    <div className={styles.debugCard}>
+                  <Separator
+                    className={styles.resizeHandleV}
+                    onDragging={(isDragging) => {
+                      if (!isDragging && debuggerPanelRef.current) {
+                        savedDebuggerPxRef.current = debuggerPanelRef.current.getSize().inPixels;
+                      }
+                    }}
+                  />
+                  <Panel id="debugger" defaultSize={35} minSize={debuggerLayout === 'classic' ? 572 : 382} panelRef={debuggerPanelRef} className={styles.debuggerPanel}>
+                    <div className={styles.debugCard} ref={debugCardRef}>
 
                       {/* CPU State — left column */}
                       <div className={styles.cpuColumn}>
@@ -179,7 +245,7 @@ export default function Workspace({
                         <div className={styles.memStackColumn}>
                           <Group orientation="vertical" className={styles.memStackGroup}>
 
-                            <Panel defaultSize={50} minSize={15}>
+                            <Panel defaultSize={50} minSize={15} className={styles.memStackPanel}>
                               <div className={styles.debugSection}>
                                 <div className={styles.sectionHeader}>Memory</div>
                                 <Memory debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
@@ -188,7 +254,7 @@ export default function Workspace({
 
                             <Separator className={styles.resizeHandle} />
 
-                            <Panel defaultSize={50} minSize={10}>
+                            <Panel defaultSize={50} minSize={10} className={styles.memStackPanel}>
                               <div className={styles.debugSection}>
                                 <div className={styles.sectionHeader}>Stack</div>
                                 <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
