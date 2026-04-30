@@ -3,6 +3,7 @@
 .content {
   flex: 1;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   min-height: 0;
   padding: 8px;
   display: flex;
@@ -129,7 +130,7 @@
 }
 
 .sep {
-  color: var(--text3);
+  color: var(--text2);
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   padding: 0 2px;

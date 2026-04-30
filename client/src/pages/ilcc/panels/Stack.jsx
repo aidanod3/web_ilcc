@@ -104,30 +104,15 @@ export default function Stack({ debugState, memoryMap = {}, isDebugging = false 
   return (
     <div className={styles.panel}>
 
-      {/* Jump-to-address bar */}
-      <div className={styles.jumpBar}>
-        <span className={styles.jumpLabel}>Jump</span>
-        <input
-          className={styles.jumpInput}
-          type="text"
-          placeholder="0xaddr"
-          value={jumpInput}
-          onChange={e => setJumpInput(e.target.value)}
-          onKeyDown={handleJump}
-          spellCheck={false}
-          aria-label="Jump to stack address"
-        />
+      {/* Column header — outside scroll */}
+      <div className={styles.tableHeader}>
+        <span className={styles.tagSpacer} />
+        <span className={styles.colAddr}>addr</span>
+        <span className={styles.colValue}>value</span>
       </div>
 
       {/* Scrollable rows — always rendered; all zeros before first step */}
       <div className={styles.content}>
-
-        {/* Sticky column header */}
-        <div className={styles.tableHeader}>
-          <span className={styles.tagSpacer} />
-          <span className={styles.colAddr}>addr</span>
-          <span className={styles.colValue}>value</span>
-        </div>
 
         {rows.map(addr => {
           const isSp    = sp    !== 0 && addr === sp;
@@ -165,6 +150,21 @@ export default function Stack({ debugState, memoryMap = {}, isDebugging = false 
             </div>
           );
         })}
+      </div>
+
+      {/* Jump-to-address bar */}
+      <div className={styles.jumpBar}>
+        <span className={styles.jumpLabel}>Jump</span>
+        <input
+          className={styles.jumpInput}
+          type="text"
+          placeholder="0xaddr"
+          value={jumpInput}
+          onChange={e => setJumpInput(e.target.value)}
+          onKeyDown={handleJump}
+          spellCheck={false}
+          aria-label="Jump to stack address"
+        />
       </div>
 
     </div>

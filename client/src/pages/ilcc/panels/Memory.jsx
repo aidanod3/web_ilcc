@@ -35,11 +35,11 @@ function parseHex(s) {
 function DiffVal({ change, plain }) {
   if (change && change.old !== change.new) {
     return (
-      <>
+      <span className={styles.diffGroup}>
         <span className={styles.old}>{hex4(change.old)}</span>
         <span className={styles.sep}>&gt;</span>
-        <span className={`${styles.value} ${styles.new}`}>{hex4(change.new)}</span>
-      </>
+        <span className={styles.new}>{hex4(change.new)}</span>
+      </span>
     );
   }
   return <span className={styles.value}>{hex4(plain)}</span>;
@@ -107,30 +107,15 @@ export default function Memory({ debugState, memoryMap = {}, isDebugging = false
   return (
     <div className={styles.panel}>
 
-      {/* Jump-to-address bar */}
-      <div className={styles.jumpBar}>
-        <span className={styles.jumpLabel}>Jump</span>
-        <input
-          className={styles.jumpInput}
-          type="text"
-          placeholder="0xaddr"
-          value={jumpInput}
-          onChange={e => setJumpInput(e.target.value)}
-          onKeyDown={handleJump}
-          spellCheck={false}
-          aria-label="Jump to memory address"
-        />
+      {/* Column header — outside scroll */}
+      <div className={styles.tableHeader}>
+        <span className={styles.tagSpacer} />
+        <span className={styles.colAddr}>addr</span>
+        <span className={styles.colValue}>value</span>
       </div>
 
       {/* Scrollable content */}
       <div className={styles.content}>
-
-        {/* Sticky column header */}
-        <div className={styles.tableHeader}>
-          <span className={styles.tagSpacer} />
-          <span className={styles.colAddr}>addr</span>
-          <span className={styles.colValue}>value</span>
-        </div>
 
         {addrs.length === 0 ? (
           <span className={styles.empty}>No program memory writes yet</span>
@@ -152,6 +137,21 @@ export default function Memory({ debugState, memoryMap = {}, isDebugging = false
           })
         )}
 
+      </div>
+
+      {/* Jump-to-address bar */}
+      <div className={styles.jumpBar}>
+        <span className={styles.jumpLabel}>Jump</span>
+        <input
+          className={styles.jumpInput}
+          type="text"
+          placeholder="0xaddr"
+          value={jumpInput}
+          onChange={e => setJumpInput(e.target.value)}
+          onKeyDown={handleJump}
+          spellCheck={false}
+          aria-label="Jump to memory address"
+        />
       </div>
     </div>
   );

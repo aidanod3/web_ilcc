@@ -63,7 +63,12 @@ export default function Workspace({
     if (pendingResizeRef.current === null || !debuggerPanelRef.current) return;
     const target = pendingResizeRef.current;
     pendingResizeRef.current = null;
-    debuggerPanelRef.current.resize(target);
+    const ref = debuggerPanelRef.current;
+    // Defer to rAF so the Panel's useLayoutEffect has fully re-derived its
+    // constraints from the new minSize before we call resize().  Without this,
+    // resize(380) can be silently clamped by the stale minSize=570 that was
+    // still in effect at the time the useEffect ran.
+    requestAnimationFrame(() => ref.resize(target));
   }, [debuggerLayout]);
 
   return (

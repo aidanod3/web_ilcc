@@ -17,7 +17,7 @@
   gap: 6px;
   padding: 5px 10px;
   background: var(--bg1);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
 }
 
 .jumpLabel {
@@ -51,6 +51,7 @@
 .content {
   flex: 1;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -58,18 +59,15 @@
   padding-bottom: 6px;
 }
 
-/* Sticky column header row — mirrors Memory's header */
+/* Column header row */
 .tableHeader {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  position: sticky;
-  top: 0;
-  background-color: var(--bg2);
-  border-bottom: 2px solid var(--bg3);
   flex-shrink: 0;
-  margin-bottom: 4px;
+  background: var(--bg2);
+  border-bottom: 2px solid var(--bg3);
 }
 
 .tagSpacer {
@@ -180,5 +178,5 @@
 }
 
 .old { color: #f87171; font-family: "JetBrains Mono", monospace; font-size: 12px; }
-.sep { color: var(--text3); font-family: "JetBrains Mono", monospace; font-size: 12px; }
+.sep { color: var(--text2); font-family: "JetBrains Mono", monospace; font-size: 12px; }
 .new { color: #4ade80; font-family: "JetBrains Mono", monospace; font-size: 12px; }

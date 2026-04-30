@@ -62,7 +62,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #4ade80;
+  background: var(--accent);
 }
 
 /* Tab filename label — truncates with ellipsis */

@@ -15,7 +15,8 @@
 import { useState, useRef, useEffect } from 'react';
 import styles from './Header.module.css';
 import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, Menu, Settings, FileCode2, ChevronDown } from 'lucide-react';
-import logo from '../../assets/ilcc_wht.PNG';
+import logoWht from '../../assets/ilcc_wht.PNG';
+import logoBlk from '../../assets/ilcc_blk.png';
 
 const DEBUGGER_LAYOUTS = [
   { id: 'compact', label: 'Compact' },
@@ -98,7 +99,7 @@ export default function Header({
 
       {/* Left: logo + code templates dropdown */}
       <div className={styles.headerLeft}>
-        <img src={logo} alt="ilcc" className={styles.logo} />
+        <img src={theme === 'light' ? logoBlk : logoWht} alt="ilcc" className={styles.logo} />
 
         <div className={styles.templatesWrapper} ref={templatesRef}>
           <button
