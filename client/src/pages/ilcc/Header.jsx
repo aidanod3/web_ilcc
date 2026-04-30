@@ -19,8 +19,8 @@ import logoWht from '../../assets/ilcc_wht.PNG';
 import logoBlk from '../../assets/ilcc_blk.png';
 
 const DEBUGGER_LAYOUTS = [
-  { id: 'compact', label: 'Compact' },
   { id: 'classic', label: 'Classic' },
+  { id: 'compact', label: 'Compact' },
 ];
 
 export default function Header({

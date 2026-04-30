@@ -36,7 +36,7 @@ export default function Workspace({
   debugState, memoryMap, isDebugging, iteration,
   tabs, activeTabId, onSwitchTab, onNewTab, onCloseTab, onRenameTab,
   onImportFiles, onExport,
-  debuggerLayout = 'compact',
+  debuggerLayout = 'classic',
 }) {
   const sidePanelRef       = useRef(null);
   const fileInputRef       = useRef(null);

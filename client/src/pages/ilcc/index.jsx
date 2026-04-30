@@ -27,7 +27,7 @@ import useTheme from '../../hooks/useTheme';
 
 export default function Ilcc() {
   const { theme, setTheme, themes } = useTheme();
-  const [debuggerLayout, setDebuggerLayout] = useState('compact');
+  const [debuggerLayout, setDebuggerLayout] = useState('classic');
 
   /* Ref to the CodeMirror editor — call editorRef.current.getCode()
      to read the document contents on demand (run/debug). */
@@ -148,12 +148,12 @@ export default function Ilcc() {
      When currentLine is null (session stopped / halted / error) the
      highlight is cleared. */
   useEffect(() => {
-    if (debug_session.currentLine != null) {
+    if (debug_session.currentLine != null && !debug_session.programDone) {
       editorRef.current?.highlightLine(debug_session.currentLine);
     } else {
       editorRef.current?.clearHighlight();
     }
-  }, [debug_session.currentLine]);
+  }, [debug_session.currentLine, debug_session.programDone]);
 
   /* ── Handler: Run button ──
      Reads the editor and sends to POST /api/run. */
