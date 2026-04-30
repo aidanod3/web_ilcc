@@ -114,6 +114,30 @@
   flex-shrink: 0;
 }
 
+/* Current PC — green */
+.pointerTag {
+  font-size: 11px;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  color: #4ade80;
+  min-width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Previous PC — red */
+.pointerTagOld {
+  font-size: 11px;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  color: #f87171;
+  min-width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+  user-select: none;
+}
+
 .address {
   font-size: 12px;
   font-family: "JetBrains Mono", monospace;

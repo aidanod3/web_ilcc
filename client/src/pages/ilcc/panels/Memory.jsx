@@ -96,6 +96,9 @@ export default function Memory({ debugState, memoryMap = {}, isDebugging = false
     rowRefs.current[dest]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
+  const pc    = debugState?.pc?.new ?? null;
+  const pcOld = debugState?.pc?.old ?? null;
+
   if (!isDebugging) {
     return (
       <div className={styles.panel}>
@@ -123,13 +126,19 @@ export default function Memory({ debugState, memoryMap = {}, isDebugging = false
           addrs.map(addr => {
             const change = changesThisStep.get(addr);
             const val    = memoryMap[addr] ?? 0;
+
+            const isPc    = pc    !== null && addr === pc;
+            const isOldPc = pcOld !== null && pcOld !== pc && addr === pcOld;
+            const tagText  = (isPc || isOldPc) ? 'pc>' : '';
+            const tagClass = isPc ? styles.pointerTag : isOldPc ? styles.pointerTagOld : styles.tag;
+
             return (
               <div
                 key={addr}
                 ref={el => { rowRefs.current[addr] = el; }}
                 className={`${styles.row} ${change ? styles.changed : ''}`}
               >
-                <span className={styles.tag} />
+                <span className={tagClass}>{tagText}</span>
                 <span className={styles.address}>{hex4(addr)}</span>
                 <DiffVal change={change} plain={val} />
               </div>
