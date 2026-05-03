@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
@@ -13,6 +13,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 INTERPRETER_PATH = os.path.join(BASE_DIR, "emulator/src/core/lcc.js")
 
 app = FastAPI()
+
+# Full Canvas-style folder label per student from the last Panel 2 submissions zip parse
+# (e.g. "000005-3459477 - India Juliet - Feb 25, 2025 558 PM"). One entry per student.
+Student_info: list[str] = []
 
 # Allow frontend (Vite dev server) to talk to this backend
 app.add_middleware(
@@ -139,6 +143,62 @@ def short_student_display_name(raw: str) -> str:
             return parts[1]
         return parts[0]
     return parts[0]
+
+
+_ORG_ID_LEADING = re.compile(r"^(\d+)-(\d+)")
+
+
+def org_defined_id_from_folder_display(raw: str) -> str:
+    """
+    Canvas submission folder (same string as student_info / Student_info entries).
+
+    Leading block is often '000005-56987425' (SIS in the second slot) or '000001-3459477'
+    where the second number is a shared course/section id — using it for every student
+    repeats the same OrgDefinedId. Prefer the second group only when it looks like a long
+    SIS-style id (8+ digits); otherwise use the first group (per-submission / per-student).
+    """
+    s = (raw or "").strip()
+    if not s or s == "(no folder)":
+        return ""
+    for ch in ("\u2013", "\u2014", "\u2212"):
+        s = s.replace(ch, "-")
+
+    def pick_from_pair(a: str, b: str) -> str:
+        if len(b) >= 8:
+            return b
+        if len(a) >= 8:
+            return a
+        return a
+
+    first = s.split(" - ", 1)[0].strip()
+    m = _ORG_ID_LEADING.match(first)
+    if m:
+        return pick_from_pair(m.group(1), m.group(2))
+    if first.isdigit():
+        # Bare folder segment: long ids only (avoid shared 7-digit section folders for every row).
+        return first if len(first) >= 8 else ""
+    m2 = _ORG_ID_LEADING.match(s)
+    if m2:
+        return pick_from_pair(m2.group(1), m2.group(2))
+    return ""
+
+
+def org_defined_id_from_folder_path(folder_path: str) -> str:
+    """
+    Full zip folder path (parent segments may hold the SIS id; last segment may be
+    '000005 - Name - date' only). Scan path segments from deepest to shallowest.
+    """
+    s = (folder_path or "").strip().replace("\\", "/")
+    if not s:
+        return ""
+    for ch in ("\u2013", "\u2014", "\u2212"):
+        s = s.replace(ch, "-")
+    segments = [p.strip() for p in s.split("/") if p.strip()]
+    for seg in reversed(segments):
+        oid = org_defined_id_from_folder_display(seg)
+        if oid:
+            return oid
+    return org_defined_id_from_folder_display(s)
 
 
 def _zip_path_posix(filename: str) -> str:
@@ -329,10 +389,17 @@ def build_student_objects(entries: list) -> list:
         files = sorted(groups[fk], key=lambda x: x.get("path") or "")
         files = _dedupe_file_list_for_student(files)
         folder_display = display_for[fk]
+        folder_full = (files[0].get("folder") or "").strip() if files else ""
+        org_id = org_defined_id_from_folder_path(folder_full)
+        if not org_id:
+            org_id = org_defined_id_from_folder_display(folder_display)
         students_out.append(
             {
                 "id": idx,
                 "name": short_student_display_name(folder_display),
+                "student_info": folder_display,
+                "folder_path": folder_full,
+                "org_defined_id": org_id,
                 "files": files,
             }
         )
@@ -340,7 +407,10 @@ def build_student_objects(entries: list) -> list:
 
 
 @app.post("/parse-submissions")
-async def parse_submissions(file: UploadFile = File(...)):
+async def parse_submissions(
+    file: UploadFile = File(...),
+    purpose: str = Form(default="submissions"),
+):
     """
     Accepts a submissions ZIP upload and parses its contents.
 
@@ -352,6 +422,7 @@ async def parse_submissions(file: UploadFile = File(...)):
     Returns a list of all `.a` files found, including their folder,
     file name, full path inside the zip, and decoded code text.
     """
+    global Student_info
     try:
         if not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="Expected a .zip file.")
@@ -410,6 +481,9 @@ async def parse_submissions(file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="No .a files found inside zip.")
 
         students = build_student_objects(entries)
+        # Panel 3 reuses this endpoint for solution zips; keep student folder labels only for submissions.
+        if (purpose or "submissions").strip().lower() != "solutions":
+            Student_info = [s["student_info"] for s in students]
         return {"files": entries, "students": students}
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="Invalid or corrupted zip file.")

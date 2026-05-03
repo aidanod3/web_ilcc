@@ -912,84 +912,6 @@ button.ag-student-item {
 
 .ag-score-slash { color: var(--ag-mut); font-size: 16px; }
 
-.ag-deductions { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
-.ag-deductions-header { display: flex; align-items: center; justify-content: space-between; }
-.ag-deductions-label {
-  font-weight: 700;
-  font-size: 12px;
-  color: var(--ag-text);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.ag-add-deduction-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--ag-ded-btn-border);
-  background: var(--ag-ded-btn-bg);
-  color: var(--ag-ded-btn-color);
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.12s;
-}
-.ag-add-deduction-btn:hover { opacity: 0.75; }
-
-.ag-deduction-list { display: flex; flex-direction: column; gap: 4px; }
-.ag-deduction-row { display: flex; align-items: center; gap: 4px; }
-.ag-deduction-pts {
-  width: 38px;
-  border: 1.5px solid var(--ag-ded-pts-border);
-  border-radius: 6px;
-  background: var(--ag-ded-pts-bg);
-  color: var(--ag-ded-pts-color);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-  padding: 3px 2px;
-  outline: none;
-  flex-shrink: 0;
-}
-.ag-deduction-pts:focus { border-color: var(--ag-red); }
-.ag-deduction-pts::-webkit-outer-spin-button,
-.ag-deduction-pts::-webkit-inner-spin-button { -webkit-appearance: none; }
-.ag-deduction-pts[type=number] { -moz-appearance: textfield; }
-
-.ag-deduction-reason {
-  flex: 1;
-  border: 1.5px solid var(--ag-ded-reason-border);
-  border-radius: 6px;
-  background: var(--ag-ded-reason-bg);
-  color: var(--ag-ded-reason-color);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 6px;
-  outline: none;
-  min-width: 0;
-  transition: border-color 0.15s;
-}
-.ag-deduction-reason:focus { border-color: var(--ag-border); color: var(--ag-text); }
-
-.ag-deduction-del {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  border: none;
-  background: transparent;
-  color: var(--ag-mut);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
-}
-.ag-deduction-del:hover { background: var(--ag-ded-pts-bg); color: var(--ag-red); }
-
 .ag-message-section { display: flex; flex-direction: column; gap: 5px; flex: 1; min-height: 0; }
 .ag-message-label {
   font-weight: 700;
@@ -1038,15 +960,6 @@ button.ag-student-item {
 .ag-btn:active { transform: translateY(0); }
 .ag-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .ag-btn-save { background: var(--ag-green); color: var(--ag-bg); flex: 1; }
-.ag-btn-skip { background: #f59e0b; color: #1a1204; flex: 1; }
-
-.ag-autosave {
-  font-size: 11px;
-  color: var(--ag-green);
-  font-weight: 700;
-  text-align: center;
-  flex-shrink: 0;
-}
 
 /* ─────────────────────────────────────────
    FLOATING TOOLBAR

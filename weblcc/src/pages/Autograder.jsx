@@ -340,22 +340,11 @@ bye:        .string "Done!\n"
   },
 ];
 
-const STATUS_META = {
-  Graded:   { color: "#22c55e", label: "Graded",   bg: "#f0fff4" },
-  InProg:   { color: "#f59e0b", label: "In Prog",  bg: "#fffbeb" },
-  Ungraded: { color: "#94a3b8", label: "Ungraded", bg: "#f8fafc" },
-  Late:     { color: "#ef4444", label: "Late",     bg: "#fff5f5" },
-  NoSub:    { color: "#ef4444", label: "No Sub",   bg: "#fff5f5" },
-};
-
 // ── SVG Icons ──────────────────────────────────────────
 const IconMoon    = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>;
 const IconSun     = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
 const IconImport  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
 const IconExport  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
-const IconPlus    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-const IconTrash   = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
-
 /** LMS zips: same file may appear under …/Submissions/… and parent; strip for one logical folder. */
 const SKIP_LMS_SUBFOLDERS = new Set([
   "submissions",
@@ -500,6 +489,83 @@ function extractStudentListName(raw) {
   return parts[0];
 }
 
+/** Prefer long second id (typical SIS); else first id when second is a short shared course key. */
+function orgIdFromLeadingNumberPair(a, b) {
+  if (b.length >= 8) return b;
+  if (a.length >= 8) return a;
+  return a;
+}
+
+/**
+ * Canvas folder label (same as backend student_info). Mirrors main.py org_defined_id_from_folder_display.
+ */
+function orgDefinedIdFromStudentInfo(studentInfo) {
+  let s = String(studentInfo ?? "").trim();
+  if (!s || s === "(no folder)") return "";
+  s = s.replace(/[\u2013\u2014\u2212]/g, "-");
+  const cut = s.indexOf(" - ");
+  const first = ((cut >= 0 ? s.slice(0, cut) : s) || "").trim();
+  const m = first.match(/^(\d+)-(\d+)/);
+  if (m) return orgIdFromLeadingNumberPair(m[1], m[2]);
+  if (/^\d+$/.test(first)) return first.length >= 8 ? first : "";
+  const m2 = s.match(/^(\d+)-(\d+)/);
+  if (m2) return orgIdFromLeadingNumberPair(m2[1], m2[2]);
+  return "";
+}
+
+/** Full zip `folder` path — OrgDefinedId may live in a parent segment, not only the last folder name. */
+function orgDefinedIdFromFolderPath(folderPath) {
+  let s = String(folderPath ?? "").trim().replace(/\\/g, "/");
+  if (!s) return "";
+  s = s.replace(/[\u2013\u2014\u2212]/g, "-");
+  const segments = s.split("/").map((p) => p.trim()).filter(Boolean);
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const oid = orgDefinedIdFromStudentInfo(segments[i]);
+    if (oid) return oid;
+  }
+  return orgDefinedIdFromStudentInfo(s);
+}
+
+/**
+ * One stored row per student in the UI. OrgDefinedId is computed once at ingest (Brightspace / Canvas zip);
+ * it is not shown in Panel 1 — only used for CSV export.
+ */
+function toSubmittedStudent(s, index) {
+  const files = dedupeParsedAsmFiles(s.files || []);
+  const preset = String(s.orgDefinedId ?? s.org_defined_id ?? "").trim();
+  const folderPath = String(s.folder_path ?? files[0]?.folder ?? "").trim();
+  const studentInfo = String(s.student_info ?? "").trim();
+  const orgDefinedId =
+    preset ||
+    orgDefinedIdFromFolderPath(folderPath) ||
+    orgDefinedIdFromStudentInfo(studentInfo);
+  return {
+    id: s.id != null ? Number(s.id) : index + 1,
+    name: safeStudentDisplayName(s.name),
+    sid: String(s.sid ?? ""),
+    status: s.status ?? "Ungraded",
+    files,
+    orgDefinedId,
+  };
+}
+
+/** Display name "Vickie Brewer" → Brightspace-style "Vickie.Brewer" (first + last segment). */
+function brightspaceUsernameFromDisplayName(name) {
+  const parts = String(name ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]}.${parts[parts.length - 1]}`;
+}
+
+function csvEscapeField(val) {
+  const s = String(val ?? "");
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
 /** Group flat /parse-submissions `files` by `student` / folder (mirrors backend build_student_objects). */
 function groupSubmissionFilesIntoStudents(files) {
   if (!Array.isArray(files) || files.length === 0) return [];
@@ -530,9 +596,16 @@ function groupSubmissionFilesIntoStudents(files) {
   return sorted.map((canon, i) => {
     const list = [...byCanon.get(canon)].sort((a, b) => String(a.path).localeCompare(String(b.path)));
     const deduped = dedupeParsedAsmFiles(list);
+    const info = displayFor.get(canon) || "";
+    const folderPath = String(deduped[0]?.folder ?? "").trim();
+    const oid =
+      orgDefinedIdFromFolderPath(folderPath) || orgDefinedIdFromStudentInfo(info);
     return {
       id: i + 1,
       name: extractStudentListName(displayFor.get(canon) || canon),
+      student_info: info,
+      folder_path: folderPath,
+      org_defined_id: oid,
       files: deduped,
     };
   });
@@ -557,27 +630,35 @@ function normalizeAsmFileKey(name) {
   return n;
 }
 
+function emptyStudentFeedback() {
+  return {
+    score: "",
+    maxScore: 20,
+    message: "",
+  };
+}
+
+function isLabScoreInputMissing(score) {
+  if (score === null || score === undefined) return true;
+  if (typeof score === "number" && Number.isNaN(score)) return true;
+  if (typeof score === "string" && score.trim() === "") return true;
+  return false;
+}
+
 export default function Autograder() {
-  const [selectedStudent, setSelectedStudent] = useState(0);
-  const [code, setCode] = useState(`c0605.a\n\nmain:\n    push lr\n    push fp\n    mov fp, sp\n    ; load values\n    mov r1, 5`);
-  const [reference, setReference] = useState(`main:\n    push lr\n    push fp\n    mov fp, sp\n    mov r1, 5\n    dout r1`);
-  const [input, setInput] = useState("5 10 -3");
+  const [code, setCode] = useState("");
+  const [reference, setReference] = useState("");
+  const [input, setInput] = useState("");
   const [expected, setExpected] = useState("15 -30");
   const [actual, setActual] = useState("");
-  const [score, setScore] = useState(18);
-  const [maxScore, setMaxScore] = useState(20);
-  const [deductions, setDeductions] = useState([
-    { id: 1, pts: -1, reason: "Q3 pcoffset off-by-one" },
-    { id: 2, pts: -1, reason: "Q5 wrong epilogue order" },
-  ]);
-  const [message, setMessage] = useState("Good work! Check pcoffset in Q3 (+1 for PC advance). Fix epilogue in Q5: mov sp,fp before pops.");
+  /** Per student id: score, max, message (Panel 6). */
+  const [feedbackByStudentId, setFeedbackByStudentId] = useState({});
   const [isChecking, setIsChecking] = useState(false);
   const [mismatchLine, setMismatchLine] = useState(2);
   const [gradeMatch, setGradeMatch] = useState(null); // null until "Run Code" is pressed
   const [gradeMessage, setGradeMessage] = useState(""); // message from /grade endpoint
   const [outputMatched, setOutputMatched] = useState(null); // null until "Run Code" is pressed
   const [search, setSearch] = useState("");
-  const [autoSaved, setAutoSaved] = useState("2s ago");
   const [fileLoading, setFileLoading] = useState(false);
   const [referenceFileLoading, setReferenceFileLoading] = useState(false);
   const [theme, setTheme] = useState('dark');
@@ -595,6 +676,28 @@ export default function Autograder() {
   /** Panel 2 / 3: double-click (outside CodeMirror) to expand; Esc or double-click again to exit */
   const [expandedEditorPanel, setExpandedEditorPanel] = useState(null); // null | 'code' | 'reference'
   const dragRef = useRef(null);
+
+  const activeFeedback =
+    activeStudentId != null
+      ? (feedbackByStudentId[activeStudentId] ?? emptyStudentFeedback())
+      : emptyStudentFeedback();
+  const { score, maxScore, message } = activeFeedback;
+
+  const patchActiveFeedback = (patch) => {
+    if (activeStudentId == null) return;
+    setFeedbackByStudentId((prev) => {
+      const cur = prev[activeStudentId] ?? emptyStudentFeedback();
+      const merged = { ...cur, ...patch };
+      return {
+        ...prev,
+        [activeStudentId]: {
+          score: merged.score,
+          maxScore: merged.maxScore,
+          message: merged.message,
+        },
+      };
+    });
+  };
   const importRef = useRef(null);
   const zipInputRef = useRef(null);
 
@@ -626,14 +729,33 @@ export default function Autograder() {
   const handleImport = (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
+    const studentIdAtImport = activeStudentId;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target.result);
-        if (data.score   !== undefined) setScore(data.score);
-        if (data.maxScore !== undefined) setMaxScore(data.maxScore);
-        if (data.deductions) setDeductions(data.deductions.map((d, i) => ({ ...d, id: i + 1 })));
-        if (data.message) setMessage(data.message);
+        if (studentIdAtImport == null) {
+          alert('Select a student before importing grades.');
+          return;
+        }
+        const patch = {};
+        if (data.score !== undefined) patch.score = data.score;
+        if (data.maxScore !== undefined) patch.maxScore = data.maxScore;
+        if (data.message !== undefined) patch.message = data.message;
+        if (Object.keys(patch).length) {
+          setFeedbackByStudentId((prev) => {
+            const cur = prev[studentIdAtImport] ?? emptyStudentFeedback();
+            const merged = { ...cur, ...patch };
+            return {
+              ...prev,
+              [studentIdAtImport]: {
+                score: merged.score,
+                maxScore: merged.maxScore,
+                message: merged.message,
+              },
+            };
+          });
+        }
         if (data.expected) setExpected(data.expected);
       } catch {
         alert('Invalid JSON file.');
@@ -643,14 +765,49 @@ export default function Autograder() {
     e.target.value = '';
   };
 
-  // ── Export grades JSON ────────────────────────────────
+  // ── Export Brightspace CSV (all students in list) ───────
   const handleExport = () => {
-    const data = { score, maxScore, deductions, message, expected };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `grade_student${selectedStudent + 1}.json`;
+    if (!submittedStudents.length) {
+      alert("No students loaded. Upload a submissions zip first.");
+      return;
+    }
+    for (const stu of submittedStudents) {
+      const fb = feedbackByStudentId[stu.id] ?? emptyStudentFeedback();
+      if (isLabScoreInputMissing(fb.score)) {
+        alert(
+          `Enter a Lab 6 points score for every student before exporting. Missing: ${safeStudentDisplayName(stu.name)}.`
+        );
+        return;
+      }
+    }
+    const headers = [
+      "OrgDefinedId",
+      "Username",
+      "Lab 6 Points Grade",
+      "Lab 6 Text Grade",
+      "End-of-Line Indicator",
+    ];
+    const lines = [headers.join(",")];
+    for (const stu of submittedStudents) {
+      const fb = feedbackByStudentId[stu.id] ?? emptyStudentFeedback();
+      const orgId = String(stu.orgDefinedId ?? "").trim();
+      const username = brightspaceUsernameFromDisplayName(stu.name);
+      const pointsGrade = Number(fb.score);
+      const row = [
+        csvEscapeField(orgId),
+        csvEscapeField(username),
+        csvEscapeField(pointsGrade),
+        csvEscapeField(fb.message),
+        csvEscapeField("#"),
+      ].join(",");
+      lines.push(row);
+    }
+    const csvBody = lines.join("\r\n");
+    const blob = new Blob(["\uFEFF", csvBody], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lab6_grades.csv";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -681,17 +838,18 @@ export default function Autograder() {
         const grouped =
           Array.isArray(data?.students) && data.students.length > 0
             ? data.students.map((stu) => ({
-                ...stu,
-                files: dedupeParsedAsmFiles(stu.files || []),
+                id: stu.id,
+                name: stu.name,
+                sid: stu.sid ?? "",
+                status: stu.status ?? "Ungraded",
+                student_info: stu.student_info,
+                folder_path: stu.folder_path,
+                org_defined_id: stu.org_defined_id,
+                files: stu.files || [],
               }))
             : groupSubmissionFilesIntoStudents(filteredFiles);
-        const students = grouped.map((s, i) => ({
-          id: s.id ?? i + 1,
-          name: safeStudentDisplayName(s.name),
-          sid: '',
-          status: 'Ungraded',
-          files: s.files || [],
-        }));
+        const students = grouped.map((s, i) => toSubmittedStudent(s, i));
+        setFeedbackByStudentId({});
         setSubmittedStudents(students);
         const first = students[0];
         setActiveStudentId(first.id);
@@ -700,6 +858,7 @@ export default function Autograder() {
         setActiveFileName(ff ? resolvedFileLabel(ff) : null);
         setCode(typeof ff?.code === 'string' ? ff.code : '');
       } else {
+        setFeedbackByStudentId({});
         setSubmittedStudents([]);
         setActiveStudentId(null);
         setActiveSubmissionIndex(0);
@@ -718,6 +877,7 @@ export default function Autograder() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('purpose', 'solutions');
       // Reuse main.py ZIP parser endpoint for solution archives.
       const resp = await fetch('http://127.0.0.1:8000/parse-submissions', {
         method: 'POST',
@@ -769,13 +929,15 @@ export default function Autograder() {
       const text = String(ev.target.result || "");
       setCode(text);
       const base = f.name.replace(/\.[^/.]+$/, '') || f.name;
+      setFeedbackByStudentId({});
       setSubmittedStudents([
         {
           id: 1,
           name: base,
-          sid: '',
-          status: 'Ungraded',
-          files: [{ name: f.name, path: f.name, folder: '', code: text }],
+          sid: "",
+          status: "Ungraded",
+          orgDefinedId: "",
+          files: [{ name: f.name, path: f.name, folder: "", code: text }],
         },
       ]);
       setActiveStudentId(1);
@@ -876,16 +1038,6 @@ export default function Autograder() {
     finally { setIsChecking(false); }
   };
 
-  // ── Deduction helpers ─────────────────────────────────
-  const addDeduction = () =>
-    setDeductions(prev => [...prev, { id: Date.now(), pts: -1, reason: "" }]);
-
-  const updateDeduction = (id, field, val) =>
-    setDeductions(prev => prev.map(d => d.id === id ? { ...d, [field]: field === 'pts' ? Number(val) : val } : d));
-
-  const removeDeduction = (id) =>
-    setDeductions(prev => prev.filter(d => d.id !== id));
-
   // ── ZIP drag & drop / click (Solutions.zip) ───────────
   const handleZipFile = (file) => {
     if (!file) return;
@@ -920,13 +1072,14 @@ export default function Autograder() {
 
   // ── Demo: load fake student submissions ───────────────
   const handleSubmitFiles = () => {
-    setSubmittedStudents(DEMO_STUDENTS);
-    const first = DEMO_STUDENTS[0];
+    setFeedbackByStudentId({});
+    const students = DEMO_STUDENTS.map((s, i) => toSubmittedStudent(s, i));
+    setSubmittedStudents(students);
+    const first = students[0];
     setActiveStudentId(first.id);
     setActiveFileName(resolvedFileLabel(first.files[0]));
     setCode(first.files[0].code);
     setActiveSubmissionIndex(0);
-    setSelectedStudent(0);
   };
 
   const handleSelectStudent = (student) => {
@@ -1021,23 +1174,7 @@ export default function Autograder() {
     setActiveSubmissionIndex(fi);
   };
 
-  // ── Save & next ───────────────────────────────────────
-  const handleSaveNext = () => {
-    setAutoSaved("just now");
-    setTimeout(() => setAutoSaved("2s ago"), 2000);
-    if (submittedStudents.length > 0) {
-      setSelectedStudent((prev) => (prev + 1) % submittedStudents.length);
-    }
-  };
-
   const hasRun = outputMatched !== null;
-  const totalDeducted = deductions.reduce((sum, d) => sum + (Number(d.pts) || 0), 0);
-
-  // Auto-calculate score whenever deductions or maxScore change
-  useEffect(() => {
-    setScore(maxScore + totalDeducted);
-  }, [deductions, maxScore]);
-
   useEffect(() => {
     if (!expandedEditorPanel) return;
     const onKey = (e) => {
@@ -1151,7 +1288,7 @@ export default function Autograder() {
         </label>
 
         {/* Export */}
-        <button className="ag-toolbar-btn" onClick={handleExport} title="Export grades (JSON)">
+        <button className="ag-toolbar-btn" onClick={handleExport} title="Export Brightspace CSV (all students)">
           <IconExport />
         </button>
 
@@ -1402,71 +1539,47 @@ export default function Autograder() {
       <div className="ag-panel ag-feedback-panel">
         <div className="ag-panel-header">Panel 6: Feedback</div>
 
-        {/* Score — both sides editable, left auto-calculates from deductions */}
         <div className="ag-score-box">
           <span className="ag-score-word">Score:</span>
           <input
             className="ag-score-num-input"
             type="number"
-            value={score}
-            onChange={e => setScore(Number(e.target.value))}
-            title="Edit score (auto-calculated from deductions)"
+            value={score === "" || score === null || score === undefined ? "" : score}
+            onChange={(e) => {
+              const v = e.target.value;
+              patchActiveFeedback({ score: v === "" ? "" : Number(v) });
+            }}
+            title="Edit score"
           />
           <span className="ag-score-slash"> / </span>
           <input
             className="ag-score-max-input"
             type="number"
             value={maxScore}
-            onChange={e => setMaxScore(Number(e.target.value))}
+            onChange={(e) => patchActiveFeedback({ maxScore: Number(e.target.value) })}
             title="Edit max score"
           />
-        </div>
-
-        {/* Deductions — fully editable */}
-        <div className="ag-deductions">
-          <div className="ag-deductions-header">
-            <span className="ag-deductions-label">Deductions:</span>
-            <button className="ag-add-deduction-btn" onClick={addDeduction} title="Add deduction">
-              <IconPlus /> Add
-            </button>
-          </div>
-          <div className="ag-deduction-list">
-            {deductions.map(d => (
-              <div key={d.id} className="ag-deduction-row">
-                <input
-                  className="ag-deduction-pts"
-                  type="number"
-                  value={d.pts}
-                  onChange={e => updateDeduction(d.id, 'pts', e.target.value)}
-                  title="Points (negative)"
-                />
-                <input
-                  className="ag-deduction-reason"
-                  type="text"
-                  value={d.reason}
-                  onChange={e => updateDeduction(d.id, 'reason', e.target.value)}
-                  placeholder="Reason…"
-                />
-                <button className="ag-deduction-del" onClick={() => removeDeduction(d.id)} title="Remove">
-                  <IconTrash />
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Message to student */}
         <div className="ag-message-section">
           <label className="ag-message-label">Message to Student:</label>
-          <textarea className="ag-message-box" value={message} onChange={e => setMessage(e.target.value)} />
+          <textarea
+            className="ag-message-box"
+            value={message}
+            onChange={(e) => patchActiveFeedback({ message: e.target.value })}
+          />
         </div>
 
         <div className="ag-feedback-actions">
-          <button className="ag-btn ag-btn-save" onClick={handleSaveNext}>Save &amp; Next</button>
-          <button className="ag-btn ag-btn-skip">Skip</button>
+          <button
+            className="ag-btn ag-btn-save"
+            onClick={handleExport}
+            title="Download Brightspace CSV for all students in the list"
+          >
+            Export
+          </button>
         </div>
-
-        <div className="ag-autosave">● Auto-saved {autoSaved}</div>
       </div>
     </div>
   );
