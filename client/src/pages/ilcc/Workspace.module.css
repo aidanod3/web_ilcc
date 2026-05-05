@@ -235,3 +235,15 @@
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
 }
+
+/* ── Format / Share banner ── */
+.shareBanner {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+  animation: fadeUp 0.15s ease;
+}

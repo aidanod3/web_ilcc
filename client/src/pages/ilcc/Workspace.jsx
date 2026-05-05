@@ -19,8 +19,46 @@
  * The side panel is toggled by the chevron on the left of the editor header.
  */
 
-import { useRef, useEffect } from 'react';
-import { Upload, Download } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import { Upload, Download, Link2, AlignLeft } from 'lucide-react';
+
+// ── LCC Assembly Auto-Formatter ──────────────────────────────────────────────
+function fmtSplitComment(line) {
+  let inStr = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') inStr = !inStr;
+    if (!inStr && line[i] === ';') return { code: line.slice(0, i), comment: line.slice(i).trim() };
+  }
+  return { code: line, comment: '' };
+}
+function fmtInstrPart(instr) {
+  const parts = instr.trim().split(/\s+/);
+  const mnemonic = parts[0];
+  if (parts.length === 1) return mnemonic;
+  const operands = parts.slice(1).join(' ').replace(/\s*,\s*/g, ', ');
+  return mnemonic.padEnd(Math.max(mnemonic.length + 1, 6)) + operands;
+}
+function formatLCCAssembly(source) {
+  const INDENT = ' '.repeat(12);
+  return source.split('\n').map(rawLine => {
+    const trimmed = rawLine.trimEnd().trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith(';')) return trimmed;
+    const { code, comment } = fmtSplitComment(trimmed);
+    const c = code.trim();
+    if (!c) return comment ? '; ' + comment.replace(/^;+\s*/, '') : '';
+    const suffix = comment ? '  ' + comment : '';
+    const lm = c.match(/^([A-Za-z_$.][A-Za-z0-9_$.]*):\s*(.*)/);
+    if (lm) {
+      const label = lm[1] + ':';
+      const rest = lm[2].trim();
+      if (!rest) return label + suffix;
+      return label + ' '.repeat(Math.max(1, 12 - label.length)) + fmtInstrPart(rest) + suffix;
+    }
+    return INDENT + fmtInstrPart(c) + suffix;
+  }).join('\n');
+}
+// ─────────────────────────────────────────────────────────────────────────────
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import styles from './Workspace.module.css';
 import Editor from './panels/Editor';
@@ -40,6 +78,25 @@ export default function Workspace({
 }) {
   const sidePanelRef       = useRef(null);
   const fileInputRef       = useRef(null);
+  const [formatDone, setFormatDone] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleFormat = () => {
+    const code = editorRef.current?.getCode() ?? '';
+    editorRef.current?.setCode(formatLCCAssembly(code));
+    setFormatDone(true);
+    setTimeout(() => setFormatDone(false), 2500);
+  };
+
+  const handleShare = () => {
+    const code = editorRef.current?.getCode() ?? '';
+    const encoded = btoa(encodeURIComponent(code)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const url = `${window.location.origin}${window.location.pathname}?code=${encoded}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    });
+  };
   const debuggerPanelRef   = useRef(null);
   const debugCardRef       = useRef(null);
   const prevLayoutRef      = useRef(debuggerLayout);
@@ -180,6 +237,20 @@ export default function Workspace({
                       <div className={styles.paneHeaderActions}>
                         <button
                           className={styles.paneActionBtn}
+                          onClick={handleFormat}
+                          title="Format code"
+                        >
+                          <AlignLeft size={14} />
+                        </button>
+                        <button
+                          className={styles.paneActionBtn}
+                          onClick={handleShare}
+                          title="Share code via URL"
+                        >
+                          <Link2 size={14} />
+                        </button>
+                        <button
+                          className={styles.paneActionBtn}
                           onClick={() => fileInputRef.current.click()}
                           title="Import .a files"
                         >
@@ -194,6 +265,12 @@ export default function Workspace({
                         </button>
                       </div>
                     </div>
+                    {formatDone && (
+                      <div className={styles.shareBanner}>Code formatted!</div>
+                    )}
+                    {shareCopied && (
+                      <div className={styles.shareBanner}>Link copied to clipboard!</div>
+                    )}
                     <TabBar
                       tabs={tabs}
                       activeId={activeTabId}
