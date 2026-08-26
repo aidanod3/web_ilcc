@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { get, post, del, as, ADMIN, FACULTY, STUDENT, SECRET } from './helpers.js';
+import { get, post, del, as, ADMIN, FACULTY, STUDENT } from './helpers.js';
 
 describe('identity headers', () => {
   it('anonymous without headers', async () => {

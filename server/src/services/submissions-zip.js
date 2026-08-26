@@ -28,7 +28,7 @@ function isMacJunkBytes(buf) {
 }
 
 function cleanCode(text) {
-  return String(text).replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  return String(text).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
 }
 
 /* "lab1.a.txt" and "lab1.a" collapse to the same key; .a wins. */
