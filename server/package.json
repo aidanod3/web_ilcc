@@ -1,15 +1,22 @@
 {
-  "name": "server",
+  "name": "ilcc-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "ILCC web assembler/debugger — Express + WebSocket server, SSO-gated downloads and autograder",
   "main": "index.js",
-  "scripts": {
-    "dev": "node --watch index.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:lcc": "jest --config jest.config.js",
+    "lint": "eslint ."
+  },
+  "license": "ISC",
   "dependencies": {
     "express": "^5.2.1",
     "ws": "^8.20.0"

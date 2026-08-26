@@ -1,2 +1,36 @@
+# deps / builds
 node_modules/
+dist/
+coverage/
+.vite/
+
+# runtime artifacts emitted by lcc/ilcc
+*.e
+*.lst
+*.bst
+name.nnn
+
+# databases
+*.db
+*.db-wal
+*.db-shm
+/data/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# tests
+playwright-report/
+test-results/
+blob-report/
+
+# os / editor
 .DS_Store
+Thumbs.db
+__MACOSX/
+__pycache__/
+*.pyc
+.idea/
+*.swp
