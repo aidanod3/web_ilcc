@@ -1,0 +1,9 @@
+    lea r0, buf
+    sin r0
+    lea r1, hi
+    sout r1
+    sout r0
+    nl
+    halt
+hi: .string "Hi "
+buf: .zero 20

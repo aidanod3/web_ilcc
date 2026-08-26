@@ -51,6 +51,7 @@ app.use('/api',             require('./src/routes/health'));
 app.use('/api/me',          require('./src/routes/me'));
 app.use('/api/demos',       require('./src/routes/demos'));
 app.use('/api/downloads',   require('./src/routes/downloads'));
+app.use('/api/materials',   require('./src/routes/materials'));
 app.use('/api/staff',       requireRole('admin'), require('./src/routes/staff'));
 app.use('/api/grader',      requireRole('ta'),    require('./src/routes/grader'));
 app.use('/api',             requireSSO,           require('./src/routes/student'));   // /assignments/open, /submissions*

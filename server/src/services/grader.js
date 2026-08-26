@@ -57,7 +57,7 @@ function runTestCase(source, stdinText = '', { timeoutMs = config.graderTimeoutM
       done = true;
       clearTimeout(timer);
       try { session?.cleanup(); } catch { /* ignore */ }
-      resolve({ stdout, runtimeMs: Date.now() - t0, timedOut: false, error: null, ...extra });
+      resolve({ stdout, runtimeMs: Date.now() - t0, timedOut: false, error: null, inputExhausted: false, ...extra });
     };
 
     const timer = setTimeout(() => finish({ timedOut: true, error: `timed out after ${timeoutMs} ms` }), timeoutMs);
@@ -71,7 +71,11 @@ function runTestCase(source, stdinText = '', { timeoutMs = config.graderTimeoutM
           exhausted = true;
           session.provideInput('');
         } else {
-          finish({ error: 'input_exhausted' });
+          /* Program wants more input than the test case provides. That's the
+             program's behaviour, not a grading failure: stop here and compare
+             whatever it printed so far. inputExhausted is surfaced for the
+             TA's diff view. */
+          finish({ inputExhausted: true });
         }
       },
       onDone:  () => finish({}),
@@ -115,7 +119,8 @@ async function gradeSubmission(submissionId) {
     if (passed) score += tc.weight;
     const row = {
       submission_id: sub.id, test_case_id: tc.id, actual_stdout: r.stdout, passed: passed ? 1 : 0,
-      diff_json: JSON.stringify(diff), runtime_ms: r.runtimeMs, error: r.error,
+      diff_json: JSON.stringify(diff), runtime_ms: r.runtimeMs,
+      error: r.error ?? (r.inputExhausted ? 'program requested more input than the test provides' : null),
     };
     q.upsertResult.run(row);
     results.push({ testCaseId: tc.id, name: tc.name, passed, weight: tc.weight, runtimeMs: r.runtimeMs, error: r.error, diff });

@@ -1,0 +1,6 @@
+    din r0
+    din r1
+    add r0, r0, r1
+    dout r0
+    nl
+    halt
