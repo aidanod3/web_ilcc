@@ -36,33 +36,6 @@ export default function Ilcc() {
      to read the document contents on demand (run/debug). */
   const editorRef = useRef(null);
 
-  // Load shared code from URL ?code= param on first mount
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const encoded = params.get('code');
-      const demo = params.get('demo');
-      if (encoded) {
-        const source = decodeURIComponent(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')));
-        setTimeout(() => {
-          editorRef.current?.setCode(source);
-          window.history.replaceState({}, '', window.location.pathname);
-        }, 50);
-      } else if (demo) {
-        /* ?demo=demoE.a — open a bundled example in a new tab (links from /examples, /setup, FAQ). */
-        fetch(`${import.meta.env.BASE_URL}api/demos/${encodeURIComponent(demo)}`)
-          .then(r => (r.ok ? r.json() : null))
-          .then(d => { if (d) handleImportTemplate(d.name, d.content); })
-          .catch(() => {})
-          .finally(() => {
-            params.delete('demo');
-            const qs = params.toString();
-            window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
-          });
-      }
-    } catch { /* ignore malformed codes */ }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   /* ── Tab state ──────────────────────────────────────────────────────────
      Each tab:  { id: string, name: string, content: string }
      content is the last-saved snapshot; the live text lives in CodeMirror
@@ -140,6 +113,33 @@ export default function Ilcc() {
     setActiveTabId(id);
     editorRef.current?.setCode(content);
   };
+
+  // Load shared code from URL ?code= param on first mount
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('code');
+      const demo = params.get('demo');
+      if (encoded) {
+        const source = decodeURIComponent(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')));
+        setTimeout(() => {
+          editorRef.current?.setCode(source);
+          window.history.replaceState({}, '', window.location.pathname);
+        }, 50);
+      } else if (demo) {
+        /* ?demo=demoE.a — open a bundled example in a new tab (links from /examples, /setup, FAQ). */
+        fetch(`${import.meta.env.BASE_URL}api/demos/${encodeURIComponent(demo)}`)
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => { if (d) handleImportTemplate(d.name, d.content); })
+          .catch(() => {})
+          .finally(() => {
+            params.delete('demo');
+            const qs = params.toString();
+            window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+          });
+      }
+    } catch { /* ignore malformed codes */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Import: read selected .a files and open each as a new tab ── */
   const handleImportFiles = async (files) => {
