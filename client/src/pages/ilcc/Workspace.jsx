@@ -246,6 +246,7 @@ export default function Workspace({
                           className={styles.paneActionBtn}
                           onClick={handleShare}
                           title="Share code via URL"
+                          data-tour="share"
                         >
                           <Link2 size={14} />
                         </button>
@@ -307,11 +308,11 @@ export default function Workspace({
                         /* Classic: three equal-width columns, CSS borders only */
                         <>
                           <div className={styles.classicColumn}>
-                            <div className={styles.sectionHeader}>Memory</div>
+                            <div className={styles.sectionHeader} data-tour="memory">Memory</div>
                             <Memory debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
                           </div>
                           <div className={`${styles.classicColumn} ${styles.classicDivider}`}>
-                            <div className={styles.sectionHeader}>Stack</div>
+                            <div className={styles.sectionHeader} data-tour="stack">Stack</div>
                             <Stack debugState={debugState} memoryMap={memoryMap} isDebugging={isDebugging} />
                           </div>
                         </>

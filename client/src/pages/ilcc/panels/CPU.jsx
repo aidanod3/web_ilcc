@@ -67,7 +67,7 @@ function EmptyState({ iteration }) {
       <StepRow iteration={iteration} />
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>Registers</div>
+        <div className={styles.sectionTitle} data-tour="cpu">Registers</div>
         {Array.from({ length: 8 }, (_, i) => (
           <Row key={i} label={`r${i}`} entry={ZERO} />
         ))}
@@ -78,7 +78,7 @@ function EmptyState({ iteration }) {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>Flags</div>
+        <div className={styles.sectionTitle} data-tour="flags">Flags</div>
         <div className={styles.flagLine}>
           {['N', 'Z', 'C', 'V'].map(f => (
             <span key={f} className={styles.flagItem}>
@@ -130,7 +130,7 @@ export default function CPU({ debugState, iteration }) {
 
       {/* ── Flags: N Z C V inline ── */}
       <div className={styles.section}>
-        <div className={styles.sectionTitle}>Flags</div>
+        <div className={styles.sectionTitle} data-tour="flags">Flags</div>
         <div className={styles.flagLine}>
           {['n', 'z', 'c', 'v'].map((f) => {
             const entry   = flags[f];

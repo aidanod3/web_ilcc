@@ -44,13 +44,13 @@ export default function Terminal({ output, inputMode, onSendInput }) {
     <div className={styles.terminal}>
 
       {/* Output area — scrollable, fills available space */}
-      <pre ref={outputRef} className={styles.output}>
+      <pre ref={outputRef} className={styles.output} data-tour="terminal">
         {output || ''}
       </pre>
 
       {/* Input row — only visible when the program requests input */}
       {inputMode && (
-        <div className={styles.inputRow}>
+        <div className={styles.inputRow} data-tour="stdin">
           <span className={styles.prompt}>&gt;</span>
           <input
             ref={inputRef}

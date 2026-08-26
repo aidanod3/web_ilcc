@@ -55,7 +55,7 @@ export default function TabBar({ tabs, activeId, onSwitch, onNew, onClose, onRen
     <div className={styles.tabBar}>
 
       {/* Scrollable tab list */}
-      <div className={styles.tabs}>
+      <div className={styles.tabs} data-tour="tabs">
         {tabs.map(tab => {
           const isActive   = tab.id === activeId;
           const isEditing  = tab.id === editingId;

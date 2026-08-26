@@ -24,9 +24,11 @@ import Drawer from './Drawer';
 import useRunProgram from '../../hooks/useRunProgram';
 import useDebugSession from '../../hooks/useDebugSession';
 import useTheme from '../../hooks/useTheme';
+import useTour from '../../hooks/useTour';
 
 export default function Ilcc() {
   const { theme, setTheme, themes } = useTheme();
+  useTour();
   const [debuggerLayout, setDebuggerLayout] = useState('classic');
 
   /* Ref to the CodeMirror editor — call editorRef.current.getCode()

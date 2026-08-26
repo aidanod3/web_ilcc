@@ -17,6 +17,8 @@ import styles from './Header.module.css';
 import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, Menu, Settings, FileCode2, ChevronDown } from 'lucide-react';
 import logoWht from '../../assets/ilcc_wht.PNG';
 import logoBlk from '../../assets/ilcc_blk.png';
+import HelpMenu from '../../components/HelpMenu';
+import UserMenu from '../../components/UserMenu';
 
 const DEBUGGER_LAYOUTS = [
   { id: 'classic', label: 'Classic' },
@@ -88,7 +90,7 @@ export default function Header({
     if (!templatesOpen || templatesFetched.current) return;
     templatesFetched.current = true;
     setTemplatesLoading(true);
-    fetch('/api/demos')
+    fetch(`${import.meta.env.BASE_URL}api/demos`)
       .then(r => r.json())
       .then(data => { setTemplates(data); setTemplatesLoading(false); })
       .catch(()  => setTemplatesLoading(false));
@@ -116,6 +118,7 @@ export default function Header({
           <button
             className={styles.menuBtn}
             onClick={() => setTemplatesOpen(o => !o)}
+            data-tour="templates"
           >
             <FileCode2 size={17} />
             Code Templates
@@ -152,6 +155,8 @@ export default function Header({
             type="button"
             onClick={isDebugging ? onDebug : onRun}
             disabled={isRunning && !isDebugging}
+            data-tour="run"
+            title={isDebugging ? 'Restart debug session' : 'Run (Ctrl/⌘+Enter)'}
           >
             {isRunning && !isDebugging
               ? <Loader size={16} />
@@ -165,6 +170,8 @@ export default function Header({
             type="button"
             onClick={!isDebugging && !isRunning ? onDebug : undefined}
             disabled={isRunning || isDebugging}
+            data-tour="debug"
+            title="Debug (F5)"
           >
             <BugPlay size={16} />
           </button>
@@ -174,6 +181,8 @@ export default function Header({
             type="button"
             onClick={onStop}
             disabled={!isRunning && !isDebugging}
+            data-tour="stop"
+            title="Stop (Esc)"
           >
             <Square size={16} />
           </button>
@@ -190,12 +199,15 @@ export default function Header({
               onBlur={() => setStepCountStr(String(parseStepCount(stepCountStr)))}
               disabled={!canStepForward}
               aria-label="Steps per click"
+              data-tour="step-count"
             />
             <button
               className={styles.btn}
               type="button"
               onClick={() => onStep(parseStepCount(stepCountStr))}
               disabled={!canStepForward}
+              data-tour="step"
+              title="Step (F10)"
             >
               <StepForward size={16} />
             </button>
@@ -206,11 +218,14 @@ export default function Header({
 
       {/* Right: settings cog + dropdown (flex:1 keeps centre centred) */}
       <div className={styles.headerRight}>
+        <HelpMenu />
+        <UserMenu />
         <div className={styles.settingsWrapper} ref={settingsRef}>
           <button
             className={styles.cogBtn}
             onClick={() => setSettingsOpen(o => !o)}
             title="Settings"
+            data-tour="settings"
           >
             <Settings size={18} />
           </button>
