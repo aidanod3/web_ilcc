@@ -84,6 +84,21 @@ const Editor = forwardRef(function Editor(props, ref) {
     clearHighlight: () => {
       viewRef.current?.dispatch({ effects: setDebugLine.of(null) });
     },
+
+    /* Move the cursor to a 1-based line, scroll it into view, and focus.
+       Used by the Problems drawer. Does NOT set the debug highlight. */
+    gotoLine: (lineNum) => {
+      const view = viewRef.current;
+      if (!view || lineNum == null) return;
+      try {
+        const line = view.state.doc.line(lineNum);
+        view.dispatch({
+          selection: { anchor: line.from },
+          effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
+        });
+        view.focus();
+      } catch { /* out of range — ignore */ }
+    },
   }));
 
   useEffect(() => {

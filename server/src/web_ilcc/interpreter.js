@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+const log = require('../logger').child({ mod: 'interpreter' });
 
 // interpreter.js
 
@@ -54,6 +54,7 @@ class Interpreter {
 		this.onOutput = null;        // Callback set by runner/debugger service — called on every write
 		this.onInputRequest = null;  // Callback invoked when the interpreter needs input from the user
 		this._inputResolve = null;   // Resolve fn for the pending input Promise
+		this.echoInput = true;       // Echo consumed stdin to output (tty behaviour). Grader sets false.
 		this.memoryChanges = []        // Tracks memory writes per instruction (used by snapshot system)
 	}
 
@@ -62,7 +63,7 @@ class Interpreter {
 		args = args || process.argv.slice(2);
 
 		if (args.length < 1) {
-			console.error(
+			log.error(
 				"Usage: node interpreter.js <input filename> [options]"
 			);
 			// process.exit(1);
@@ -90,7 +91,7 @@ class Interpreter {
 						// Load point value is in the next argument
 						i++;
 						if (i >= args.length) {
-							console.error("Error: -L option requires a value");
+							log.error("Error: -L option requires a value");
 							// process.exit(1);
 							fatalExit("Error: -L option requires a value", 1);
 						}
@@ -99,7 +100,7 @@ class Interpreter {
 					// Parse load point value (hexadecimal)
 					this.loadPoint = parseInt(loadPointStr, 16);
 					if (isNaN(this.loadPoint)) {
-						console.error(
+						log.error(
 							`Invalid load point value: ${loadPointStr}`
 						);
 						// process.exit(1);
@@ -109,7 +110,7 @@ class Interpreter {
 						);
 					}
 				} else {
-					console.error(`Bad command line switch: ${arg}`); // `Unknown option: ${arg}`
+					log.error(`Bad command line switch: ${arg}`); // `Unknown option: ${arg}`
 					// process.exit(1);
 					fatalExit(`Bad command line switch: ${arg}`, 1);
 				}
@@ -125,7 +126,7 @@ class Interpreter {
 					//       accessed by default when running .e files, or when assembling and
 					//       running .a files all at once.
 					if (extension !== ".e") {
-						console.error(
+						log.error(
 							"Unsupported file type for interpreter.js (expected .e)"
 						);
 						fatalExit(
@@ -134,7 +135,7 @@ class Interpreter {
 						);
 					}
 				} else {
-					console.error(`Unexpected argument: ${arg}`);
+					log.error(`Unexpected argument: ${arg}`);
 					// process.exit(1);
 					fatalExit(`Unexpected argument: ${arg}`, 1);
 				}
@@ -143,31 +144,31 @@ class Interpreter {
 		}
 
 		if (!this.inputFileName) {
-			console.error("No input file specified.");
+			log.error("No input file specified.");
 			// process.exit(1);
 			fatalExit("No input file specified.", 1);
 		}
 
 		// Get the userName using nameHandler
 		try {
-			//// console.log(`inputFileName = ${this.inputFileName}`);
+			//// log.debug(`inputFileName = ${this.inputFileName}`);
 			this.userName = nameHandler.createNameFile(this.inputFileName);
-			//// console.log("userName = " + this.userName);
+			//// log.debug("userName = " + this.userName);
 		} catch (error) {
-			console.error("Error handling name file:", error.message);
+			log.error("Error handling name file:", error.message);
 			// process.exit(1);
 			fatalExit("Error handling name file: " + error.message, 1);
 		}
 
 		// this prints out when called by interpreter.js
-		console.log(`Starting interpretation of ${this.inputFileName}`);
+		log.debug(`Starting interpretation of ${this.inputFileName}`);
 
 		// Open and read the executable file
 		let buffer;
 		try {
 			buffer = fs.readFileSync(this.inputFileName);
 		} catch (err) {
-			console.error(`Cannot open input file ${this.inputFileName}`); // , err: ${err}
+			log.error(`Cannot open input file ${this.inputFileName}`); // , err: ${err}
 			// process.exit(1);
 			fatalExit(`Cannot open input file ${this.inputFileName}`, 1); // , err: ${err}
 		}
@@ -175,7 +176,7 @@ class Interpreter {
 		// Check file signature
 		if (buffer[0] !== "o".charCodeAt(0)) {
 			// `${this.inputFileName} is not a valid LCC executable file: missing 'o' signature`
-			console.error(`${this.inputFileName} is not in lcc format`);
+			log.error(`${this.inputFileName} is not in lcc format`);
 			// process.exit(1);
 			fatalExit(`${this.inputFileName} is not in lcc format`, 1);
 		}
@@ -189,9 +190,9 @@ class Interpreter {
 		// Prepare .lst and .bst file names
 		const lstFileName = this.inputFileName.replace(/\.e$/, ".lst");
 		const bstFileName = this.inputFileName.replace(/\.e$/, ".bst");
-		console.log(`lst file = ${lstFileName}`);
-		console.log(`bst file = ${bstFileName}`);
-		console.log(
+		log.debug(`lst file = ${lstFileName}`);
+		log.debug(`bst file = ${bstFileName}`);
+		log.debug(
 			"====================================================== Output"
 		);
 
@@ -199,10 +200,10 @@ class Interpreter {
 		try {
 			this.run();
 			if (this.generateStats) {
-				console.log(); // Ensure cursor moves to the next line
+				log.debug(); // Ensure cursor moves to the next line
 			}
 		} catch (error) {
-			console.error(`Runtime Error: ${error.message}`);
+			log.error(`Runtime Error: ${error.message}`);
 			// process.exit(1);
 			fatalExit(`Runtime Error: ${error.message}`, 1);
 		}
@@ -253,7 +254,7 @@ class Interpreter {
 		try {
 			buffer = fs.readFileSync(fileName);
 		} catch (err) {
-			console.error(`Cannot open input file ${fileName}`);
+			log.error(`Cannot open input file ${fileName}`);
 			// process.exit(1);
 			fatalExit(`Cannot open input file ${fileName}`, 1);
 		}
@@ -278,13 +279,13 @@ class Interpreter {
 
 		// If either "o" or "C" was not found in the expected order, throw an error
 		if (!foundO || !foundC) {
-			console.error(`${fileName} is not a valid LCC executable file`);
+			log.error(`${fileName} is not a valid LCC executable file`);
 			// process.exit(1);
 			fatalExit(`${fileName} is not a valid LCC executable file`, 1);
 		}
 
 		// this prints out when called by lcc.js
-		console.log(`Starting interpretation of ${fileName}`);
+		log.debug(`Starting interpretation of ${fileName}`);
 
 		// Load the executable into memory
 		this.loadExecutableBuffer(buffer);
@@ -458,8 +459,8 @@ class Interpreter {
 	// }
 
 	// restorePrevMemory(state) {
-	// 	// console.log("TEST: ", this.snapshot[state], state);
-	// 	// console.log("MEMORY: ", this.snapshot[state].memory);
+	// 	// log.debug("TEST: ", this.snapshot[state], state);
+	// 	// log.debug("MEMORY: ", this.snapshot[state].memory);
 
 	// 	let oldMem = this.snapshot[state].memory;
 	// 	if (oldMem.address != null) {
@@ -880,9 +881,13 @@ class Interpreter {
 
 	async readLineFromStdin() {
 		if (!this.inputBuffer || this.inputBuffer.length === 0) {
-			// No input available — notify the service and suspend until it arrives
-			if (this.onInputRequest) this.onInputRequest();
-			await new Promise(resolve => { this._inputResolve = resolve; });
+			// No input available — arm the resolver FIRST, then notify. A caller
+			// that answers synchronously inside onInputRequest (the autograder)
+			// would otherwise find _inputResolve still null and deadlock.
+			await new Promise(resolve => {
+				this._inputResolve = resolve;
+				if (this.onInputRequest) queueMicrotask(() => this.onInputRequest());
+			});
 		}
 		// Consume one line from the buffer
 		this.inputBuffer = this.inputBuffer.replace(/\r\n/g, "\n");
@@ -896,20 +901,22 @@ class Interpreter {
 			this.inputBuffer = "";
 		}
 		// Echo the input back to the terminal (like a real tty would)
-		this.writeOutput(inputLine);
+		if (this.echoInput) this.writeOutput(inputLine);
 		return { inputLine, isSimulated: true };
 	}
 
 	async readCharFromStdin() {
 		if (!this.inputBuffer || this.inputBuffer.length === 0) {
-			// No input available — notify the service and suspend until it arrives
-			if (this.onInputRequest) this.onInputRequest();
-			await new Promise(resolve => { this._inputResolve = resolve; });
+			// Same ordering as readLineFromStdin: arm resolver before notifying.
+			await new Promise(resolve => {
+				this._inputResolve = resolve;
+				if (this.onInputRequest) queueMicrotask(() => this.onInputRequest());
+			});
 		}
 		let ainChar = this.inputBuffer.charAt(0);
 		this.inputBuffer = this.inputBuffer.slice(1);
 		// Echo the character back to the terminal
-		this.writeOutput(ainChar + newline);
+		if (this.echoInput) this.writeOutput(ainChar + newline);
 		return { char: ainChar, isSimulated: true };
 	}
 
@@ -936,7 +943,7 @@ class Interpreter {
 		this.memoryChanges.push(memoryChange);
 
 		// Echo a newline after the input (readLineFromStdin already echoed the text)
-		if (isSimulated) {
+		if (isSimulated && this.echoInput) {
 			this.writeOutput(newline);
 		}
 	}
@@ -1072,7 +1079,7 @@ class Interpreter {
 						// No need to echo input here; already handled in readLineFromStdin()
 						//// unless input is simulated
 						if (isSimulated) {
-							this.writeOutput(newline);
+							if (this.echoInput) this.writeOutput(newline);
 						} else {
 							// add input to the output buffer w/ newline delimeter
 							this.output += dinInput + newline;
@@ -1100,7 +1107,7 @@ class Interpreter {
 						// No need to echo input here; already handled in readLineFromStdin()
 						//// unless input is simulated
 						if (isSimulated) {
-							this.writeOutput(newline);
+							if (this.echoInput) this.writeOutput(newline);
 						} else {
 							this.output += hinInput + newline;
 						}
@@ -1129,8 +1136,8 @@ class Interpreter {
 				break;
 			default:
 				// `Unknown TRAP vector: ${this.trapvec}`
-				console.error(`Error on line 0 of ${this.inputFileName}`);
-				console.error();
+				log.error(`Error on line 0 of ${this.inputFileName}`);
+				log.error();
 				this.error(`Trap vector out of range`); // : ${this.trapvec}
 				this.running = false;
 		}
@@ -1204,8 +1211,8 @@ class Interpreter {
 	}
 
 	error(message) {
-		// console.error(`Interpreter Error: ${message}`);
-		console.error(`${message}`);
+		// log.error(`Interpreter Error: ${message}`);
+		log.error(`${message}`);
 		this.running = false;
 	}
 }

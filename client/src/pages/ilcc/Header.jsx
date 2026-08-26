@@ -97,9 +97,20 @@ export default function Header({
   return (
     <header className={styles.header}>
 
-      {/* Left: logo + code templates dropdown */}
+      {/* Left: problems menu + logo + code templates dropdown */}
       <div className={styles.headerLeft}>
-        <img src={theme === 'light' ? logoBlk : logoWht} alt="ilcc" className={styles.logo} />
+        <button
+          className={styles.cogBtn}
+          type="button"
+          onClick={onMenuOpen}
+          title="Problems"
+          aria-label="Open problems panel"
+          data-tour="problems"
+        >
+          <Menu size={18} />
+        </button>
+
+        <img src={theme === 'light' ? logoBlk : logoWht} alt="ilcc" className={styles.logo} data-tour="brand" />
 
         <div className={styles.templatesWrapper} ref={templatesRef}>
           <button

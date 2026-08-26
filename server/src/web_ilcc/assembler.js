@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+const log = require('../logger').child({ mod: 'assembler' });
 
 // assembler.js
 // LCC.js Assembler
@@ -159,7 +159,7 @@ class Assembler {
 		// Check if inputFileName is already set
 		if (!this.inputFileName) {
 			if (args.length !== 1) {
-				console.error("Usage: assembler.js <input filename>");
+				log.error("Usage: assembler.js <input filename>");
 				fatalExit("Usage: assembler.js <input filename>", 1);
 			}
 			this.inputFileName = args[0];
@@ -170,7 +170,7 @@ class Assembler {
 			const sourceCode = fs.readFileSync(this.inputFileName, "utf-8");
 			this.sourceLines = sourceCode.split("\n");
 		} catch (err) {
-			console.error(`Cannot open input file ${this.inputFileName}`); // , err: ${err}
+			log.error(`Cannot open input file ${this.inputFileName}`); // , err: ${err}
 			fatalExit(`Cannot open input file ${this.inputFileName}`, 1); // , err: ${err}
 		}
 
@@ -180,7 +180,7 @@ class Assembler {
 		if (extension === ".bin") {
 			// Note: The original LCC does not print any message for assemnbling a .bin file as
 			// of 12/2024. I say this should be here to provide user feedback & good UX
-			console.log(`Assembling ${this.inputFileName}`);
+			log.debug(`Assembling ${this.inputFileName}`);
 
 			this.parseBinFile();
 			// Construct output filename with .e extension
@@ -191,7 +191,7 @@ class Assembler {
 			// Now write the output as a .e file
 			this.writeOutputFile();
 		} else if (extension === ".hex") {
-			console.log(`Assembling ${this.inputFileName}`);
+			log.debug(`Assembling ${this.inputFileName}`);
 			this.parseHexFile();
 			this.outputFileName = this.constructOutputFileName(
 				this.inputFileName,
@@ -207,7 +207,7 @@ class Assembler {
 			);
 
 			// Perform Pass 1
-			console.log("Starting assembly pass 1");
+			log.debug("Starting assembly pass 1");
 			this.pass = 1;
 			this.locCtr = 0;
 			this.loadPoint = 0; // TODO: fix this to not be hardcoded, because flags may dictate where in memory the program starts
@@ -219,24 +219,24 @@ class Assembler {
 			this.performPass();
 
 			if (this.locCtr === 0) {
-				console.error("Empty file");
+				log.error("Empty file");
 				fatalExit("Empty file", 0); // No instructions or data found in source file
 			}
 
 			if (this.errorFlag) {
-				// console.error('Errors encountered during Pass 1.');
-				// this.errors.forEach(error => console.error(error));
+				// log.error('Errors encountered during Pass 1.');
+				// this.errors.forEach(error => log.error(error));
 				fatalExit("Errors encountered during Pass 1.", 1);
 			}
 
 			// Rewind source lines for Pass 2
-			console.log("Starting assembly pass 2");
+			log.debug("Starting assembly pass 2");
 			this.pass = 2;
 			this.locCtr = 0;
 			this.lineNum = 0;
 			this.performPass();
 
-			// console.log(this.listing);
+			// log.debug(this.listing);
 
 			// After Pass 2
 			if (this.isObjectModule) {
@@ -248,7 +248,7 @@ class Assembler {
 			}
 
 			if (this.errorFlag) {
-				// console.error('Errors encountered during Pass 2.');
+				// log.error('Errors encountered during Pass 2.');
 				// Close the output file only if it's open
 				if (this.outFile !== null) {
 					fs.closeSync(this.outFile);
@@ -283,11 +283,11 @@ class Assembler {
 						this.inputFileName
 					);
 				} catch (error) {
-					console.error("Error handling name file:", error.message);
+					log.error("Error handling name file:", error.message);
 					fatalExit("Error handling name file: " + error.message, 1);
 				}
 
-				console.log(`Output file ${this.outputFileName} needs linking`);
+				log.debug(`Output file ${this.outputFileName} needs linking`);
 
 				// Generate .lst and .bst files
 				const lstFileName = this.constructOutputFileName(
@@ -325,8 +325,8 @@ class Assembler {
 				// Write the .bst file
 				fs.writeFileSync(bstFileName, bstContent, "utf-8");
 
-				console.log(`lst file = ${lstFileName}`);
-				console.log(`bst file = ${bstFileName}`);
+				log.debug(`lst file = ${lstFileName}`);
+				log.debug(`bst file = ${bstFileName}`);
 			}
 		} else {
 			// Note: Treating only .a files as valid assembly files is
@@ -334,7 +334,7 @@ class Assembler {
 			//       LCC behavior is to treat all non .bin, .hex, .o, and
 			//       .e files as assembly files)
 			if (extension === ".ap") {
-				console.error(
+				log.error(
 					"Error: .ap files are not supported by assembler.js - Did you mean to use assemblerPlus.js?"
 				);
 				fatalExit(
@@ -342,7 +342,7 @@ class Assembler {
 					1
 				);
 			}
-			console.error("Unsupported file type");
+			log.error("Unsupported file type");
 			fatalExit("Unsupported file type", 1);
 		}
 	}
@@ -352,7 +352,7 @@ class Assembler {
 		try {
 			this.outFile = fs.openSync(this.outputFileName, "w");
 		} catch (err) {
-			console.error(`Cannot open output file ${this.outputFileName}`);
+			log.error(`Cannot open output file ${this.outputFileName}`);
 			fatalExit(`Cannot open output file ${this.outputFileName}`, 1);
 		}
 
@@ -542,7 +542,7 @@ class Assembler {
 			let mnemonic = null;
 			let operands = [];
 
-			// console.log("Tokens: ", tokens);
+			// log.debug("Tokens: ", tokens);
 
 			// Check if line starts with a label
 			if (
@@ -610,7 +610,7 @@ class Assembler {
 			//// possible bug/strange lcc behavior:
 			//// remove a single empty line from the listing
 			//// if it is the last line
-			// console.log("last line of file is: '", this.listing[this.listing.length - 1], "'");
+			// log.debug("last line of file is: '", this.listing[this.listing.length - 1], "'");
 			if (
 				this.listing[this.listing.length - 1].sourceLine.trim() === ""
 			) {
@@ -659,7 +659,7 @@ class Assembler {
 			// Now we should have a 16-bit hexadecimal string
 			// For example: "4B1F"
 			if (!/^[0-9A-Fa-f]+$/.test(line)) {
-				console.error(
+				log.error(
 					`Error: line ${
 						lineNum + 1
 					} in .hex file is not purely hexadecimal: "${line}"`
@@ -672,7 +672,7 @@ class Assembler {
 				);
 			}
 			if (line.length !== 4) {
-				console.error(
+				log.error(
 					`Error: line ${
 						lineNum + 1
 					} in .hex file does not have exactly 4 nibbles: "${line}"`
@@ -702,7 +702,7 @@ class Assembler {
 		// Note: Reporting an empty hex file is custom LCC.js behavior in 12/2024
 		//       (this does not match current official LCC behavior)
 		if (this.locCtr === 0) {
-			console.error("Empty file");
+			log.error("Empty file");
 			fatalExit("Empty file", 0); // No instructions or data found in source file
 		}
 
@@ -751,7 +751,7 @@ class Assembler {
 			// Now we should have a 16-bit binary string
 			// For example: "0010000000000101"
 			if (!/^[01]+$/.test(line)) {
-				console.error(
+				log.error(
 					`Error: line ${
 						lineNum + 1
 					} in .bin file is not purely binary: "${line}"`
@@ -764,7 +764,7 @@ class Assembler {
 				);
 			}
 			if (line.length !== 16) {
-				console.error(
+				log.error(
 					`Error: line ${
 						lineNum + 1
 					} in .bin file does not have exactly 16 bits: "${line}"`
@@ -794,7 +794,7 @@ class Assembler {
 		// Note: The reporting of an empty bin file is custom LCC.js behavior in 12/2024
 		//       (it does not currently match official LCC behavior)
 		if (this.locCtr === 0) {
-			console.error("Empty file");
+			log.error("Empty file");
 			fatalExit("Empty file", 0); // No instructions or data found in source file
 		}
 
@@ -2207,7 +2207,7 @@ class Assembler {
 
 	error(message) {
 		const errorMsg = `Error on line ${this.lineNum} of ${this.inputFileName}:\n    ${this.currentLine}\n${message}`;
-		console.error(errorMsg);
+		log.error(errorMsg);
 		this.errors.push(errorMsg);
 		this.errorFlag = true;
 

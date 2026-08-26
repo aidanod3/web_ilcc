@@ -102,8 +102,20 @@ export default function Ilcc() {
     setTabs(prev => prev.map(t => t.id === id ? { ...t, name } : t));
   };
 
-  /* ── Drawer (problems panel) state ── */
+  /* ── Drawer (problems panel) state ──
+     problems: [{ line: number|null, message: string }] — assembler/runtime
+     errors surfaced from Run or Debug. Opening the drawer is automatic on
+     error; the Header's menu button reopens it. */
   const [menuOpen, setMenuOpen] = useState(false);
+  const [problems, setProblems] = useState([]);
+
+  /* Parse "line N" out of an error string so the drawer can jump to it. */
+  const reportProblem = (err) => {
+    const message = String(err?.message ?? err ?? 'Unknown error');
+    const m = message.match(/line\s+(\d+)/i);
+    setProblems([{ line: m ? Number(m[1]) : null, message }]);
+    setMenuOpen(true);
+  };
 
   /* ── Import a template from the server: open as a new tab ── */
   const handleImportTemplate = (name, content) => {
@@ -177,10 +189,11 @@ export default function Ilcc() {
   /* ── Handler: Debug button ──
      Reads the editor and starts an interactive debug session. */
   const handleDebug = async () => {
+    setProblems([]);
     try {
       await debug_session.start(getCode());
     } catch (err) {
-      // TODO: surface error to user (e.g. assembly errors)
+      reportProblem(err);
     }
   };
 
@@ -195,7 +208,12 @@ export default function Ilcc() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
       {/* Full-height slide-in problems drawer */}
-      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <Drawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        problems={problems}
+        onGoToLine={(line) => { editorRef.current?.gotoLine?.(line); setMenuOpen(false); }}
+      />
 
       {/* Top toolbar: run/debug/step/stop buttons */}
       <Header

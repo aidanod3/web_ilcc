@@ -25,8 +25,11 @@ const crypto = require('crypto');
 const Assembler   = require('../web_ilcc/assembler');
 const Interpreter = require('../web_ilcc/interpreter');
 
-function createRunSession(sourceCode, callbacks) {
+/* options.echoInput (default true): echo consumed stdin into output like a tty.
+   The autograder passes false so expected_stdout needn't include the inputs. */
+function createRunSession(sourceCode, callbacks, options = {}) {
   const { onOutput, onInputRequest, onDone, onError } = callbacks;
+  const { echoInput = true } = options;
 
   /* ── 1. Write source to a temp .a file ── */
   const id    = crypto.randomUUID();
@@ -50,6 +53,7 @@ function createRunSession(sourceCode, callbacks) {
   const interp = new Interpreter();
   interp.onOutput = onOutput;
   interp.onInputRequest = onInputRequest;
+  interp.echoInput = echoInput;
   interp.loadExecutableFile(ePath);
 
   /* ── Helpers ── */
