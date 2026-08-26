@@ -15,6 +15,9 @@ import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { keymap, Decoration } from '@codemirror/view';
 import { StateEffect, StateField } from '@codemirror/state';
+import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+import { lccLanguage } from '../../../editor/lccLanguage';
+import { breakpointGutter, getBreakpointLines, breakpointsField } from '../../../editor/breakpointGutter';
 import styles from './Editor.module.css';
 
 /* ── Debug-line highlight ───────────────────────────────────────────────────
@@ -85,6 +88,9 @@ const Editor = forwardRef(function Editor(props, ref) {
       viewRef.current?.dispatch({ effects: setDebugLine.of(null) });
     },
 
+    /* 1-based lines that currently have a breakpoint. */
+    getBreakpoints: () => viewRef.current ? getBreakpointLines(viewRef.current.state) : [],
+
     /* Move the cursor to a 1-based line, scroll it into view, and focus.
        Used by the Problems drawer. Does NOT set the debug highlight. */
     gotoLine: (lineNum) => {
@@ -107,6 +113,14 @@ const Editor = forwardRef(function Editor(props, ref) {
       doc: '',
       extensions: [
         basicSetup,
+        lccLanguage(),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        breakpointGutter,
+        EditorView.updateListener.of((u) => {
+          if (props.onBreakpointsChange && u.startState.field(breakpointsField) !== u.state.field(breakpointsField)) {
+            props.onBreakpointsChange(getBreakpointLines(u.state));
+          }
+        }),
         debugLineField,
         keymap.of([{
           key: 'Tab',

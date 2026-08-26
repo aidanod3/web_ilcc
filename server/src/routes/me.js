@@ -10,8 +10,11 @@ const config = require('../config');
 const router = express.Router();
 
 router.get('/', (req, res) => {
+  /* ?login=1: bounce to hydra-auth's SAML entry, then back to `return`. */
   if (req.query.login === '1') {
-    return res.redirect(302, `${config.publicBase}/downloads`);
+    const back = String(req.query.return || `${config.publicBase}/`);
+    const safe = back.startsWith('/') && !back.startsWith('//') ? back : `${config.publicBase}/`;
+    return res.redirect(302, `/login?returnTo=${encodeURIComponent(safe)}`);
   }
   if (!req.user) return res.json({ anonymous: true });
   const { email, netid, role } = req.user;

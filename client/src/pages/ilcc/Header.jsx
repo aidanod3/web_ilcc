@@ -14,7 +14,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import styles from './Header.module.css';
-import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, Menu, Settings, FileCode2, ChevronDown } from 'lucide-react';
+import { Play, Loader, BugPlay, RotateCcw, Square, StepForward, FastForward, Menu, Settings, FileCode2, ChevronDown } from 'lucide-react';
 import logoWht from '../../assets/ilcc_wht.PNG';
 import logoBlk from '../../assets/ilcc_blk.png';
 import HelpMenu from '../../components/HelpMenu';
@@ -33,6 +33,8 @@ export default function Header({
   onStep,
   onStop,
   canStepForward,
+  onContinue,
+  lastStop,
   onMenuOpen,
   onImportTemplate,
   theme,
@@ -211,6 +213,18 @@ export default function Header({
             >
               <StepForward size={16} />
             </button>
+            <button
+              className={styles.btn}
+              type="button"
+              onClick={onContinue}
+              disabled={!canStepForward}
+              data-tour="continue"
+              title="Continue to next breakpoint (F8)"
+            >
+              <FastForward size={16} />
+            </button>
+            {lastStop === 'breakpoint' && <span className={styles.stopNote}>● breakpoint</span>}
+            {lastStop === 'budget' && <span className={styles.stopNote} title="Stopped after 100k instructions without hitting a breakpoint">paused</span>}
           </>
         )}
 

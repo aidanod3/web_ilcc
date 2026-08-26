@@ -25,6 +25,7 @@ import useRunProgram from '../../hooks/useRunProgram';
 import useDebugSession from '../../hooks/useDebugSession';
 import useTheme from '../../hooks/useTheme';
 import useTour from '../../hooks/useTour';
+import useShortcuts from '../../hooks/useShortcuts';
 
 export default function Ilcc() {
   const { theme, setTheme, themes } = useTheme();
@@ -199,12 +200,31 @@ export default function Ilcc() {
     }
   };
 
+  /* ── Breakpoints: editor gutter → server, on change and at debug start ── */
+  const handleBreakpointsChange = (lines) => {
+    if (debug_session.isDebugging) debug_session.setBreakpoints(lines);
+  };
+  useEffect(() => {
+    if (debug_session.isDebugging) debug_session.setBreakpoints(editorRef.current?.getBreakpoints?.() ?? []);
+  }, [debug_session.isDebugging]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const canContinue = debug_session.isDebugging && !debug_session.programDone && !debug_session.inputMode;
+  const handleContinue = () => { if (canContinue) debug_session.continueRun(); };
+
   /* ── Handler: Stop button ──
      Ends whichever mode is active (run or debug). */
   const handleStop = () => {
     runner.reset();
     debug_session.stop();
   };
+
+  useShortcuts({
+    onRun: () => { if (!runner.isRunning && !debug_session.isDebugging) handleRun(); },
+    onDebug: () => { if (!runner.isRunning && !debug_session.isDebugging) handleDebug(); },
+    onStep: () => { if (canContinue) debug_session.step(1); },
+    onContinue: handleContinue,
+    onStop: () => { if (runner.isRunning || debug_session.isDebugging) handleStop(); },
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -225,7 +245,9 @@ export default function Ilcc() {
         onDebug={handleDebug}
         onStep={(n) => debug_session.step(n)}
         onStop={handleStop}
-        canStepForward={debug_session.isDebugging && !debug_session.programDone && !debug_session.inputMode}
+        canStepForward={canContinue}
+        onContinue={handleContinue}
+        lastStop={debug_session.lastStop}
         onMenuOpen={() => setMenuOpen(true)}
         onImportTemplate={handleImportTemplate}
         theme={theme}
@@ -254,6 +276,7 @@ export default function Ilcc() {
         onImportFiles={handleImportFiles}
         onExport={handleExport}
         debuggerLayout={debuggerLayout}
+        onBreakpointsChange={handleBreakpointsChange}
       />
 
     </div>

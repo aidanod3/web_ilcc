@@ -51,6 +51,7 @@ export default function useDebugSession() {
   const [iteration,    setIteration]   = useState(0);
   const [programDone,  setProgramDone] = useState(false);
   const [currentLine,  setCurrentLine] = useState(null);
+  const [lastStop,     setLastStop]    = useState(null);   // 'breakpoint' | 'budget' | null after a continue
 
   /* Sparse map of every memory cell written since the session started.
      Key: address (number), Value: current cell value (number).
@@ -99,7 +100,7 @@ export default function useDebugSession() {
     setCurrentLine(null);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/api/debug`);
+    const ws = new WebSocket(`${protocol}//${window.location.host}${import.meta.env.BASE_URL}api/debug`);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -141,6 +142,7 @@ export default function useDebugSession() {
         case 'step_result':
           setDebugState(msg.diff);
           setIteration(msg.iteration);
+          setLastStop(msg.continued ? (msg.diff.hitBreakpoint ? 'breakpoint' : msg.diff.budgetExhausted ? 'budget' : null) : null);
           /* pc.new is the next instruction to execute — highlight that line. */
           setCurrentLine(lineMapRef.current[msg.diff.pc.new] ?? null);
           /* Merge any memory writes from this step into the running map. */
@@ -187,6 +189,18 @@ export default function useDebugSession() {
     }
   }, []);
 
+  /* ── setBreakpoints(lines) / continue() ── */
+  const setBreakpoints = useCallback((lines) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'breakpoints', lines }));
+    }
+  }, []);
+  const continueRun = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'continue' }));
+    }
+  }, []);
+
   /* ── sendInput(text) ────────────────────────────────────────────────────
      Provide input to a paused SIN/DIN. After sending, the server does NOT
      auto-resume — it waits for the next step command. */
@@ -214,9 +228,13 @@ export default function useDebugSession() {
     setProgramDone(false);
     setMemoryMap({});
     setCurrentLine(null);
+    setLastStop(null);
   }, []);
 
   return {
+    lastStop,
+    setBreakpoints,
+    continueRun,
     isDebugging,
     output,
     inputMode,

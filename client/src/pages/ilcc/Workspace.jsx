@@ -75,6 +75,7 @@ export default function Workspace({
   tabs, activeTabId, onSwitchTab, onNewTab, onCloseTab, onRenameTab,
   onImportFiles, onExport,
   debuggerLayout = 'classic',
+  onBreakpointsChange,
 }) {
   const sidePanelRef       = useRef(null);
   const fileInputRef       = useRef(null);
@@ -280,7 +281,7 @@ export default function Workspace({
                       onClose={onCloseTab}
                       onRename={onRenameTab}
                     />
-                    <Editor ref={editorRef} />
+                    <Editor ref={editorRef} onBreakpointsChange={onBreakpointsChange} />
                   </div>
                 </Panel>
 

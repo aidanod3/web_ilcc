@@ -4,14 +4,15 @@
  *   const { me, loading, isSignedIn, isTA, isAdmin, refresh } = useMe();
  *   me = { email, netid, role } | { anonymous: true }
  *
- * loginUrl points at a forward-auth'd route so navigating there triggers the
- * SAML redirect; hydra-auth sends the browser back afterwards.
+ * loginUrl is hydra-auth's site-wide SAML entry (/login). It sets the
+ * np_access cookie and bounces back to returnTo; Traefik forward-auth then
+ * accepts subsequent requests.
  */
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 export const API = import.meta.env.BASE_URL.replace(/\/$/, '') + '/api';
-export const loginUrl = (returnTo = window.location.pathname) =>
-  `${API}/me?login=1&return=${encodeURIComponent(returnTo)}`;
+export const loginUrl = (returnTo = window.location.pathname + window.location.search) =>
+  `/login?returnTo=${encodeURIComponent(returnTo)}`;
 
 const MeContext = createContext(null);
 

@@ -7,11 +7,14 @@
  *     { type: 'start', code }    — assemble and load; does NOT begin executing
  *     { type: 'step',  n }       — execute n instructions, get state diff back
  *     { type: 'input', text }    — provide input when program hits SIN/DIN
+ *     { type: 'breakpoints', lines } — set breakpoint source lines (1-based)
+ *     { type: 'continue' }        — run until a breakpoint / halt / input
  *
  *   server → client:
  *     { type: 'output',      text }           — program printed something
  *     { type: 'input_request'      }          — program needs user input
- *     { type: 'step_result', diff, iteration }— state diff after a step
+ *     { type: 'step_result', diff, iteration, continued? } — state diff after step/continue
+ *     { type: 'breakpoints_ack', lines, resolved }
  *     { type: 'error',       message }        — assembly or runtime error
  *     { type: 'done'               }          — program reached HALT
  */
@@ -21,6 +24,7 @@ const { createDebugSession } = require('../services/debugger');
 function handleDebugSocket(ws) {
   let session   = null;
   let iteration = 0;
+  let breakpointAddrs = [];
 
   /* Helper: send a typed JSON message to the client. */
   function send(obj) {
@@ -55,6 +59,7 @@ function handleDebugSocket(ws) {
         });
 
         iteration = 0;
+        breakpointAddrs = [];
 
         /* Send the initial program-area memory so the Memory panel is
            pre-populated with the loaded executable's contents.
@@ -81,6 +86,26 @@ function handleDebugSocket(ws) {
         if (diff) {
           iteration += n;
           send({ type: 'step_result', diff, iteration });
+        }
+        break;
+      }
+
+      /* ── breakpoints: replace the set of 1-based source lines ── */
+      case 'breakpoints': {
+        if (!session) return;
+        const lines = Array.isArray(msg.lines) ? msg.lines.map(Number).filter(Number.isInteger) : [];
+        breakpointAddrs = lines.map(l => session.lineToAddr(l)).filter(a => a != null);
+        send({ type: 'breakpoints_ack', lines, resolved: breakpointAddrs.length });
+        break;
+      }
+
+      /* ── continue: run to the next breakpoint / halt / input ── */
+      case 'continue': {
+        if (!session) return;
+        const diff = await session.continueTo(breakpointAddrs);
+        if (diff) {
+          iteration += diff.steps;
+          send({ type: 'step_result', diff, iteration, continued: true });
         }
         break;
       }

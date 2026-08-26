@@ -156,6 +156,44 @@ function createDebugSession(sourceCode, callbacks) {
       return diff;
     },
 
+    /* Run until PC lands on a breakpoint address, the program halts, it
+       needs input, or the step budget is exhausted. One diff for the whole
+       run (before → after) plus all memory changes. */
+    async continueTo(breakpointAddrs = [], { maxSteps = 100000 } = {}) {
+      if (!interp.running) { onDone(); return; }
+      const bps = new Set(breakpointAddrs.map(Number));
+      const before = captureState();
+      interp.memoryChanges = [];
+      let steps = 0;
+      let hitBreakpoint = false;
+      try {
+        while (interp.running && steps < maxSteps) {
+          await interp.handleSteps(1);
+          steps++;
+          if (interp._inputResolve) break;                 // paused for input
+          if (bps.has(interp.pc)) { hitBreakpoint = true; break; }
+        }
+      } catch (err) {
+        cleanup();
+        onError(`Runtime error: ${err.message}`);
+        return;
+      }
+      const after = captureState();
+      const diff = buildDiff(before, after);
+      diff.memory = normalizeMemoryChanges(interp.memoryChanges);
+      diff.steps = steps;
+      diff.hitBreakpoint = hitBreakpoint;
+      diff.budgetExhausted = steps >= maxSteps && interp.running;
+      if (!interp.running) onDone();
+      return diff;
+    },
+
+    /* address → line number map, for translating breakpoint lines. */
+    lineToAddr(line) {
+      for (const [addr, l] of Object.entries(lineMap)) if (l === line) return Number(addr);
+      return null;
+    },
+
     /* Called when the user submits input in the terminal. */
     provideInput(text) {
       interp.inputBuffer += text + '\n';

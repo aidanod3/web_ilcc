@@ -61,7 +61,7 @@ export default function useRunProgram() {
     /* Build the WebSocket URL from the current page origin so it works
        in both local dev (Vite proxy) and Docker (same host). */
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/api/run`);
+    const ws = new WebSocket(`${protocol}//${window.location.host}${import.meta.env.BASE_URL}api/run`);
     wsRef.current = ws;
 
     ws.onopen = () => {
