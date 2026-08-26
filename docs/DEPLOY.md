@@ -12,7 +12,7 @@ Prod: **https://hydra.newpaltz.edu/ilcc** · namespace `hydra-infra` · one pod.
 /home/infra/hydra-saml-auth/scripts/deploy-ilcc.sh --sync-downloads   # after changing a course file in /home/infra
 ```
 
-The script: pulls this repo to `/home/infra/web_ilcc`, `buildah bud --build-arg VITE_BASE=/ilcc/`, imports the image into RKE2's containerd (there is no registry), tags it `docker.io/ndg8743/ilcc:<date>`, applies `k8s/components/ilcc/` from hydra-saml-auth, `kubectl set image`, waits for readiness through Traefik, and runs smoke checks.
+The script: pulls this repo to `/home/infra/web_ilcc`, `buildah bud --build-arg VITE_BASE=/ilcc/`, imports the image into RKE2's containerd (there is no registry), tags it `docker.io/ndg8743/ilcc:<date>` (image name only — containerd needs a registry-style name; no push happens), applies `k8s/components/ilcc/` from hydra-saml-auth, `kubectl set image`, waits for readiness through Traefik, and runs smoke checks.
 
 ## Where things live
 

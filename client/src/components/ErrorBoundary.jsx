@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { newIssueUrl } from '../lib/repo';
 
 export default class ErrorBoundary extends Component {
   state = { error: null };
@@ -15,7 +16,7 @@ export default class ErrorBoundary extends Component {
         <p style={{ marginTop: 16 }}>
           <a href={base} style={{ color: 'var(--accent, #f7a800)' }}>Reload</a>
           {' · '}
-          <a href="https://github.com/ndg8743/web_ilcc/issues/new" target="_blank" rel="noreferrer" style={{ color: 'var(--accent, #f7a800)' }}>Report a bug</a>
+          <a href={newIssueUrl({ title: "Render error", body: String(this.state.error?.stack || this.state.error) })} target="_blank" rel="noreferrer" style={{ color: 'var(--accent, #f7a800)' }}>Report a bug</a>
         </p>
       </div>
     );

@@ -1,9 +1,9 @@
 .layout { display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: start; }
-.nav { position: sticky; top: 68px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.nav { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .nav a { padding: 5px 10px; border-radius: 6px; color: var(--text2); text-decoration: none; }
 .nav a:hover { background: var(--bg3); color: var(--text); }
 .navHead { margin: 10px 0 4px; padding: 0 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); }
-.section { scroll-margin-top: 68px; }
+.section { scroll-margin-top: 12px; }
 .tableWrap { overflow-x: auto; }
 .ops { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; white-space: nowrap; }
 .exHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0 4px; }

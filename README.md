@@ -52,4 +52,4 @@ See `server/.env.example`. Identity is never read from cookies — Traefik's for
 
 ## Contributing
 
-Work happens on `ndg8743/web_ilcc`. Branch from `main`, open a PR; CI runs lint, unit, integration, build, audit, and Playwright. Upstream student branches are being hand-ported into this layout — see the closed PRs on `aidanod3/web_ilcc` for what landed where.
+Work happens on `compsci-suny-newpaltz/ilcc`. Branch from `main`, open a PR; CI runs lint, unit, integration, build, audit, and Playwright. Upstream student branches are being hand-ported into this layout — see the closed PRs on `aidanod3/web_ilcc` for what landed where.

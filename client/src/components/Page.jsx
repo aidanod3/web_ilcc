@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import HelpMenu from './HelpMenu';
 import UserMenu from './UserMenu';
+import Footer from './Footer';
 import useTheme from '../hooks/useTheme';
 import logoWht from '../assets/ilcc_wht.PNG';
 import logoBlk from '../assets/ilcc_blk.png';
@@ -31,10 +32,13 @@ export default function Page({ title, subtitle, wide = false, children, actions 
           <UserMenu />
         </div>
       </header>
-      <main className={`${styles.main} ${wide ? styles.wide : ''}`}>
-        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-        {children}
-      </main>
+      <div className={styles.scroll}>
+        <main className={`${styles.main} ${wide ? styles.wide : ''}`}>
+          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
+          {children}
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 }

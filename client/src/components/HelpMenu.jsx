@@ -5,10 +5,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { HelpCircle, ChevronDown, BookOpen, Download, FileText, Bug, Compass, StepForward, Library } from 'lucide-react';
+import { GitHubIcon } from './Footer';
 import { startTour } from '../hooks/useTour';
+import { bugReportUrl, REPO_URL } from '../lib/repo';
 import styles from './Menu.module.css';
-
-const REPO = 'https://github.com/ndg8743/web_ilcc';
 
 export default function HelpMenu() {
   const [open, setOpen] = useState(false);
@@ -30,10 +30,7 @@ export default function HelpMenu() {
     else nav(`/?tour=${part}`);
   };
 
-  const bugUrl = () => {
-    const body = encodeURIComponent(`**What happened?**\n\n\n**Steps to reproduce**\n1.\n\n**Page:** ${window.location.href}\n**Browser:** ${navigator.userAgent}`);
-    return `${REPO}/issues/new?title=&body=${body}`;
-  };
+  const bugUrl = () => bugReportUrl();
 
   return (
     <div className={styles.wrap} ref={ref}>
@@ -51,6 +48,7 @@ export default function HelpMenu() {
           <Link className={styles.item} role="menuitem" to="/faq" onClick={() => setOpen(false)}><FileText size={15} /> FAQ</Link>
           <div className={styles.divider} />
           <a className={styles.item} role="menuitem" href={bugUrl()} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}><Bug size={15} /> Report a bug</a>
+          <a className={styles.item} role="menuitem" href={REPO_URL} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}><GitHubIcon size={15} /> Source on GitHub</a>
         </div>
       )}
     </div>
