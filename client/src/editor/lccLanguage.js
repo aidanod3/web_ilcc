@@ -5,7 +5,6 @@
  * user-defined macros via `withCustomKeywords`.
  */
 import { StreamLanguage } from '@codemirror/language';
-import { styleTags, tags as t } from '@lezer/highlight';
 
 export const MNEMONICS = new Set([
   // data movement

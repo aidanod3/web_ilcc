@@ -148,10 +148,9 @@ function createDebugSession(sourceCode, callbacks) {
 
       /* Attach flattened memory changes so the client can update its map. */
       diff.memory = normalizeMemoryChanges(interp.memoryChanges);
+      diff.halted = !interp.running;
 
-      if (!interp.running) {
-        onDone();
-      }
+      if (!interp.running) setImmediate(onDone);
 
       return diff;
     },
@@ -184,13 +183,17 @@ function createDebugSession(sourceCode, callbacks) {
       diff.steps = steps;
       diff.hitBreakpoint = hitBreakpoint;
       diff.budgetExhausted = steps >= maxSteps && interp.running;
-      if (!interp.running) onDone();
+      diff.halted = !interp.running;
+      /* The route sends step_result first, then done — so the client sees
+         the final diff before the session flips to programDone. */
+      if (!interp.running) setImmediate(onDone);
       return diff;
     },
 
-    /* address → line number map, for translating breakpoint lines. */
+    /* First address whose instruction came from source `line`, or null.
+       Uses the same listing-derived map the client gets in line_map. */
     lineToAddr(line) {
-      for (const [addr, l] of Object.entries(lineMap)) if (l === line) return Number(addr);
+      for (const [addr, l] of Object.entries(this.getLineMap())) if (l === line) return Number(addr);
       return null;
     },
 

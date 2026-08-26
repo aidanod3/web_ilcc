@@ -90,3 +90,39 @@ describe('WS hardening', () => {
     expect(r).toBe(1009);   // message too big
   });
 });
+
+describe('WS /api/debug breakpoints + continue', () => {
+  it('continue runs to the breakpoint line, then to halt', async () => {
+    const code = '    mov r0, 1\n    mov r1, 2\n    add r0, r0, r1\n    dout r0\n    nl\n    halt\n';
+    const stops = [];
+    let acked = null;
+    const msgs = await session('/api/debug', {
+      onOpen: ws => ws.send(JSON.stringify({ type: 'start', code })),
+      onMessage: (ws, j) => {
+        if (j.type === 'line_map') ws.send(JSON.stringify({ type: 'breakpoints', lines: [3] }));
+        if (j.type === 'breakpoints_ack') { acked = j; ws.send(JSON.stringify({ type: 'continue' })); }
+        if (j.type === 'step_result' && j.continued) {
+          stops.push({ steps: j.diff.steps, hit: j.diff.hitBreakpoint, pc: j.diff.pc.new });
+          if (j.diff.hitBreakpoint) ws.send(JSON.stringify({ type: 'continue' }));
+        }
+      },
+    });
+    expect(acked).toMatchObject({ lines: [3], resolved: 1 });
+    expect(stops[0]).toMatchObject({ steps: 2, hit: true, pc: 2 });   // stopped BEFORE line 3 (addr 2)
+    expect(stops[1].hit).toBe(false);                                   // ran to halt
+    expect(msgs.at(-1).type).toBe('done');
+    expect(outputOf(msgs)).toBe('3\n');
+  });
+
+  it('breakpoint on a data/blank line resolves to 0 and continue runs to halt', async () => {
+    const msgs = await session('/api/debug', {
+      onOpen: ws => ws.send(JSON.stringify({ type: 'start', code: '    mov r0, 7\n    dout r0\n    halt\n' })),
+      onMessage: (ws, j) => {
+        if (j.type === 'line_map') ws.send(JSON.stringify({ type: 'breakpoints', lines: [99] }));
+        if (j.type === 'breakpoints_ack') { expect(j.resolved).toBe(0); ws.send(JSON.stringify({ type: 'continue' })); }
+      },
+    });
+    expect(msgs.at(-1).type).toBe('done');
+    expect(outputOf(msgs)).toBe('7');
+  });
+});

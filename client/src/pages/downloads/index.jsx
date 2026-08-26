@@ -1,5 +1,5 @@
 /* Downloads — course package, debugger, textbook. */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Download, Copy, Check } from 'lucide-react';
 import Page from '../../components/Page';
@@ -51,13 +51,16 @@ export default function Downloads() {
       .catch((e) => setErr(e.message));
   }, []);
 
-  let rest = items ? [...items] : [];
-  const grouped = GROUPS.map((g) => {
-    const mine = rest.filter(g.match);
-    rest = rest.filter((d) => !mine.includes(d));
-    return { ...g, items: mine };
-  });
-  if (rest.length) grouped.push({ title: 'Other', items: rest });
+  const grouped = useMemo(() => {
+    let rest = items ? [...items] : [];
+    const out = GROUPS.map((g) => {
+      const mine = rest.filter(g.match);
+      rest = rest.filter((d) => !mine.includes(d));
+      return { ...g, items: mine };
+    });
+    if (rest.length) out.push({ title: 'Other', items: rest });
+    return out;
+  }, [items]);
 
   return (
     <Page title="Downloads" subtitle="Everything you need to run the course tools on your own machine.">

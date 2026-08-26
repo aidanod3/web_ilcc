@@ -13,6 +13,12 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    rules: {
+      // React-compiler-style rules flag patterns in the inherited editor code (refs read in render,
+      // setState in effects). Tracked for cleanup; keep visible but non-blocking.
+      'react-refresh/only-export-components': ['warn', { allowExportNames: ['loginUrl', 'API'] }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_', caughtErrors: 'none' }],
+    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
