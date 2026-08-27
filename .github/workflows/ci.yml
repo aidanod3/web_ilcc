@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, consolidate]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: server } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: server/package-lock.json }
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test -- --coverage
+      - run: npm audit --audit-level=high || echo "::warning::npm audit found high-severity issues"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: server-coverage, path: server/coverage/lcov.info, if-no-files-found: ignore }
+
+  client:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: client } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: client/package-lock.json }
+      - run: npm ci
+      - run: npm run lint:ci   # inherited editor code has React-compiler findings; tracked, non-blocking
+      - run: npm test -- --coverage
+      - run: VITE_BASE=/ilcc/ npm run build
+      - run: npm audit --audit-level=high || echo "::warning::npm audit found high-severity issues"
+      - uses: actions/upload-artifact@v4
+        with: { name: client-dist, path: client/dist, retention-days: 3 }
+
+  image:
+    runs-on: ubuntu-latest
+    needs: [server, client]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ilcc:ci
+          build-args: VITE_BASE=/ilcc/
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Boot + probe
+        run: |
+          docker run -d --name ilcc -p 3000:3000 -e HYDRA_PROXY_SECRET=ci -e SEED_ADMINS=ci@newpaltz.edu ilcc:ci
+          for i in $(seq 1 30); do curl -sf localhost:3000/api/ready && break; sleep 1; done
+          curl -sf localhost:3000/api/health | tee /dev/stderr | grep -q '"status":"ok"'
+          curl -s localhost:3000/ | grep -q '/ilcc/assets/'
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:3000/api/grader/assignments)" = 401
+          docker logs ilcc | tail -5

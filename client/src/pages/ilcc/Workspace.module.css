@@ -1,0 +1,249 @@
+/* ── Outer layout ── */
+
+/* Fills remaining height after the Header */
+.workspaceOuter {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: var(--bg);
+}
+
+/* Outermost horizontal PanelGroup — side panel | right area */
+.outerHGroup {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Vertical PanelGroup inside the right Panel — top row | terminal */
+.mainVGroup {
+  height: 100%;
+}
+
+/* Collapsible side panel content */
+.sidePanel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── Top row: editor | debug card (horizontal PanelGroup) ── */
+
+/* Horizontal PanelGroup — fills the top Panel of mainVGroup */
+.editorDebugGroup {
+  height: 100%;
+}
+
+/* Shared pane wrapper — editor and terminal */
+.pane {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── Debug card — fills its Panel, flex row (CPU | Memory+Stack) ── */
+
+.debugCard {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Debugger Panel — minSize is set dynamically via the prop; no CSS override needed */
+.debuggerPanel {}
+
+/* CPU State column */
+.cpuColumn {
+  flex: 1;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  border-right: 1px solid var(--border);
+}
+
+/* Memory + Stack column (Compact mode) */
+.memStackColumn {
+  flex: 1;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+}
+
+/* Vertical PanelGroup for Memory / Stack (still resizable between each other) */
+.memStackGroup {
+  height: 100%;
+}
+
+/* Inner panels of the compact mem/stack split — must not be horizontal scroll
+   containers or they swallow trackpad deltaX before it reaches .debugCard.
+   The library sets overflow:auto via inline style, so !important is required. */
+.memStackPanel {
+  overflow-x: clip !important;
+}
+
+/* Classic layout: each of Memory and Stack gets its own equal-width column */
+.classicColumn {
+  flex: 1;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+}
+
+/* Adds a CSS border on the left — used on the Stack column in Classic mode */
+.classicDivider {
+  border-left: 1px solid var(--border);
+}
+
+/* Individual section inside the debug card (Memory or Stack) */
+.debugSection {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+}
+
+/* ── Resize handles ── */
+
+/* Horizontal bar — separates vertically-stacked panels */
+.resizeHandle {
+  height: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  flex-shrink: 0;
+}
+
+.resizeHandle::after {
+  content: "";
+  width: 30px;
+  height: 2px;
+  background: var(--bg3);
+  border-radius: 8px;
+  transition: background 0.15s, width 0.15s;
+}
+
+.resizeHandle:hover::after,
+.resizeHandle[data-resize-handle-active]::after {
+  background: var(--text2);
+  width: 100%;
+}
+
+/* Vertical bar — separates the side panel from the right area */
+.resizeHandleV {
+  width: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ew-resize;
+  flex-shrink: 0;
+}
+
+.resizeHandleV::after {
+  content: "";
+  width: 2px;
+  height: 30px;
+  background: var(--bg3);
+  border-radius: 8px;
+  transition: background 0.15s, height 0.15s;
+}
+
+.resizeHandleV:hover::after,
+.resizeHandleV[data-resize-handle-active]::after {
+  background: var(--text2);
+  height: 100%;
+}
+
+/* ── Pane header ── */
+
+/* Header bar for editor and terminal panes */
+.paneHeader {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 6px 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Right-side icon buttons inside the pane header */
+.paneHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.paneActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.paneActionBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+
+/* ── Shared ── */
+
+/* Section header — CPU State, Memory, Stack, side Panel */
+.sectionHeader {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Format / Share banner ── */
+.shareBanner {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+  animation: fadeUp 0.15s ease;
+}

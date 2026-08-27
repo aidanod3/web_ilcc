@@ -1,0 +1,152 @@
+{
+  "registers": [
+    { "name": "r0", "alias": "", "purpose": "General purpose. Default operand for the I/O traps (dout, din, …)." },
+    { "name": "r1", "alias": "", "purpose": "General purpose." },
+    { "name": "r2", "alias": "", "purpose": "General purpose." },
+    { "name": "r3", "alias": "", "purpose": "General purpose." },
+    { "name": "r4", "alias": "", "purpose": "General purpose." },
+    { "name": "r5", "alias": "fp", "purpose": "Frame pointer — base of the current stack frame (cea uses it)." },
+    { "name": "r6", "alias": "sp", "purpose": "Stack pointer — push/pop move it. Stack grows downward from the top of memory." },
+    { "name": "r7", "alias": "lr", "purpose": "Link register — bl/blr save the return address here; ret jumps to it." }
+  ],
+  "flags": [
+    { "name": "N", "meaning": "Result was negative (bit 15 set).", "setBy": "add sub cmp and not shifts/rotates mul div rem or xor sext" },
+    { "name": "Z", "meaning": "Result was zero.", "setBy": "add sub cmp and not shifts/rotates mul div rem or xor sext" },
+    { "name": "C", "meaning": "Carry out of bit 15 (unsigned overflow / borrow); last bit shifted out for shifts and rotates.", "setBy": "add sub cmp srl sra sll rol ror" },
+    { "name": "V", "meaning": "Signed overflow.", "setBy": "add sub cmp" }
+  ],
+  "groups": [
+    {
+      "title": "Data movement",
+      "instructions": [
+        { "mnemonic": "mov", "operands": "dr, imm9 | dr, sr", "description": "Pseudo-op: assembles to mvi (immediate) or mvr (register).", "flags": "" },
+        { "mnemonic": "mvi", "operands": "dr, imm9", "description": "dr = sign-extended 9-bit immediate (−256…255).", "flags": "" },
+        { "mnemonic": "mvr", "operands": "dr, sr", "description": "dr = sr.", "flags": "" },
+        { "mnemonic": "ld", "operands": "dr, label[±n]", "description": "dr = mem[label]. PC-relative (pcoffset9, ±256 words).", "flags": "" },
+        { "mnemonic": "st", "operands": "sr, label[±n]", "description": "mem[label] = sr. PC-relative (pcoffset9).", "flags": "" },
+        { "mnemonic": "ldr", "operands": "dr, baser, offset6", "description": "dr = mem[baser + offset6] (offset −32…31).", "flags": "" },
+        { "mnemonic": "str", "operands": "sr, baser, offset6", "description": "mem[baser + offset6] = sr.", "flags": "" },
+        { "mnemonic": "lea", "operands": "dr, label[±n]", "description": "dr = address of label (PC-relative).", "flags": "" },
+        { "mnemonic": "cea", "operands": "dr, imm5", "description": "dr = fp + imm5 (compute effective address; assembles as add dr, fp, imm5).", "flags": "NZCV" },
+        { "mnemonic": "push", "operands": "sr", "description": "mem[--sp] = sr.", "flags": "" },
+        { "mnemonic": "pop", "operands": "dr", "description": "dr = mem[sp++].", "flags": "" }
+      ]
+    },
+    {
+      "title": "Arithmetic and logic",
+      "instructions": [
+        { "mnemonic": "add", "operands": "dr, sr1, sr2 | dr, sr1, imm5", "description": "dr = sr1 + sr2 (or + imm5, −16…15).", "flags": "NZCV" },
+        { "mnemonic": "sub", "operands": "dr, sr1, sr2 | dr, sr1, imm5", "description": "dr = sr1 − sr2 (or − imm5).", "flags": "NZCV" },
+        { "mnemonic": "cmp", "operands": "sr1, sr2 | sr1, imm5", "description": "Sets flags from sr1 − sr2; result discarded.", "flags": "NZCV" },
+        { "mnemonic": "and", "operands": "dr, sr1, sr2 | dr, sr1, imm5", "description": "dr = sr1 & sr2 (or & imm5).", "flags": "NZ" },
+        { "mnemonic": "not", "operands": "dr, sr", "description": "dr = ~sr (bitwise complement).", "flags": "NZ" },
+        { "mnemonic": "mul", "operands": "dr, sr", "description": "dr = dr × sr (two-operand).", "flags": "NZ" },
+        { "mnemonic": "div", "operands": "dr, sr", "description": "dr = dr ÷ sr, signed integer division (two-operand).", "flags": "NZ" },
+        { "mnemonic": "rem", "operands": "dr, sr", "description": "dr = dr mod sr, signed remainder (two-operand).", "flags": "NZ" },
+        { "mnemonic": "or", "operands": "dr, sr", "description": "dr = dr | sr (two-operand).", "flags": "NZ" },
+        { "mnemonic": "xor", "operands": "dr, sr", "description": "dr = dr ^ sr (two-operand).", "flags": "NZ" },
+        { "mnemonic": "sext", "operands": "dr, sr", "description": "Sign-extend dr, treating its low sr bits as a signed value (bit width taken from sr).", "flags": "NZ" }
+      ]
+    },
+    {
+      "title": "Shifts and rotates",
+      "instructions": [
+        { "mnemonic": "srl", "operands": "sr [, count]", "description": "Shift sr right logically by count (default 1); C = last bit shifted out.", "flags": "NZC" },
+        { "mnemonic": "sra", "operands": "sr [, count]", "description": "Shift sr right arithmetically (sign-preserving) by count (default 1).", "flags": "NZC" },
+        { "mnemonic": "sll", "operands": "sr [, count]", "description": "Shift sr left by count (default 1); C = last bit shifted out.", "flags": "NZC" },
+        { "mnemonic": "rol", "operands": "sr [, count]", "description": "Rotate sr left by count (default 1).", "flags": "NZC" },
+        { "mnemonic": "ror", "operands": "sr [, count]", "description": "Rotate sr right by count (default 1).", "flags": "NZC" }
+      ]
+    },
+    {
+      "title": "Branches",
+      "instructions": [
+        { "mnemonic": "br", "operands": "label", "description": "Unconditional branch (PC-relative, pcoffset9).", "flags": "" },
+        { "mnemonic": "bral", "operands": "label", "description": "Same as br (branch always).", "flags": "" },
+        { "mnemonic": "brz", "operands": "label", "description": "Branch if Z = 1 (zero / equal).", "flags": "" },
+        { "mnemonic": "bre", "operands": "label", "description": "Same as brz (branch if equal).", "flags": "" },
+        { "mnemonic": "brnz", "operands": "label", "description": "Branch if Z = 0 (not zero / not equal).", "flags": "" },
+        { "mnemonic": "brne", "operands": "label", "description": "Same as brnz (branch if not equal).", "flags": "" },
+        { "mnemonic": "brn", "operands": "label", "description": "Branch if N = 1 (negative).", "flags": "" },
+        { "mnemonic": "brp", "operands": "label", "description": "Branch if positive: N = 0 and Z = 0.", "flags": "" },
+        { "mnemonic": "brlt", "operands": "label", "description": "Branch if less than, signed (N ≠ V).", "flags": "" },
+        { "mnemonic": "brgt", "operands": "label", "description": "Branch if greater than, signed (N = V and Z = 0).", "flags": "" },
+        { "mnemonic": "brc", "operands": "label", "description": "Branch if C = 1 (carry / unsigned overflow).", "flags": "" }
+      ]
+    },
+    {
+      "title": "Subroutines and jumps",
+      "instructions": [
+        { "mnemonic": "bl", "operands": "label", "description": "Branch and link: lr = pc; pc = label (pcoffset11, ±1024 words).", "flags": "" },
+        { "mnemonic": "call", "operands": "label", "description": "Alias of bl.", "flags": "" },
+        { "mnemonic": "jsr", "operands": "label", "description": "Alias of bl.", "flags": "" },
+        { "mnemonic": "blr", "operands": "baser [, offset6]", "description": "Branch and link via register: lr = pc; pc = baser + offset6.", "flags": "" },
+        { "mnemonic": "jsrr", "operands": "baser [, offset6]", "description": "Alias of blr.", "flags": "" },
+        { "mnemonic": "jmp", "operands": "baser [, offset6]", "description": "pc = baser + offset6.", "flags": "" },
+        { "mnemonic": "ret", "operands": "[offset6]", "description": "pc = lr + offset6 (return from subroutine; same as jmp lr).", "flags": "" }
+      ]
+    },
+    {
+      "title": "Output traps",
+      "instructions": [
+        { "mnemonic": "dout", "operands": "[sr]", "description": "Print sr as signed decimal. Defaults to r0.", "flags": "" },
+        { "mnemonic": "udout", "operands": "[sr]", "description": "Print sr as unsigned decimal. Defaults to r0.", "flags": "" },
+        { "mnemonic": "hout", "operands": "[sr]", "description": "Print sr as hexadecimal. Defaults to r0.", "flags": "" },
+        { "mnemonic": "aout", "operands": "[sr]", "description": "Print the low byte of sr as an ASCII character. Defaults to r0.", "flags": "" },
+        { "mnemonic": "sout", "operands": "[sr]", "description": "Print the null-terminated string whose address is in sr. Defaults to r0.", "flags": "" },
+        { "mnemonic": "nl", "operands": "", "description": "Print a newline.", "flags": "" }
+      ]
+    },
+    {
+      "title": "Input traps",
+      "instructions": [
+        { "mnemonic": "din", "operands": "[dr]", "description": "Read a signed decimal from stdin into dr. Defaults to r0.", "flags": "" },
+        { "mnemonic": "hin", "operands": "[dr]", "description": "Read a hexadecimal number from stdin into dr. Defaults to r0.", "flags": "" },
+        { "mnemonic": "ain", "operands": "[dr]", "description": "Read one character from stdin into dr. Defaults to r0.", "flags": "" },
+        { "mnemonic": "sin", "operands": "[sr]", "description": "Read a line from stdin and store it null-terminated at the address in sr. Defaults to r0.", "flags": "" }
+      ]
+    },
+    {
+      "title": "Control and debug traps",
+      "instructions": [
+        { "mnemonic": "halt", "operands": "", "description": "Stop the program.", "flags": "" },
+        { "mnemonic": "m", "operands": "", "description": "Debug: dump memory.", "flags": "" },
+        { "mnemonic": "r", "operands": "", "description": "Debug: dump registers and flags.", "flags": "" },
+        { "mnemonic": "s", "operands": "", "description": "Debug: dump the stack.", "flags": "" },
+        { "mnemonic": "bp", "operands": "", "description": "Breakpoint trap (accepted by the assembler; not implemented in the interpreter).", "flags": "" }
+      ]
+    }
+  ],
+  "directives": [
+    { "name": ".word", "operands": "n | label[±n]", "description": "Emit one 16-bit word." },
+    { "name": ".fill", "operands": "n | label[±n]", "description": "Same as .word." },
+    { "name": ".zero", "operands": "n", "description": "Reserve n words, zero-filled." },
+    { "name": ".space", "operands": "n", "description": "Same as .zero." },
+    { "name": ".blkw", "operands": "n", "description": "Same as .zero." },
+    { "name": ".string", "operands": "\"text\"", "description": "Emit the characters as words, followed by a 0 terminator. Escapes like \\n are supported." },
+    { "name": ".stringz", "operands": "\"text\"", "description": "Same as .string." },
+    { "name": ".asciz", "operands": "\"text\"", "description": "Same as .string." },
+    { "name": ".start", "operands": "label", "description": "Set the entry point to label (default: address 0)." },
+    { "name": ".org", "operands": "addr", "description": "Set the location counter. Accepted but not yet implemented — assembly stops with an error." },
+    { "name": ".global", "operands": "label", "description": "Export label for linking (also .globl). Produces an object module." },
+    { "name": ".extern", "operands": "label", "description": "Declare a label defined in another module. Produces an object module." }
+  ],
+  "examples": [
+    {
+      "title": "Hello, number",
+      "code": "  mov r0, 5\n  dout r0\n  nl\n  halt\n"
+    },
+    {
+      "title": "Standard stack frame",
+      "code": "  mov r0, 7\n  push r0          ; argument\n  bl square\n  pop r1           ; discard argument\n  dout r0\n  nl\n  halt\n\nsquare:\n  push lr\n  push fp\n  mov fp, sp\n  ldr r0, fp, 2    ; first argument\n  mul r0, r0\n  mov sp, fp\n  pop fp\n  pop lr\n  ret\n"
+    },
+    {
+      "title": "Loop with a counter",
+      "code": "  mov r1, 1\nloop:\n  cmp r1, 5\n  brgt done\n  dout r1\n  nl\n  add r1, r1, 1\n  br loop\ndone:\n  halt\n"
+    },
+    {
+      "title": "Strings and input",
+      "code": "  lea r0, prompt\n  sout r0\n  din r0\n  add r0, r0, 1\n  dout r0\n  nl\n  halt\n\nprompt: .string \"Enter a number: \"\n"
+    }
+  ]
+}

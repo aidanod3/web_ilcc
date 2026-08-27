@@ -1,0 +1,15 @@
+{
+  "name": "ILCC — LCC assembler & debugger",
+  "short_name": "ILCC",
+  "description": "Write, run, and step through LCC assembly in your browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#13151a",
+  "theme_color": "#13151a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

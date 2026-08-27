@@ -1,0 +1,319 @@
+/* Header toolbar styles */
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 8px 0;
+}
+
+/* ── Left section (logo + menu button) ── */
+
+.headerLeft {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo {
+  height: 36px;
+  width: auto;
+  display: block;
+  padding: 4px 0;
+  padding-left: 5px;
+}
+
+/* Menu button — icon + label, no border, hover highlight */
+.menuBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px 0 6px;
+  margin-left: 20px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+
+.menuBtn:hover {
+  background: var(--bg3);
+}
+
+/* ── Code Templates dropdown ── */
+
+.templatesWrapper {
+  position: relative;
+  margin-left: 20px;
+}
+
+/* Nullify the margin that .menuBtn carries — it now lives on the wrapper */
+.templatesWrapper .menuBtn {
+  margin-left: 0;
+}
+
+.templateDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+
+.templateItem {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.templateItem:hover {
+  background: var(--bg3);
+}
+
+.templateEmpty {
+  padding: 8px 10px;
+  color: var(--text2);
+  font-size: 0.85rem;
+}
+
+/* ── Centre section (action buttons) ── */
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── Right section (settings) ── */
+
+.headerRight {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* Wrapper gives the dropdown an anchor for absolute positioning */
+.settingsWrapper {
+  position: relative;
+}
+
+.cogBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.cogBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+/* Dropdown panel anchored below the cog button */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  min-height: 48px;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  padding: 4px;
+}
+
+/* ── Toolbar buttons ── */
+
+.btn {
+  display: flex;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  height: 30.5px;
+  width: 30.5px;
+  padding: 0;
+}
+
+.btn:hover {
+  background: var(--bg3);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnGreen {
+  composes: btn;
+  background: rgb(60, 151, 60);
+}
+
+.btnGreen:hover {
+  background: rgb(55, 143, 55);
+}
+
+.btnRed {
+  composes: btn;
+  background: rgb(255, 56, 56);
+}
+
+.btnRed:hover {
+  background: rgb(228, 49, 49);
+}
+
+/* Step-count number input */
+.stepInput {
+  width: 48px;
+  height: 30.5px;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.stepInput::-webkit-inner-spin-button,
+.stepInput::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stepInput:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Button group ── */
+
+.btnGroup {
+  display: flex;
+  align-items: center;
+}
+
+.btnGroupLeft {
+  border-radius: 6px 0 0 6px !important;
+  border-right: none !important;
+}
+
+.btnGroupMid {
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.btnGroupRight {
+  border-radius: 0 6px 6px 0 !important;
+  border-left: none !important;
+}
+
+/* ── Settings dropdown rows ── */
+
+/* Thin rule between settings sections */
+.dropdownDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+}
+
+/* Top-level clickable row (e.g. "Theme ›") */
+.settingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.settingsRow:hover {
+  background: var(--bg3);
+}
+
+/* Indented option rows inside a settings sub-section */
+.themeItem {
+  display: block;
+  width: 100%;
+  padding: 5px 10px 5px 22px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text2);
+  font-size: 0.83rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.themeItem:hover {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+.themeItemActive {
+  color: var(--gold) !important;
+  font-weight: 600;
+}
+
+.stopNote {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red, #e5484d);
+  letter-spacing: 0.02em;
+}

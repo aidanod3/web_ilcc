@@ -1,0 +1,183 @@
+/* Stack panel styles */
+
+/* Outer wrapper — fills the space below the section header */
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: clip;
+}
+
+/* ── Jump-to-address bar ── */
+.jumpBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg1);
+  border-top: 1px solid var(--border);
+}
+
+.jumpLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.jumpInput {
+  flex: 1;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+  min-width: 0;
+}
+
+.jumpInput:focus {
+  border-color: #4ade80;
+}
+
+/* ── Scrollable rows area ── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: clip;
+  scrollbar-gutter: stable;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 6px;
+}
+
+/* Column header row */
+.tableHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-bottom: 2px solid var(--bg3);
+}
+
+.tagSpacer {
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.colAddr {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text2);
+}
+
+.colValue {
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text2);
+}
+
+/* Single stack row */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.row:hover {
+  background-color: var(--bg3);
+}
+
+.address {
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--text2);
+  flex: 1;
+}
+
+.value {
+  font-size: 12px;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--text);
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Changed-row highlight (flash → settle) ── */
+@keyframes cell-flash {
+  from { background: rgba(74, 222, 128, 0.28); }
+  to   { background: rgba(74, 222, 128, 0.08); }
+}
+
+.changed {
+  background: rgba(74, 222, 128, 0.08);
+  animation: cell-flash 0.6s ease-out forwards;
+}
+
+/* Empty state placeholder */
+.empty {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* ── Pointer tags ── */
+
+/* Current sp / fp — green */
+.pointerTag {
+  font-size: 11px;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  color: #4ade80;
+  min-width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Previous sp — red, same size/layout as .pointerTag */
+.pointerTagOld {
+  font-size: 11px;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  color: #f87171;
+  min-width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* ── Old/new diff display ── */
+.diffGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.old { color: #f87171; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+.sep { color: var(--text2); font-family: "JetBrains Mono", monospace; font-size: 12px; }
+.new { color: #4ade80; font-family: "JetBrains Mono", monospace; font-size: 12px; }

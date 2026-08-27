@@ -1,0 +1,45 @@
+/* driver.js popover skinned to the app's theme variables */
+.driver-popover.ilcc-tour {
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--border2, var(--border));
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  max-width: 380px;
+  font-family: inherit;
+}
+.driver-popover.ilcc-tour .driver-popover-title {
+  font-size: 15px; font-weight: 600; color: var(--text);
+}
+.driver-popover.ilcc-tour .driver-popover-description {
+  font-size: 13.5px; line-height: 1.55; color: var(--text);
+}
+.driver-popover.ilcc-tour .driver-popover-description code,
+.driver-popover.ilcc-tour .driver-popover-description kbd {
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px;
+}
+.driver-popover.ilcc-tour .driver-popover-progress-text { color: var(--text2); font-size: 12px; }
+.driver-popover.ilcc-tour .driver-popover-arrow-side-left.driver-popover-arrow  { border-left-color: var(--bg2); }
+.driver-popover.ilcc-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: var(--bg2); }
+.driver-popover.ilcc-tour .driver-popover-arrow-side-top.driver-popover-arrow   { border-top-color: var(--bg2); }
+.driver-popover.ilcc-tour .driver-popover-arrow-side-bottom.driver-popover-arrow{ border-bottom-color: var(--bg2); }
+
+.driver-popover.ilcc-tour button {
+  font: inherit; font-size: 13px; font-weight: 500;
+  padding: 6px 12px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg3); color: var(--text);
+  text-shadow: none; cursor: pointer;
+}
+.driver-popover.ilcc-tour button:hover { border-color: var(--accent); }
+.driver-popover.ilcc-tour .driver-popover-next-btn {
+  background: var(--accent); border-color: var(--accent); color: var(--accentText, #111);
+}
+.driver-popover.ilcc-tour .driver-popover-close-btn {
+  color: var(--text2); background: transparent; border: none; padding: 4px 6px;
+}
+.driver-popover.ilcc-tour .driver-popover-close-btn:hover { color: var(--text); }
+
+/* Make the first step's close button read as "Skip tour" (driver renders ✕). */
+.driver-popover.ilcc-tour .driver-popover-close-btn { font-size: 20px; line-height: 1; }

@@ -1,0 +1,160 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;          /* the editor root is height:100% + overflow:hidden; pages scroll here */
+  background: var(--bg1);
+  color: var(--text);
+}
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+
+.bar {
+  flex-shrink: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.left, .right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.back {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 6px;
+  color: var(--text2); text-decoration: none;
+}
+.back:hover { background: var(--bg3); color: var(--text); }
+
+.brand { display: flex; align-items: center; }
+.logo { height: 24px; }
+
+.title {
+  margin: 0 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.main {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+  box-sizing: border-box;
+}
+.wide { max-width: 1400px; }
+
+.subtitle {
+  margin: 0 0 20px;
+  font-size: 15px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+/* ---- shared page primitives (import this module from pages) ---- */
+
+.h2 { margin: 28px 0 10px; font-size: 18px; font-weight: 600; }
+.h3 { margin: 18px 0 8px; font-size: 15px; font-weight: 600; }
+.p  { margin: 0 0 12px; line-height: 1.6; color: var(--text); }
+.muted { color: var(--text2); }
+.small { font-size: 13px; }
+
+.card {
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg2);
+}
+.cardRow { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+
+.btn, .btnPrimary, .btnDanger {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--text);
+  font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  text-decoration: none; white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn:hover { border-color: var(--accent); }
+.btnPrimary { background: var(--accent); border-color: var(--accent); color: var(--accentText, #fff); }
+.btnPrimary:hover { filter: brightness(1.1); }
+.btnDanger { color: var(--red, #e5484d); }
+.btnDanger:hover { border-color: var(--red, #e5484d); }
+.btn:disabled, .btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.code {
+  padding: 1px 6px; border-radius: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px;
+}
+.pre {
+  position: relative;
+  margin: 8px 0 12px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg3);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.55;
+  white-space: pre; overflow-x: auto;
+}
+.copyBtn {
+  position: absolute; top: 6px; right: 6px;
+  padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text2); font-size: 11px; cursor: pointer;
+}
+.copyBtn:hover { color: var(--text); border-color: var(--accent); }
+
+.callout {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 12px 0; padding: 12px 14px;
+  border-left: 3px solid var(--accent); border-radius: 6px;
+  background: var(--bg2); font-size: 14px; line-height: 1.5;
+}
+.calloutWarn { border-left-color: var(--yellow, #e3a008); }
+.calloutIcon { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
+.calloutWarn .calloutIcon { color: var(--yellow, #e3a008); }
+
+.tabs { display: flex; gap: 4px; margin: 12px 0 0; border-bottom: 1px solid var(--border); }
+.tab {
+  padding: 8px 14px; margin-bottom: -1px;
+  border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0;
+  background: transparent; color: var(--text2); font: inherit; font-size: 13px; cursor: pointer;
+}
+.tab:hover { color: var(--text); }
+.tabActive { background: var(--bg2); border-color: var(--border); color: var(--text); font-weight: 600; }
+.tabPanel { padding: 14px 16px; border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; background: var(--bg2); }
+
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
+}
+.badgeOk  { color: var(--green, #30a46c); border-color: var(--green, #30a46c); }
+.badgeWarn{ color: var(--yellow, #e3a008); border-color: var(--yellow, #e3a008); }
+.badgeErr { color: var(--red, #e5484d); border-color: var(--red, #e5484d); }
+
+.table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.table th, .table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.table th { font-weight: 600; color: var(--text2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.input, .select, .textarea {
+  width: 100%; box-sizing: border-box;
+  padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg1); color: var(--text); font: inherit; font-size: 13.5px;
+}
+.textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.5; resize: vertical; min-height: 80px; }
+.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--accent); }
+.label { display: block; margin: 12px 0 5px; font-size: 12.5px; font-weight: 600; color: var(--text2); }
+
+.empty { padding: 32px; text-align: center; color: var(--text2); font-size: 14px; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .main { padding: 18px 14px 48px; }
+  .title { display: none; }
+}

@@ -1,0 +1,2 @@
+loop: br loop
+    halt
